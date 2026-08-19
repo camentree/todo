@@ -1,0 +1,238 @@
+import { Hono } from "hono";
+
+import * as comments from "./operations/comments.ts";
+import * as events from "./operations/events.ts";
+import * as lists from "./operations/lists.ts";
+import * as recurring from "./operations/recurring.ts";
+import * as tasks from "./operations/tasks.ts";
+import { asStage } from "@shared/stages.ts";
+import { TASK_STATES } from "@shared/states.ts";
+import type { TaskState } from "@shared/states.ts";
+
+export const api = new Hono();
+
+function numberParam(value: string | undefined): number {
+  const parsed = Number.parseInt(value ?? "", 10);
+  if (Number.isNaN(parsed)) {
+    throw new Error(`${value} is not a number`);
+  }
+  return parsed;
+}
+
+function taskState(value: unknown): TaskState {
+  const found = TASK_STATES.find((state) => state === value);
+  if (!found) {
+    throw new Error(`${value} is not a task state`);
+  }
+  return found;
+}
+
+api.get("/lists", async (context) => {
+  return context.json(await lists.all());
+});
+
+api.get("/stages", async (context) => {
+  return context.json(await lists.stages());
+});
+
+api.get("/tags", async (context) => {
+  return context.json(
+    await lists.tagsOf(context.req.query("list") ?? null),
+  );
+});
+
+api.get("/who", async (context) => {
+  return context.json(await lists.knownWho());
+});
+
+api.get("/today", async (context) => {
+  await recurring.generateDue();
+  return context.json(await tasks.today());
+});
+
+api.get("/tasks", async (context) => {
+  await recurring.generateDue();
+  const query = context.req.query();
+  const states = query.states
+    ? query.states.split(",").map(taskState)
+    : undefined;
+
+  return context.json(
+    await tasks.query({
+      list: query.list || undefined,
+      stage: asStage(query.stage) ?? undefined,
+      states: states,
+      search: query.search || undefined,
+      tags: query.tags ? query.tags.split(",") : undefined,
+      who: query.who || undefined,
+      dueOnOrBefore: query.dueOnOrBefore || undefined,
+      overdue: query.overdue === "true",
+      hasNoDueDate: query.hasNoDueDate === "true",
+      includeArchived: query.includeArchived === "true",
+    }),
+  );
+});
+
+api.get("/archive", async (context) => {
+  return context.json(await tasks.archived());
+});
+
+api.get("/tasks/:id", async (context) => {
+  const found = await tasks.byId(
+    numberParam(context.req.param("id")),
+  );
+  if (!found) {
+    return context.json({ error: "no such task" }, 404);
+  }
+  return context.json(found);
+});
+
+api.post("/tasks", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await tasks.create({
+      list: body.list,
+      title: body.title,
+      parentId: body.parentId,
+      note: body.note,
+      stage: body.stage,
+      tags: body.tags,
+      who: body.who,
+      dueDate: body.dueDate,
+      dueTime: body.dueTime,
+      state: body.state ? taskState(body.state) : undefined,
+    }),
+  );
+});
+
+api.patch("/tasks/:id", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await tasks.update(numberParam(context.req.param("id")), body),
+  );
+});
+
+api.post("/tasks/:id/state", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await tasks.setState(
+      numberParam(context.req.param("id")),
+      taskState(body.state),
+    ),
+  );
+});
+
+api.post("/tasks/:id/hide", async (context) => {
+  await tasks.hide(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});
+
+api.post("/tasks/:id/unhide", async (context) => {
+  await tasks.unhide(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});
+
+api.post("/tasks/:id/defer", async (context) => {
+  await tasks.deferByOneDay(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});
+
+api.get("/tasks/:id/comments", async (context) => {
+  return context.json(
+    await comments.forTask(numberParam(context.req.param("id"))),
+  );
+});
+
+api.post("/tasks/:id/comments", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await comments.add({
+      taskId: numberParam(context.req.param("id")),
+      body: body.body,
+      author: body.author,
+    }),
+  );
+});
+
+api.post("/tasks/:id/comments/seen", async (context) => {
+  await comments.markSeen(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});
+
+api.post("/tasks/archive", async (context) => {
+  const body = await context.req.json();
+  await tasks.archive(body.ids);
+  return context.json({ ok: true });
+});
+
+api.post("/tasks/unarchive", async (context) => {
+  const body = await context.req.json();
+  await tasks.unarchive(body.ids);
+  return context.json({ ok: true });
+});
+
+api.post("/tasks/reorder", async (context) => {
+  const body = await context.req.json();
+  await tasks.reorder(body.ids);
+  return context.json({ ok: true });
+});
+
+api.get("/recurring/:id", async (context) => {
+  const found = await recurring.byId(
+    numberParam(context.req.param("id")),
+  );
+  if (!found) {
+    return context.json({ error: "no such recurring task" }, 404);
+  }
+  return context.json(found);
+});
+
+api.post("/recurring", async (context) => {
+  const body = await context.req.json();
+  const created = await recurring.create(body);
+  await recurring.generateDue();
+  return context.json(created);
+});
+
+api.post("/tasks/:id/repeat", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await recurring.startFrom({
+      taskId: numberParam(context.req.param("id")),
+      frequency: body.frequency,
+    }),
+  );
+});
+
+api.post("/recurring/:id/schedule", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await recurring.configure(
+      numberParam(context.req.param("id")),
+      body,
+    ),
+  );
+});
+
+api.post("/recurring/:id/pause", async (context) => {
+  const body = await context.req.json();
+  await recurring.pause(
+    numberParam(context.req.param("id")),
+    body.paused,
+  );
+  return context.json({ ok: true });
+});
+
+api.get("/events/unseen", async (context) => {
+  return context.json(await events.unseen());
+});
+
+api.post("/events/seen", async (context) => {
+  await events.markAllSeen();
+  return context.json({ ok: true });
+});
+
+api.post("/events/:id/seen", async (context) => {
+  await events.markSeen(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});

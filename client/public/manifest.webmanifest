@@ -1,0 +1,10 @@
+{
+  "name": "Todo",
+  "short_name": "Todo",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1c1a1e",
+  "theme_color": "#1c1a1e",
+  "orientation": "portrait"
+}
