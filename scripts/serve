@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-[ -d node_modules ] || npm ci --silent
-[ -d dist/client ] || npm run build
-
-npm run migrate
-
-exec npm start
