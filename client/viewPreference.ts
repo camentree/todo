@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import type { Scope } from "./screens/Tasks.tsx";
 import type {
   BreakUpField,
+  Density,
   SortDirection,
   SortField,
   ViewPreference,
@@ -12,18 +13,21 @@ const FLAT_MANUAL: ViewPreference = {
   breakUpBy: "none",
   sortBy: "manual",
   sortDirection: "asc",
+  density: "compact",
 };
 
 const BY_LIST: ViewPreference = {
   breakUpBy: "list",
   sortBy: "manual",
   sortDirection: "asc",
+  density: "compact",
 };
 
 const BY_DUE: ViewPreference = {
   breakUpBy: "none",
   sortBy: "due_date",
   sortDirection: "desc",
+  density: "airy",
 };
 
 export function defaultView(scope: Scope): ViewPreference {
@@ -72,6 +76,7 @@ function read(
       sortBy: (parsed.sortBy ?? fallback.sortBy) as SortField,
       sortDirection: (parsed.sortDirection ??
         fallback.sortDirection) as SortDirection,
+      density: (parsed.density ?? fallback.density) as Density,
     };
   } catch {
     return fallback;

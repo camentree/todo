@@ -8,7 +8,7 @@ import {
 import { stageLabel } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
-import type { BreakUpField, Task } from "@shared/types.ts";
+import type { BreakUpField, Density, Task } from "@shared/types.ts";
 
 const SWIPE_FRACTION = 0.4;
 const LONG_PRESS_MILLISECONDS = 400;
@@ -38,6 +38,7 @@ export interface RowActions {
 export interface TaskBoardProps {
   groups: BoardGroup[];
   actions: RowActions;
+  density: Density;
   onMove: (
     taskId: number,
     landing: Landing,
@@ -55,6 +56,7 @@ interface Lift {
 export function TaskBoard({
   groups,
   actions,
+  density,
   onMove,
 }: TaskBoardProps) {
   const [lift, setLift] = useState<Lift | null>(null);
@@ -126,7 +128,7 @@ export function TaskBoard({
   }
 
   return (
-    <div className="board" ref={boardRef}>
+    <div className="board" data-density={density} ref={boardRef}>
       {groups.map((group) => (
         <Group
           key={group.key}
@@ -195,7 +197,9 @@ function Group({
         >
           <Chevron open={!collapsed} />
           <span className="group-name">{group.label}</span>
-          <span className="group-count">{group.tasks.length}</span>
+          {collapsed && (
+            <span className="group-count">{group.tasks.length}</span>
+          )}
         </button>
       )}
 

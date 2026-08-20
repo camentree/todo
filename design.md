@@ -163,18 +163,85 @@ Comments only ever mean it needs you. No status-update comments.
 
 ## Look
 
-Minimal, mobile-first, low detail at a glance and more on opening. Colour means
-one thing: something is asking for you.
+Minimal, mobile-first, low detail at a glance and more on opening. The app is
+light-first — it gets used through the day, often outdoors, so contrast has to
+survive bright sun. Nothing turns red; being late is a date, not an alarm.
+Separation between rows is whitespace only, no rules and no cards. One accent
+plus neutrals, because a busy screen is worse than a plain one.
 
-| | Dark | Light |
+Rows are at the compact spacing: most of a normal day fits on a phone screen
+without scrolling. Type size stays where it is at every density — the spacing
+comes out of padding, never out of shrinking text.
+
+The light ground is **Mist**: a near-white carrying the accent's own hue at
+about a third strength, so the screen agrees with itself without the ground
+darkening enough to lose the muted text in sunlight.
+
+The accent is **Pine**: a deep green that agrees with the ground rather than
+sitting against it. It does three jobs and no others — the current place in the
+menu, the active control in the bar, and the add button. Colour means *where you
+are*. Nothing else in the app is coloured, tags included: a category string is
+information, not orientation, and a screen of coloured tags is the busyness this
+design is trying to avoid. Reversing that is one token, `--tag`.
+
+| | Dark | Light (Mist) |
 |---|---|---|
-| Ground | `#1c1a1e` | `#eef1f0` |
-| Text | `#ddd8d3` | `#1f2624` |
-| Muted | `#857f7a` | `#77817e` |
-| Accent | `#86c9c0` | `#2f7d74` |
+| Ground | `#1c1a1e` | `#f5f8f6` |
+| Raised | `#26242a` | `#ebefec` |
+| Text | `#ddd8d3` | `#1b2120` |
+| Muted | `#857f7a` | `#68726f` |
+| Faint | `#605b58` | `#9da6a3` |
+| Hairline | `#2c2a2e` | `#dfe5e2` |
+| Accent | `#7fb996` | `#356b52` |
 
-The accent carries the section label, the tag, and the add button in both — one
-design in two grounds. Clean sans for task text, mono for tags and metadata.
+Muted is the colour that fails first in sunlight, so it is held at 4.5 against
+the ground rather than tuned by eye.
+
+### Type
+
+Task text is **Seravek** — a humanist sans with a faint calligraphic swell in
+the strokes, fluid without looking handwritten. Tags, dates and labels stay
+mono. Nothing is set in a serif: the app should read as calm, not as writing.
+
+Seravek ships with macOS and is **not on iOS**, so the phone falls back to **SF
+Rounded**, which is the system face with its terminals rounded off. Two devices,
+two faces, both chosen. The whole stack is one token:
+
+```css
+--sans: Seravek, ui-rounded, "SF Pro Rounded", "Avenir Next",
+        -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+```
+
+Dropping `Seravek` from the front makes it SF Rounded everywhere, which is the
+switch to make if the two devices ever feel like two apps. Six faces compared,
+with a toggle that changes the setting rather than the face, at
+<https://claude.ai/code/artifact/4ea0c274-4c52-45be-9b91-e21cf2178c8f>.
+
+The dark neutrals are the originals, tuned against a palette that no longer
+exists — a warm near-black under a green accent. They want their own pass.
+
+### Grounds not taken
+
+Two other light grounds got built and rejected close. Both are drop-in — swap
+the six neutrals in `:root` and nothing else moves.
+
+**Chalk** — near-white, faintly cool, no tint. The best of the three in direct
+sun and the one with the least to say indoors. Worth trying if Mist ever reads
+as heavy or faintly dirty.
+
+| Ground | Raised | Text | Muted | Faint | Hairline |
+|---|---|---|---|---|---|
+| `#fafbfb` | `#f1f3f3` | `#1a1f1e` | `#6b7472` | `#9aa3a1` | `#e2e6e5` |
+
+**Sage** — the original grey-green, full strength. The most cohesive of the
+three and the first to lose its tags to sunlight.
+
+| Ground | Raised | Text | Muted | Faint | Hairline |
+|---|---|---|---|---|---|
+| `#eef1ef` | `#e4e8e6` | `#1d2422` | `#6f7a77` | `#a0a9a6` | `#dce1df` |
+
+All three flip in place, with a sunlight slider, at
+<https://claude.ai/code/artifact/ea453b43-c612-4c61-8603-fc9fde547b99>.
 
 ## Build order
 

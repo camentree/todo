@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 
 import { api } from "../api.ts";
 import { todayAsDateString } from "../format.ts";
+import type { Density } from "@shared/types.ts";
 import {
   dueDateIn,
   dueTimeIn,
@@ -32,9 +33,11 @@ function lastUsedList(): string | null {
 
 export function NewTaskRow({
   list,
+  density,
   onClose,
 }: {
   list?: string;
+  density: Density;
   onClose: () => void;
 }) {
   const [input, setInput] = useState("");
@@ -113,7 +116,7 @@ export function NewTaskRow({
     parsed.title.trim().length > 0 && Boolean(targetList);
 
   return (
-    <div className="tasks">
+    <div className="tasks" data-density={density}>
       <form
         className="task new-task"
         onSubmit={(event) => {

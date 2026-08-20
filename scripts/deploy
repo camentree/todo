@@ -7,23 +7,12 @@ previous="$(git rev-parse HEAD)"
 target="$(git rev-parse origin/main)"
 [ "$previous" = "$target" ] && exit 0
 
-install_and_build() {
-  if [ ! -d node_modules ] || ! git diff --quiet "$previous" "$target" -- package-lock.json; then
-    npm ci --silent || return 1
-  fi
-  npm run build
-}
-
 git reset --hard --quiet "$target"
 
-if ! install_and_build; then
-  git reset --hard --quiet "$previous"
-  ntfy publish --quiet --token "$(cat "$HOME/.ntfy/token")" \
-    --title "todo deploy failed" \
-    http://127.0.0.1:2586/parallax \
-    "$(git rev-parse --short "$target") would not build; still serving $(git rev-parse --short "$previous")"
-  exit 1
+if [ ! -d node_modules ] || ! git diff --quiet "$previous" "$target" -- package-lock.json; then
+  npm ci --include=dev --silent
 fi
 
+npm run build
 launchctl kickstart -k "gui/$UID/org.nixos.todo"
 echo "$(date -u +%FT%TZ) deployed $(git rev-parse --short HEAD)"

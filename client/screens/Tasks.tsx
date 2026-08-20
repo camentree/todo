@@ -61,6 +61,7 @@ export function Tasks({ scope }: { scope: Scope }) {
       ) : (
         <TaskBoard
           groups={groups}
+          density={view.density}
           actions={{
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),
@@ -73,7 +74,11 @@ export function Tasks({ scope }: { scope: Scope }) {
       )}
 
       {adding && (
-        <NewTaskRow list={list} onClose={() => setAdding(false)} />
+        <NewTaskRow
+          list={list}
+          density={view.density}
+          onClose={() => setAdding(false)}
+        />
       )}
 
       {scope !== "archive" && !adding && (

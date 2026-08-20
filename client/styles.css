@@ -1,43 +1,104 @@
+@font-face {
+  font-family: "Seravek Web";
+  font-weight: 400;
+  font-style: normal;
+  font-display: optional;
+  src: url("/seravek-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Seravek Web";
+  font-weight: 500;
+  font-style: normal;
+  font-display: optional;
+  src: url("/seravek-500.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Seravek Web";
+  font-weight: 700;
+  font-style: normal;
+  font-display: optional;
+  src: url("/seravek-700.woff2") format("woff2");
+}
+
 :root {
-  --ground: #eef1f0;
-  --raised: #e4e8e7;
-  --hover: #e7ebea;
-  --text: #1f2624;
-  --dim: #77817e;
-  --faint: #a4adaa;
-  --accent: #2f7d74;
-  --hairline: #dbe1df;
-  --chip-bg: #2f7d7424;
-  --chip-text: #2f7d74;
-  --tag: #5c7f7a;
-  --scrim: #1f26246b;
+  --ground: #f5f8f6;
+  --raised: #ebefec;
+  --hover: #eef2ef;
+  --text: #1b2120;
+  --dim: #68726f;
+  --faint: #9da6a3;
+  --accent: #356b52;
+  --hairline: #dfe5e2;
+  --chip-bg: #356b5224;
+  --chip-text: #356b52;
+  --tag: #68726f;
+  --scrim: #1b21206b;
   --warn: #b46a5f;
   --sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    "Seravek Web", Seravek, ui-rounded, "SF Pro Rounded",
+    "Avenir Next", -apple-system, BlinkMacSystemFont, system-ui,
     sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --tap: 0.07s;
   --motion: 0.5s;
   --motion-slow: 0.85s;
+  --motion-menu: 0.75s;
+  --row-pad: 0.42rem;
+  --row-title: 1.02rem;
+  --row-leading: 1.35;
+  --tick: 1.3rem;
+  --tick-gap: 0.75rem;
+  --group-top: 0.6rem;
+  --group-bottom: 0.35rem;
+  --group-gap: 0.4rem;
+}
+
+[data-density="airy"] {
+  --row-pad: 0.78rem;
+  --row-title: 1.08rem;
+  --row-leading: 1.42;
+  --tick: 1.45rem;
+  --tick-gap: 0.95rem;
+  --group-top: 1.1rem;
+  --group-bottom: 0.6rem;
+  --group-gap: 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --ground: #1c1a1e;
     --raised: #26242a;
     --hover: #262428;
     --text: #ddd8d3;
     --dim: #857f7a;
     --faint: #605b58;
-    --accent: #86c9c0;
+    --accent: #7fb996;
     --hairline: #2c2a2e;
-    --chip-bg: #86c9c029;
-    --chip-text: #9fd8d0;
-    --tag: #6d938d;
+    --chip-bg: #7fb99629;
+    --chip-text: #96c8ab;
+    --tag: #857f7a;
     --scrim: #0b0a0cad;
     --warn: #c9736c;
   }
+}
+
+:root[data-theme="dark"] {
+  --ground: #1c1a1e;
+  --raised: #26242a;
+  --hover: #262428;
+  --text: #ddd8d3;
+  --dim: #857f7a;
+  --faint: #605b58;
+  --accent: #7fb996;
+  --hairline: #2c2a2e;
+  --chip-bg: #7fb99629;
+  --chip-text: #96c8ab;
+  --tag: #857f7a;
+  --scrim: #0b0a0cad;
+  --warn: #c9736c;
 }
 
 *,
@@ -113,7 +174,7 @@ a {
 .app {
   max-width: 62rem;
   margin: 0 auto;
-  padding: 0 1.25rem calc(16rem + env(safe-area-inset-bottom));
+  padding: 0 1.15rem calc(16rem + env(safe-area-inset-bottom));
   min-height: 100vh;
 }
 
@@ -122,7 +183,7 @@ a {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: calc(2.6rem + env(safe-area-inset-top)) 0 1.2rem;
+  padding: calc(2.6rem + env(safe-area-inset-top)) 0 1rem;
   touch-action: pan-y;
 }
 
@@ -187,7 +248,7 @@ a {
 }
 
 .group + .group {
-  margin-top: 1.5rem;
+  margin-top: var(--group-gap);
 }
 
 .group-head {
@@ -195,14 +256,14 @@ a {
   align-items: center;
   gap: 0.6rem;
   width: 100%;
-  padding: 0.7rem 0 0.5rem;
+  padding: var(--group-top) 0 var(--group-bottom);
   color: var(--dim);
 }
 
 .group-name {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -217,7 +278,7 @@ a {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 1.7rem;
+  font-size: 1.6rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   min-width: 0;
@@ -278,8 +339,8 @@ a {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.95rem 0.25rem;
+  gap: 0.15rem;
+  padding: var(--row-pad) 0.25rem;
   background: var(--ground);
   touch-action: pan-y;
   user-select: none;
@@ -288,12 +349,12 @@ a {
 
 .task-main {
   display: flex;
-  gap: 0.85rem;
+  gap: var(--tick-gap);
   align-items: center;
 }
 
 .task .task-meta {
-  padding-left: calc(1.45rem + 0.85rem);
+  padding-left: calc(var(--tick) + var(--tick-gap));
 }
 
 .task[data-swiping="false"] {
@@ -301,8 +362,8 @@ a {
 }
 
 .task-tick {
-  width: 1.45rem;
-  height: 1.45rem;
+  width: var(--tick);
+  height: var(--tick);
   border-radius: 50%;
   border: 1.5px solid var(--faint);
   flex-shrink: 0;
@@ -320,9 +381,9 @@ a {
 }
 
 .task-title {
-  font-size: 1.05rem;
+  font-size: var(--row-title);
   font-weight: 400;
-  line-height: 1.35;
+  line-height: var(--row-leading);
   overflow-wrap: anywhere;
   text-align: left;
   flex: 1;
@@ -360,7 +421,7 @@ a {
 
 .tag {
   color: var(--tag);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   text-transform: lowercase;
 }
 
@@ -370,7 +431,7 @@ a {
 }
 
 .task-meta {
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   color: var(--dim);
   display: flex;
   gap: 0.6rem;
@@ -572,7 +633,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  animation: drop-in var(--motion-slow) var(--ease);
+  animation: drop-in var(--motion-menu) var(--ease);
   transform-origin: top;
 }
 
@@ -588,7 +649,6 @@ a {
 
 @keyframes drop-in {
   from {
-    opacity: 0;
     transform: translateY(-0.5rem) scale(0.98);
   }
 }

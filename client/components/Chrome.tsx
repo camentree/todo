@@ -10,13 +10,26 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Chevron } from "./TaskBoard.tsx";
 import { api } from "../api.ts";
 import { formatWhen } from "../format.ts";
+import { useTheme, type Theme } from "../theme.ts";
 import type {
   BreakUpField,
+  Density,
   Event as TaskEvent,
   SortDirection,
   SortField,
   ViewPreference,
 } from "@shared/types.ts";
+
+const DENSITY_OPTIONS: { value: Density; label: string }[] = [
+  { value: "airy", label: "Airy" },
+  { value: "compact", label: "Compact" },
+];
+
+const THEME_OPTIONS: { value: Theme; label: string }[] = [
+  { value: "system", label: "Follow the system" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 const GROUP_OPTIONS: { field: BreakUpField; label: string }[] = [
   { field: "none", label: "Nothing" },
@@ -220,6 +233,8 @@ function ViewMenu({
   view: ViewPreference;
   onViewChange: (changes: Partial<ViewPreference>) => void;
 }) {
+  const [theme, onThemeChange] = useTheme();
+
   const sortValue =
     view.sortBy === "manual"
       ? "manual"
@@ -262,6 +277,40 @@ function ViewMenu({
           }}
         >
           {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="menu-field">
+        <span className="menu-label">Spacing</span>
+        <select
+          value={view.density}
+          onChange={(event) =>
+            onViewChange({
+              density: event.target.value as Density,
+            })
+          }
+        >
+          {DENSITY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="menu-field">
+        <span className="menu-label">Appearance</span>
+        <select
+          value={theme}
+          onChange={(event) =>
+            onThemeChange(event.target.value as Theme)
+          }
+        >
+          {THEME_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

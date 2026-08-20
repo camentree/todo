@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "./App.tsx";
+import { applyTheme, followSystemTheme, readTheme } from "./theme.ts";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -14,6 +15,9 @@ const queryClient = new QueryClient({
     queries: { refetchOnWindowFocus: true, staleTime: 5_000 },
   },
 });
+
+applyTheme(readTheme());
+followSystemTheme();
 
 const container = document.getElementById("root");
 

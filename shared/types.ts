@@ -79,10 +79,13 @@ export type SortField =
 
 export type SortDirection = "asc" | "desc";
 
+export type Density = "airy" | "compact";
+
 export interface ViewPreference {
   breakUpBy: BreakUpField;
   sortBy: SortField;
   sortDirection: SortDirection;
+  density: Density;
 }
 
 export interface TaskQuery {
