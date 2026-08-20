@@ -655,6 +655,7 @@ function useRowGesture({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const element = useRef<HTMLDivElement>(null);
   const stopWatching = useRef<(() => void) | null>(null);
+  const endLatest = useRef<() => void>(() => {});
 
   useEffect(() => {
     const node = element.current;
@@ -681,6 +682,10 @@ function useRowGesture({
     };
   }, []);
 
+  useEffect(() => {
+    endLatest.current = endGesture;
+  });
+
   function stopTimer(): void {
     if (timer.current) {
       clearTimeout(timer.current);
@@ -688,18 +693,28 @@ function useRowGesture({
     }
   }
 
-  function watchForRelease(finish: () => void): void {
+  function watchForRelease(
+    pointerId: number,
+    finish: () => void,
+  ): void {
     stopWatching.current?.();
-    function onRelease(): void {
+
+    function onPointerRelease(event: PointerEvent): void {
+      if (event.pointerId === pointerId) {
+        finish();
+      }
+    }
+    function onWindowBlur(): void {
       finish();
     }
-    window.addEventListener("pointerup", onRelease);
-    window.addEventListener("pointercancel", onRelease);
-    window.addEventListener("blur", onRelease);
+
+    window.addEventListener("pointerup", onPointerRelease);
+    window.addEventListener("pointercancel", onPointerRelease);
+    window.addEventListener("blur", onWindowBlur);
     stopWatching.current = () => {
-      window.removeEventListener("pointerup", onRelease);
-      window.removeEventListener("pointercancel", onRelease);
-      window.removeEventListener("blur", onRelease);
+      window.removeEventListener("pointerup", onPointerRelease);
+      window.removeEventListener("pointercancel", onPointerRelease);
+      window.removeEventListener("blur", onWindowBlur);
       stopWatching.current = null;
     };
   }
@@ -714,7 +729,7 @@ function useRowGesture({
         return;
       }
       active.current = true;
-      watchForRelease(() => endGesture());
+      watchForRelease(event.pointerId, () => endLatest.current());
       start.current = { x: event.clientX, y: event.clientY };
       sideways.current = 0;
       furthest.current = 0;
