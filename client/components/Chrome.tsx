@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Chevron } from "./TaskBoard.tsx";
@@ -14,6 +14,7 @@ import { useTheme, type Theme } from "../theme.ts";
 import type {
   BreakUpField,
   Density,
+  Layout,
   Event as TaskEvent,
   SortDirection,
   SortField,
@@ -25,8 +26,13 @@ const DENSITY_OPTIONS: { value: Density; label: string }[] = [
   { value: "compact", label: "Compact" },
 ];
 
+const LAYOUT_OPTIONS: { value: Layout; label: string }[] = [
+  { value: "stacked", label: "Stacked" },
+  { value: "columns", label: "Columns" },
+];
+
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
-  { value: "system", label: "Follow the system" },
+  { value: "system", label: "System" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
 ];
@@ -108,6 +114,19 @@ export function TopBar({
     queryFn: api.unseenEvents,
     refetchInterval: 60_000,
   });
+
+  useEffect(() => {
+    if (menu === "none") {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setMenu("none");
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menu]);
 
   return (
     <>
@@ -284,39 +303,62 @@ function ViewMenu({
         </select>
       </label>
 
-      <label className="menu-field">
-        <span className="menu-label">Spacing</span>
-        <select
-          value={view.density}
-          onChange={(event) =>
-            onViewChange({
-              density: event.target.value as Density,
-            })
-          }
-        >
-          {DENSITY_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <MenuToggle
+        label="Spacing"
+        value={view.density}
+        options={DENSITY_OPTIONS}
+        onChoose={(density) => onViewChange({ density: density })}
+      />
 
-      <label className="menu-field">
-        <span className="menu-label">Appearance</span>
-        <select
-          value={theme}
-          onChange={(event) =>
-            onThemeChange(event.target.value as Theme)
-          }
-        >
-          {THEME_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {view.breakUpBy !== "none" && (
+        <MenuToggle
+          label="Layout"
+          wideOnly
+          value={view.layout}
+          options={LAYOUT_OPTIONS}
+          onChoose={(layout) => onViewChange({ layout: layout })}
+        />
+      )}
+
+      <MenuToggle
+        label="Appearance"
+        value={theme}
+        options={THEME_OPTIONS}
+        onChoose={onThemeChange}
+      />
+    </div>
+  );
+}
+
+function MenuToggle<Value extends string>({
+  label,
+  value,
+  options,
+  wideOnly = false,
+  onChoose,
+}: {
+  label: string;
+  value: Value;
+  options: { value: Value; label: string }[];
+  wideOnly?: boolean;
+  onChoose: (next: Value) => void;
+}) {
+  return (
+    <div className="menu-field" data-wide-only={wideOnly}>
+      <span className="menu-label">{label}</span>
+      <div className="menu-toggle" role="group" aria-label={label}>
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className="menu-toggle-option"
+            aria-pressed={option.value === value}
+            onClick={() => onChoose(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

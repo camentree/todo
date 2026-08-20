@@ -62,6 +62,7 @@ export function Tasks({ scope }: { scope: Scope }) {
         <TaskBoard
           groups={groups}
           density={view.density}
+          layout={view.layout}
           actions={{
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),

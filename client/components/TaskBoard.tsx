@@ -8,7 +8,12 @@ import {
 import { stageLabel } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
-import type { BreakUpField, Density, Task } from "@shared/types.ts";
+import type {
+  BreakUpField,
+  Density,
+  Layout,
+  Task,
+} from "@shared/types.ts";
 
 const SWIPE_FRACTION = 0.4;
 const LONG_PRESS_MILLISECONDS = 400;
@@ -39,6 +44,7 @@ export interface TaskBoardProps {
   groups: BoardGroup[];
   actions: RowActions;
   density: Density;
+  layout: Layout;
   onMove: (
     taskId: number,
     landing: Landing,
@@ -57,6 +63,7 @@ export function TaskBoard({
   groups,
   actions,
   density,
+  layout,
   onMove,
 }: TaskBoardProps) {
   const [lift, setLift] = useState<Lift | null>(null);
@@ -65,6 +72,7 @@ export function TaskBoard({
   const boardRef = useRef<HTMLDivElement>(null);
 
   function placeAt(
+    pointerX: number,
     pointerY: number,
     taskId: number,
     fromKey: string,
@@ -73,7 +81,10 @@ export function TaskBoard({
       ...(boardRef.current?.querySelectorAll<HTMLElement>(
         "[data-row]",
       ) ?? []),
-    ];
+    ].filter((row) => {
+      const box = row.getBoundingClientRect();
+      return pointerX >= box.left && pointerX <= box.right;
+    });
 
     for (const row of rows) {
       const box = row.getBoundingClientRect();
@@ -88,12 +99,38 @@ export function TaskBoard({
     }
 
     const last = rows.at(-1);
+    if (last) {
+      return {
+        taskId: taskId,
+        fromKey: fromKey,
+        toKey: last.dataset.group ?? fromKey,
+        index: Number(last.dataset.index ?? 0) + 1,
+      };
+    }
+
     return {
       taskId: taskId,
       fromKey: fromKey,
-      toKey: last?.dataset.group ?? fromKey,
-      index: Number(last?.dataset.index ?? 0) + 1,
+      toKey: emptyGroupUnder(pointerX) ?? fromKey,
+      index: 0,
     };
+  }
+
+  function emptyGroupUnder(pointerX: number): string | null {
+    const columns = [
+      ...(boardRef.current?.querySelectorAll<HTMLElement>(
+        "[data-group-key]",
+      ) ?? []),
+    ];
+
+    for (const column of columns) {
+      const box = column.getBoundingClientRect();
+      if (pointerX >= box.left && pointerX <= box.right) {
+        return column.dataset.groupKey ?? null;
+      }
+    }
+
+    return null;
   }
 
   function commit(): void {
@@ -128,7 +165,12 @@ export function TaskBoard({
   }
 
   return (
-    <div className="board" data-density={density} ref={boardRef}>
+    <div
+      className="board"
+      data-density={density}
+      data-layout={layout}
+      ref={boardRef}
+    >
       {groups.map((group) => (
         <Group
           key={group.key}
@@ -149,12 +191,17 @@ export function TaskBoard({
             })
           }
           lift={lift}
-          onLiftStart={(taskId, pointerY) =>
-            setLift(placeAt(pointerY, taskId, group.key))
+          onLiftStart={(taskId, pointerX, pointerY) =>
+            setLift(placeAt(pointerX, pointerY, taskId, group.key))
           }
-          onLiftMove={(taskId, pointerY) =>
+          onLiftMove={(taskId, pointerX, pointerY) =>
             setLift(
-              placeAt(pointerY, taskId, lift?.fromKey ?? group.key),
+              placeAt(
+                pointerX,
+                pointerY,
+                taskId,
+                lift?.fromKey ?? group.key,
+              ),
             )
           }
           onLiftEnd={commit}
@@ -183,12 +230,20 @@ function Group({
   lift: Lift | null;
   editingId: number | null;
   onEditingIdChange: (taskId: number | null) => void;
-  onLiftStart: (taskId: number, pointerY: number) => void;
-  onLiftMove: (taskId: number, pointerY: number) => void;
+  onLiftStart: (
+    taskId: number,
+    pointerX: number,
+    pointerY: number,
+  ) => void;
+  onLiftMove: (
+    taskId: number,
+    pointerX: number,
+    pointerY: number,
+  ) => void;
   onLiftEnd: () => void;
 }) {
   return (
-    <div className="group">
+    <div className="group" data-group-key={group.key}>
       {group.label && (
         <button
           type="button"
@@ -254,8 +309,16 @@ function Row({
   editing: boolean;
   onEditStart: () => void;
   onEditEnd: () => void;
-  onLiftStart: (taskId: number, pointerY: number) => void;
-  onLiftMove: (taskId: number, pointerY: number) => void;
+  onLiftStart: (
+    taskId: number,
+    pointerX: number,
+    pointerY: number,
+  ) => void;
+  onLiftMove: (
+    taskId: number,
+    pointerX: number,
+    pointerY: number,
+  ) => void;
   onLiftEnd: () => void;
 }) {
   const [showSubtasks, setShowSubtasks] = useState(false);
@@ -264,8 +327,10 @@ function Row({
   const gesture = useRowGesture({
     onLeft: () => actions.swipeLeft(task),
     onRight: () => actions.swipeRight(task),
-    onLiftStart: (pointerY) => onLiftStart(task.id, pointerY),
-    onLiftMove: (pointerY) => onLiftMove(task.id, pointerY),
+    onLiftStart: (pointerX, pointerY) =>
+      onLiftStart(task.id, pointerX, pointerY),
+    onLiftMove: (pointerX, pointerY) =>
+      onLiftMove(task.id, pointerX, pointerY),
     onLiftEnd: onLiftEnd,
     enabled: !isTerminal(task.state),
     allowRight: task.archivedAt === null,
@@ -306,6 +371,7 @@ function Row({
             className="task"
             ref={gesture.ref}
             data-done={isTerminal(task.state)}
+            data-editing={editing}
             data-swiping={gesture.swiping}
             style={{ transform: `translateX(${gesture.offset}px)` }}
             onPointerDown={gesture.down}
@@ -348,21 +414,19 @@ function Row({
                 </button>
               )}
 
-              {editing && (
-                <button
-                  type="button"
-                  className="task-info"
-                  aria-label="Task details"
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    dismissKeyboard();
-                    actions.open(task);
-                  }}
-                  onClick={() => actions.open(task)}
-                >
-                  <InfoIcon />
-                </button>
-              )}
+              <button
+                type="button"
+                className="task-info"
+                aria-label="Task details"
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  dismissKeyboard();
+                  actions.open(task);
+                }}
+                onClick={() => actions.open(task)}
+              >
+                <InfoIcon />
+              </button>
 
               {task.lastCommentFromOthers && (
                 <span
@@ -576,8 +640,8 @@ function useRowGesture({
 }: {
   onLeft: () => void;
   onRight: () => void;
-  onLiftStart: (pointerY: number) => void;
-  onLiftMove: (pointerY: number) => void;
+  onLiftStart: (pointerX: number, pointerY: number) => void;
+  onLiftMove: (pointerX: number, pointerY: number) => void;
   onLiftEnd: () => void;
   enabled: boolean;
   allowRight: boolean;
@@ -587,8 +651,10 @@ function useRowGesture({
   const sideways = useRef(0);
   const furthest = useRef(0);
   const holding = useRef(false);
+  const active = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const element = useRef<HTMLDivElement>(null);
+  const stopWatching = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const node = element.current;
@@ -606,11 +672,36 @@ function useRowGesture({
     return () => node.removeEventListener("touchmove", holdTheScroll);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      stopWatching.current?.();
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
+    };
+  }, []);
+
   function stopTimer(): void {
     if (timer.current) {
       clearTimeout(timer.current);
       timer.current = null;
     }
+  }
+
+  function watchForRelease(finish: () => void): void {
+    stopWatching.current?.();
+    function onRelease(): void {
+      finish();
+    }
+    window.addEventListener("pointerup", onRelease);
+    window.addEventListener("pointercancel", onRelease);
+    window.addEventListener("blur", onRelease);
+    stopWatching.current = () => {
+      window.removeEventListener("pointerup", onRelease);
+      window.removeEventListener("pointercancel", onRelease);
+      window.removeEventListener("blur", onRelease);
+      stopWatching.current = null;
+    };
   }
 
   return {
@@ -622,17 +713,22 @@ function useRowGesture({
       if (!enabled) {
         return;
       }
+      active.current = true;
+      watchForRelease(() => endGesture());
       start.current = { x: event.clientX, y: event.clientY };
       sideways.current = 0;
       furthest.current = 0;
       holding.current = false;
+      const pointerX = event.clientX;
       const pointerY = event.clientY;
       const node = event.currentTarget;
       const pointerId = event.pointerId;
       timer.current = setTimeout(() => {
         holding.current = true;
-        node.setPointerCapture(pointerId);
-        onLiftStart(pointerY);
+        if (node.isConnected) {
+          node.setPointerCapture(pointerId);
+        }
+        onLiftStart(pointerX, pointerY);
       }, LONG_PRESS_MILLISECONDS);
     },
     move: (event: React.PointerEvent) => {
@@ -648,7 +744,7 @@ function useRowGesture({
       );
 
       if (holding.current) {
-        onLiftMove(event.clientY);
+        onLiftMove(event.clientX, event.clientY);
         return;
       }
 
@@ -669,29 +765,37 @@ function useRowGesture({
       sideways.current = travel;
       setOffset(travel);
     },
-    up: () => {
-      stopTimer();
-      if (holding.current) {
-        holding.current = false;
-        start.current = null;
-        setOffset(0);
-        onLiftEnd();
-        return;
-      }
-      if (!start.current) {
-        return;
-      }
-      const dx = sideways.current;
-      const threshold =
-        (element.current?.offsetWidth ?? 0) * SWIPE_FRACTION;
-      start.current = null;
-      sideways.current = 0;
-      setOffset(0);
-      if (dx <= -threshold) {
-        onLeft();
-      } else if (dx >= threshold) {
-        onRight();
-      }
-    },
+    up: () => endGesture(),
   };
+
+  function endGesture(): void {
+    if (!active.current) {
+      return;
+    }
+    active.current = false;
+    stopWatching.current?.();
+    stopTimer();
+
+    if (holding.current) {
+      holding.current = false;
+      start.current = null;
+      setOffset(0);
+      onLiftEnd();
+      return;
+    }
+    if (!start.current) {
+      return;
+    }
+    const dx = sideways.current;
+    const threshold =
+      (element.current?.offsetWidth ?? 0) * SWIPE_FRACTION;
+    start.current = null;
+    sideways.current = 0;
+    setOffset(0);
+    if (dx <= -threshold) {
+      onLeft();
+    } else if (dx >= threshold) {
+      onRight();
+    }
+  }
 }

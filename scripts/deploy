@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+[ -d node_modules ] || npm ci --include=dev --silent
+[ -d dist/client ] || npm run build
+
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ] || ! git diff --quiet HEAD; then
+  echo "$(date -u +%FT%TZ) checkout is not a clean main, skipping deploy"
+  exit 0
+fi
+
 git fetch --quiet origin main
 
 previous="$(git rev-parse HEAD)"
@@ -8,10 +16,7 @@ target="$(git rev-parse origin/main)"
 [ "$previous" = "$target" ] && exit 0
 
 git reset --hard --quiet "$target"
-
-if [ ! -d node_modules ] || ! git diff --quiet "$previous" "$target" -- package-lock.json; then
-  npm ci --include=dev --silent
-fi
+git diff --quiet "$previous" "$target" -- package-lock.json || npm ci --include=dev --silent
 
 npm run build
 launchctl kickstart -k "gui/$UID/org.nixos.todo"

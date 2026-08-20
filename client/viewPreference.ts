@@ -4,6 +4,7 @@ import type { Scope } from "./screens/Tasks.tsx";
 import type {
   BreakUpField,
   Density,
+  Layout,
   SortDirection,
   SortField,
   ViewPreference,
@@ -14,6 +15,7 @@ const FLAT_MANUAL: ViewPreference = {
   sortBy: "manual",
   sortDirection: "asc",
   density: "compact",
+  layout: "stacked",
 };
 
 const BY_LIST: ViewPreference = {
@@ -21,6 +23,7 @@ const BY_LIST: ViewPreference = {
   sortBy: "manual",
   sortDirection: "asc",
   density: "compact",
+  layout: "stacked",
 };
 
 const BY_DUE: ViewPreference = {
@@ -28,6 +31,7 @@ const BY_DUE: ViewPreference = {
   sortBy: "due_date",
   sortDirection: "desc",
   density: "airy",
+  layout: "stacked",
 };
 
 export function defaultView(scope: Scope): ViewPreference {
@@ -77,6 +81,7 @@ function read(
       sortDirection: (parsed.sortDirection ??
         fallback.sortDirection) as SortDirection,
       density: (parsed.density ?? fallback.density) as Density,
+      layout: (parsed.layout ?? fallback.layout) as Layout,
     };
   } catch {
     return fallback;

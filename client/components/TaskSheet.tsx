@@ -176,6 +176,25 @@ export function TaskSheet({
     onSuccess: refresh,
   });
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key !== "Escape") {
+        return;
+      }
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLElement &&
+        active.closest("input, textarea")
+      ) {
+        active.blur();
+        return;
+      }
+      closeSlowly();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
   function closeSlowly(): void {
     drag.slideOut();
     if (task && title !== task.title) {
@@ -217,6 +236,15 @@ export function TaskSheet({
         <div className="sheet-handle">
           <div className="sheet-grabber" />
         </div>
+
+        <button
+          type="button"
+          className="sheet-close"
+          aria-label="Close"
+          onClick={closeSlowly}
+        >
+          <CloseIcon />
+        </button>
         <div className="sheet-body" ref={bodyRef}>
           <input
             className="sheet-title"
@@ -722,4 +750,23 @@ function useDragDown({
       }
     },
   };
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 5l10 10M15 5L5 15"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }

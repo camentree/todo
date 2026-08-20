@@ -243,6 +243,31 @@ three and the first to lose its tags to sunlight.
 All three flip in place, with a sunlight slider, at
 <https://claude.ai/code/artifact/ea453b43-c612-4c61-8603-fc9fde547b99>.
 
+## On a computer
+
+The app is mobile-first and stays that way; a handful of behaviours change above
+768px, none of which alter the phone.
+
+- The task detail sheet is a **centred modal** rather than a sheet sliding up
+  from the bottom. Drag-to-dismiss goes with it, replaced by a close button, a
+  click on the backdrop, and Escape. Escape inside a text field blurs the field
+  first, so backing out of an edit does not close the whole modal.
+- Rows highlight under the cursor, and the ⓘ that opens the detail modal
+  **appears on hover** instead of only while renaming. It holds its slot at all
+  times so rows never reflow as the cursor crosses them. On touch it is not laid
+  out at all until editing starts.
+- **Break-up-by can render as columns**, one per group, dragged between. This is
+  a per-screen setting alongside spacing, offered only when something is
+  grouped and only on a wide window; below 768px the setting is hidden and the
+  board falls back to stacked sections on its own.
+
+Drag-and-drop hit-testing filters candidate rows by the pointer's **x** before
+scanning by **y**. Stacked layouts are unaffected, since every row spans the
+full width and the filter passes everything.
+
+The content column is capped at 40rem — around 70 characters of task title —
+except in columns, which take up to 84rem.
+
 ## Build order
 
 1. **The app.** Lists, tasks, subtasks, due dates, recurring tasks and their
