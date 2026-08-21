@@ -8,6 +8,7 @@ import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import { TaskSheet } from "../components/TaskSheet.tsx";
 import { buildGroups } from "../grouping.ts";
+import { useShortcuts } from "../useShortcuts.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
 
@@ -39,6 +40,22 @@ export function Tasks({ scope }: { scope: Scope }) {
       if (scope === "archive") return api.archive();
       return api.tasks(list ? { list: list } : {});
     },
+  });
+
+  useShortcuts((event) => {
+    if (event.key === "c" && scope !== "archive") {
+      event.preventDefault();
+      setAdding(true);
+    }
+    if (event.key === "f") {
+      const field = document.querySelector<HTMLInputElement>(
+        "[data-search-field]",
+      );
+      if (field) {
+        event.preventDefault();
+        field.focus();
+      }
+    }
   });
 
   const groups = buildGroups({
