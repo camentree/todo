@@ -88,11 +88,15 @@ if (box) {
     "  skip action shown mid-swipe:",
     (await page.locator(".swipe-action.defer").count()) > 0,
   );
+  console.log(
+    "  delete action shown mid-swipe:",
+    (await page.locator(".swipe-action.remove").count()) > 0,
+  );
   await page.mouse.up();
   await page.waitForTimeout(1000);
 }
 
 const after = await page.locator(".task-title").first().textContent();
-console.log("  first row unchanged by the swipe:", before === after);
+console.log("  first row deleted by the swipe:", before !== after);
 
 await browser.close();

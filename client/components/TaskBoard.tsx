@@ -333,7 +333,6 @@ function Row({
       onLiftMove(task.id, pointerX, pointerY),
     onLiftEnd: onLiftEnd,
     enabled: !isTerminal(task.state),
-    allowRight: task.archivedAt === null,
   });
 
   const subtasks = task.subtasks ?? [];
@@ -359,11 +358,15 @@ function Row({
               <div className="swipe-action archive">
                 {leftSwipeLabel(task)}
               </div>
-              {task.archivedAt === null && (
-                <div className="swipe-action defer">
-                  {rightSwipeLabel(task)}
-                </div>
-              )}
+              <div
+                className={
+                  task.archivedAt
+                    ? "swipe-action remove"
+                    : "swipe-action defer"
+                }
+              >
+                {rightSwipeLabel(task)}
+              </div>
             </>
           )}
 
@@ -483,6 +486,9 @@ function Row({
 }
 
 export function rightSwipeLabel(task: Task): string {
+  if (task.archivedAt) {
+    return "Delete";
+  }
   if (task.state === "hidden") {
     return "Unhide";
   }
@@ -636,7 +642,6 @@ function useRowGesture({
   onLiftMove,
   onLiftEnd,
   enabled,
-  allowRight,
 }: {
   onLeft: () => void;
   onRight: () => void;
@@ -644,7 +649,6 @@ function useRowGesture({
   onLiftMove: (pointerX: number, pointerY: number) => void;
   onLiftEnd: () => void;
   enabled: boolean;
-  allowRight: boolean;
 }) {
   const [offset, setOffset] = useState(0);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -776,9 +780,8 @@ function useRowGesture({
           event.currentTarget.setPointerCapture(event.pointerId);
         }
       }
-      const travel = allowRight ? dx : Math.min(dx, 0);
-      sideways.current = travel;
-      setOffset(travel);
+      sideways.current = dx;
+      setOffset(dx);
     },
     up: () => endGesture(),
   };

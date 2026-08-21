@@ -349,6 +349,11 @@ a {
   background: linear-gradient(to right, var(--accent), transparent);
 }
 
+.swipe-action.remove {
+  left: 0;
+  background: linear-gradient(to right, var(--warn), transparent);
+}
+
 .task {
   position: relative;
   display: flex;

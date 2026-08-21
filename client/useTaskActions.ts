@@ -175,6 +175,9 @@ export function useTaskActions(
 
   const swipeRight = useMutation({
     mutationFn: (task: Task) => {
+      if (task.archivedAt) {
+        return api.deleteTask(task.id);
+      }
       if (task.state === "hidden") {
         return api.unhideTask(task.id);
       }
