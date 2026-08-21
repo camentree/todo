@@ -222,23 +222,23 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
     <div className="menu under-title">
       <MenuLink
         label="Today"
+        here={location.pathname === "/due_date/today"}
+        onGo={() => go("/due_date/today")}
+      />
+      <MenuLink
+        label="To Do"
         here={location.pathname === "/"}
         onGo={() => go("/")}
       />
       <MenuLink
-        label="To Do"
-        here={location.pathname === "/todo"}
-        onGo={() => go("/todo")}
-      />
-      <MenuLink
         label="Done"
-        here={location.pathname === "/done"}
-        onGo={() => go("/done")}
+        here={location.pathname === "/state/complete"}
+        onGo={() => go("/state/complete")}
       />
       <MenuLink
         label="Archive"
-        here={location.pathname === "/archive"}
-        onGo={() => go("/archive")}
+        here={location.pathname === "/archived/true"}
+        onGo={() => go("/archived/true")}
       />
 
       {lists.length > 0 && (

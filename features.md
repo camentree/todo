@@ -24,7 +24,7 @@ Cloudflare Access, running on the same machine and Postgres server as Parallax.
 
 ## Screens
 
-Five scopes, one screen component, chosen from a menu that drops out of the
+Seven scopes, one screen component, chosen from a menu that drops out of the
 title:
 
 | Scope | Shows |
@@ -32,13 +32,17 @@ title:
 | Today | anything due today or earlier, plus anything with an unread comment |
 | To Do | everything open, whatever its date |
 | A list | one list, everything open |
-| Done | everything ticked off on an earlier day |
+| A tag | everything open carrying that tag |
+| A person | everything open belonging to that person |
+| Done | everything ticked off, newest first |
 | Archive | everything archived |
 
-Done is where a finished task lands once the day it was finished is over. Until
-then it stays on the screen it was ticked off on, struck through. Ticking its
-circle again marks it To Do and it leaves Done. There is no add button on Done
-or on Archive.
+The scope menu offers the lists; a tag or a person screen is reached by tapping
+that tag or that name under a row.
+
+A ticked-off task appears on Done straight away, and also stays where it was
+ticked off, struck through, until the next day. Ticking its circle again marks
+it To Do and it leaves Done. There is no add button on Done or on Archive.
 
 **Every screen remembers its own grouping, sorting, spacing and layout**, each
 list included. So Today can stay airy while To Do stays compact, and Errands
@@ -46,9 +50,9 @@ can be grouped by who while Reading is grouped by nothing. Appearance is the
 exception: light or dark is one choice that holds everywhere.
 
 A screen nobody has arranged yet starts from a default that depends on what it
-shows. Today is airy and sorted by due date, To Do compact and
-grouped by list, Done compact and newest finished first, and lists and Archive
-compact and in manual order.
+shows. Today is airy and sorted by due date, To Do compact and grouped by list,
+Done compact and newest finished first, and everything else compact and in
+manual order.
 
 The title itself opens that menu. Beside it sit the date, a control for
 grouping and sorting, and a bell. Each of those three opens a small menu
@@ -128,9 +132,15 @@ as usual. Tapping outside also closes it.
 ## Grouping, sorting, ordering
 
 Tasks can be grouped by list, stage, tag, due date, or who they belong to, and
-sorted by hand, due date, title, creation date, or when they were finished. **A group heading does not
-repeat itself in its rows** — group by stage and the rows stop showing their
-stage.
+sorted by hand, due date, title, creation date, or when they were finished.
+
+**A row carries every attribute its task has**, under the title: its tags, its
+list, who it belongs to, its date and time, whether it repeats, and its stage.
+Tapping the list, a tag, or the person goes to the screen for that one.
+
+**A heading does not repeat itself in its rows** — group by stage and the rows
+stop showing their stage, and the same goes for the screen's own filter, so a
+list screen's rows do not each name that list.
 
 Groups collapse by tapping their heading.
 

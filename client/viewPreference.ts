@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { useLocation } from "react-router-dom";
 
 import type { Scope } from "./screens/Tasks.tsx";
 import type {
@@ -11,58 +10,61 @@ import type {
   ViewPreference,
 } from "@shared/types.ts";
 
-const DEFAULTS: Record<Scope, ViewPreference> = {
-  today: {
-    breakUpBy: "none",
-    sortBy: "due_date",
-    sortDirection: "desc",
-    density: "airy",
-    layout: "stacked",
-  },
-  todo: {
-    breakUpBy: "list",
-    sortBy: "manual",
-    sortDirection: "asc",
-    density: "compact",
-    layout: "stacked",
-  },
-  list: {
-    breakUpBy: "none",
-    sortBy: "manual",
-    sortDirection: "asc",
-    density: "compact",
-    layout: "stacked",
-  },
-  done: {
-    breakUpBy: "none",
-    sortBy: "resolved_at",
-    sortDirection: "desc",
-    density: "compact",
-    layout: "stacked",
-  },
-  archive: {
-    breakUpBy: "none",
-    sortBy: "manual",
-    sortDirection: "asc",
-    density: "compact",
-    layout: "stacked",
-  },
+const FLAT_MANUAL: ViewPreference = {
+  breakUpBy: "none",
+  sortBy: "manual",
+  sortDirection: "asc",
+  density: "compact",
+  layout: "stacked",
 };
 
+const BY_LIST: ViewPreference = {
+  breakUpBy: "list",
+  sortBy: "manual",
+  sortDirection: "asc",
+  density: "compact",
+  layout: "stacked",
+};
+
+const BY_DUE: ViewPreference = {
+  breakUpBy: "none",
+  sortBy: "due_date",
+  sortDirection: "desc",
+  density: "airy",
+  layout: "stacked",
+};
+
+const BY_FINISHED: ViewPreference = {
+  breakUpBy: "none",
+  sortBy: "resolved_at",
+  sortDirection: "desc",
+  density: "compact",
+  layout: "stacked",
+};
+
+export function defaultView(scope: Scope): ViewPreference {
+  if (scope.field === "due_date" && scope.value === "today")
+    return BY_DUE;
+  if (scope.field === "state" && scope.value === "complete")
+    return BY_FINISHED;
+  if (scope.field === null) return BY_LIST;
+  return FLAT_MANUAL;
+}
+
 export function useViewPreference(
-  scope: Scope,
+  key: string,
+  fallback: ViewPreference,
 ): [ViewPreference, (changes: Partial<ViewPreference>) => void] {
-  const { pathname } = useLocation();
-  const storageKey = `view:${pathname}`;
+  const storageKey = `view:${key}`;
 
   const [preference, setPreference] = useState<ViewPreference>(() =>
-    read({ storageKey: storageKey, scope: scope }),
+    read(storageKey, fallback),
   );
-  const [shown, setShown] = useState<string>(pathname);
+  const [shown, setShown] = useState<string>(storageKey);
 
-  if (shown !== pathname) {
-    setShown(pathname);
-    setPreference(read({ storageKey: storageKey, scope: scope }));
+  if (shown !== storageKey) {
+    setShown(storageKey);
+    setPreference(read(storageKey, fallback));
   }
 
   const change = useCallback(
@@ -79,14 +81,10 @@ export function useViewPreference(
   return [preference, change];
 }
 
-function read({
-  storageKey,
-  scope,
-}: {
-  storageKey: string;
-  scope: Scope;
-}): ViewPreference {
-  const fallback = DEFAULTS[scope];
+function read(
+  storageKey: string,
+  fallback: ViewPreference,
+): ViewPreference {
   try {
     const stored = window.localStorage.getItem(storageKey);
     if (!stored) {
