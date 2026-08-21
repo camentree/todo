@@ -40,6 +40,13 @@ then it stays on the screen it was ticked off on, struck through. Ticking its
 circle again marks it To Do and it leaves Done. There is no add button on Done
 or on Archive.
 
+**Each screen remembers its own grouping, sorting, spacing and layout.** So
+Today can stay airy while To Do stays compact. All list screens share one
+preference between them, because a list is free text with no identity of its
+own. The defaults are Today airy and sorted by due date, To Do compact and
+grouped by list, Done compact and newest finished first, and lists and Archive
+compact and in manual order.
+
 The title itself opens that menu. Beside it sit the date, a control for
 grouping and sorting, and a bell. Each of those three opens a small menu
 anchored under the bar rather than a full screen.

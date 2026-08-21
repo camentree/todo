@@ -9,7 +9,7 @@ import { TaskBoard } from "../components/TaskBoard.tsx";
 import { TaskSheet } from "../components/TaskSheet.tsx";
 import { buildGroups } from "../grouping.ts";
 import { useTaskActions } from "../useTaskActions.ts";
-import { defaultView, useViewPreference } from "../viewPreference.ts";
+import { useViewPreference } from "../viewPreference.ts";
 
 export type Scope = "today" | "todo" | "done" | "archive" | "list";
 
@@ -17,14 +17,10 @@ export function Tasks({ scope }: { scope: Scope }) {
   const { name } = useParams();
   const list =
     scope === "list" ? decodeURIComponent(name ?? "") : undefined;
-  const key = scope === "list" ? `list:${list}` : scope;
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
-  const [view, changeView] = useViewPreference(
-    key,
-    defaultView(scope),
-  );
+  const [view, changeView] = useViewPreference(scope);
   const actions = useTaskActions(changeView);
 
   const { data: lists = [] } = useQuery({

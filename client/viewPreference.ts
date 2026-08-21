@@ -10,54 +10,58 @@ import type {
   ViewPreference,
 } from "@shared/types.ts";
 
-const FLAT_MANUAL: ViewPreference = {
-  breakUpBy: "none",
-  sortBy: "manual",
-  sortDirection: "asc",
-  density: "compact",
-  layout: "stacked",
+const DEFAULTS: Record<Scope, ViewPreference> = {
+  today: {
+    breakUpBy: "none",
+    sortBy: "due_date",
+    sortDirection: "desc",
+    density: "airy",
+    layout: "stacked",
+  },
+  todo: {
+    breakUpBy: "list",
+    sortBy: "manual",
+    sortDirection: "asc",
+    density: "compact",
+    layout: "stacked",
+  },
+  list: {
+    breakUpBy: "none",
+    sortBy: "manual",
+    sortDirection: "asc",
+    density: "compact",
+    layout: "stacked",
+  },
+  done: {
+    breakUpBy: "none",
+    sortBy: "resolved_at",
+    sortDirection: "desc",
+    density: "compact",
+    layout: "stacked",
+  },
+  archive: {
+    breakUpBy: "none",
+    sortBy: "manual",
+    sortDirection: "asc",
+    density: "compact",
+    layout: "stacked",
+  },
 };
-
-const BY_LIST: ViewPreference = {
-  breakUpBy: "list",
-  sortBy: "manual",
-  sortDirection: "asc",
-  density: "compact",
-  layout: "stacked",
-};
-
-const BY_DUE: ViewPreference = {
-  breakUpBy: "none",
-  sortBy: "due_date",
-  sortDirection: "desc",
-  density: "airy",
-  layout: "stacked",
-};
-
-const BY_FINISHED: ViewPreference = {
-  breakUpBy: "none",
-  sortBy: "resolved_at",
-  sortDirection: "desc",
-  density: "compact",
-  layout: "stacked",
-};
-
-export function defaultView(scope: Scope): ViewPreference {
-  if (scope === "today") return BY_DUE;
-  if (scope === "todo") return BY_LIST;
-  if (scope === "done") return BY_FINISHED;
-  return FLAT_MANUAL;
-}
 
 export function useViewPreference(
-  key: string,
-  fallback: ViewPreference,
+  scope: Scope,
 ): [ViewPreference, (changes: Partial<ViewPreference>) => void] {
-  const storageKey = `view:${key}`;
+  const storageKey = `view:${scope}`;
 
   const [preference, setPreference] = useState<ViewPreference>(() =>
-    read(storageKey, fallback),
+    read(scope),
   );
+  const [shown, setShown] = useState<Scope>(scope);
+
+  if (shown !== scope) {
+    setShown(scope);
+    setPreference(read(scope));
+  }
 
   const change = useCallback(
     (changes: Partial<ViewPreference>) => {
@@ -73,12 +77,10 @@ export function useViewPreference(
   return [preference, change];
 }
 
-function read(
-  storageKey: string,
-  fallback: ViewPreference,
-): ViewPreference {
+function read(scope: Scope): ViewPreference {
+  const fallback = DEFAULTS[scope];
   try {
-    const stored = window.localStorage.getItem(storageKey);
+    const stored = window.localStorage.getItem(`view:${scope}`);
     if (!stored) {
       return fallback;
     }
