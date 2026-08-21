@@ -35,6 +35,18 @@ describe("parse", () => {
     ]);
   });
 
+  test("sigils fold case, so /Programming is /programming", () => {
+    expect(
+      tokensOf(
+        "Refactor the auth middleware #Parallax @Claude /Programming",
+      ),
+    ).toEqual([
+      { kind: "tag", text: "#Parallax", value: "parallax" },
+      { kind: "who", text: "@Claude", value: "claude" },
+      { kind: "list", text: "/Programming", value: "programming" },
+    ]);
+  });
+
   test("reads a stage sigil only when it names a real stage", () => {
     expect(tokensOf("Ship it !blocked")).toEqual([
       { kind: "stage", text: "!blocked", value: "blocked" },

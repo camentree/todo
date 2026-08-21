@@ -2,6 +2,7 @@ import { addDays, format, parseISO } from "date-fns";
 
 import { sql } from "../database.ts";
 import * as events from "./events.ts";
+import { canonicalName } from "@shared/names.ts";
 import { dueDatesBetween, toDateString } from "@shared/recurrence.ts";
 import type { Schedule } from "@shared/recurrence.ts";
 import type { Frequency, RecurringTask } from "@shared/types.ts";
@@ -48,11 +49,11 @@ export async function create(
       weekdays, day_of_month, due_time, starts_on
     )
     values (
-      ${task.list},
+      ${canonicalName(task.list)},
       ${task.title},
       ${task.note ?? null},
-      ${task.tags ?? []},
-      ${task.who ?? null},
+      ${(task.tags ?? []).map(canonicalName)},
+      ${task.who ? canonicalName(task.who) : null},
       ${task.subtaskTitles ?? []},
       ${task.frequency},
       ${task.repeatEvery ?? 1},

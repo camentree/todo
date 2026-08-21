@@ -1,6 +1,7 @@
 import { sql } from "../database.ts";
 import { CAMEN } from "./comments.ts";
 import * as events from "./events.ts";
+import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
@@ -42,7 +43,7 @@ export async function query(criteria: TaskQuery): Promise<Task[]> {
           : sql`and ${NOT_LONG_RESOLVED}`
       }
       ${criteria.includeArchived ? sql`` : sql`and archived_at is null`}
-      ${criteria.list ? sql`and list = ${criteria.list}` : sql``}
+      ${criteria.list ? sql`and list = ${canonicalName(criteria.list)}` : sql``}
       ${criteria.stage ? sql`and stage = ${criteria.stage}` : sql``}
       ${
         criteria.recurringTaskId
@@ -56,8 +57,12 @@ export async function query(criteria: TaskQuery): Promise<Task[]> {
       }
       ${criteria.overdue ? sql`and due_date < current_date` : sql``}
       ${criteria.hasNoDueDate ? sql`and due_date is null` : sql``}
-      ${criteria.tags?.length ? sql`and tags @> ${criteria.tags}` : sql``}
-      ${criteria.who ? sql`and who = ${criteria.who}` : sql``}
+      ${
+        criteria.tags?.length
+          ? sql`and tags @> ${criteria.tags.map(canonicalName)}`
+          : sql``
+      }
+      ${criteria.who ? sql`and who = ${canonicalName(criteria.who)}` : sql``}
       ${
         criteria.search
           ? sql`and (title ilike ${"%" + criteria.search + "%"}
@@ -153,15 +158,15 @@ export async function create(
       due_date, due_time, sort_order
     )
     values (
-      ${task.list},
+      ${canonicalName(task.list)},
       ${task.parentId ?? null},
       ${task.recurringTaskId ?? null},
       ${task.title},
       ${task.note ?? null},
       ${task.state ?? "to_do"},
       ${task.stage ?? null},
-      ${task.tags ?? []},
-      ${task.who ?? null},
+      ${(task.tags ?? []).map(canonicalName)},
+      ${task.who ? canonicalName(task.who) : null},
       ${task.dueDate ?? null},
       ${task.dueTime ?? null},
       coalesce((select max(sort_order) + 1 from todo.tasks), 0)
@@ -210,6 +215,19 @@ export interface TaskChanges {
   parentId?: number | null;
 }
 
+function canonicalNamesIn(changes: TaskChanges): TaskChanges {
+  return {
+    ...changes,
+    ...(changes.list === undefined
+      ? {}
+      : { list: canonicalName(changes.list) }),
+    ...(changes.who ? { who: canonicalName(changes.who) } : {}),
+    ...(changes.tags
+      ? { tags: changes.tags.map(canonicalName) }
+      : {}),
+  };
+}
+
 export async function update(
   id: number,
   changes: TaskChanges,
@@ -217,7 +235,7 @@ export async function update(
 ): Promise<Task> {
   const [updated] = await sql<Task[]>`
     update todo.tasks
-    set ${sql(pruneUndefined(changes))}, updated_at = now()
+    set ${sql(pruneUndefined(canonicalNamesIn(changes)))}, updated_at = now()
     where id = ${id}
     returning ${COLUMNS}
   `;
