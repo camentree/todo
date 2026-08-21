@@ -28,9 +28,6 @@ await openSheetFor(
   page,
   page.locator(".task", { hasText: "10 pushups" }).first(),
 );
-await page
-  .locator(".sheet-section-head", { hasText: "Subtasks" })
-  .click();
 await page.waitForTimeout(600);
 
 console.log("before:", (await subtaskTitles()).join(" | "));

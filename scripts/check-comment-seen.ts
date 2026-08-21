@@ -54,9 +54,6 @@ await openSheetFor(
   page,
   page.locator(".task", { hasText: commented.title }).first(),
 );
-await page
-  .locator(".sheet-section-head", { hasText: "Comments" })
-  .click();
 await page.waitForTimeout(900);
 
 const after = await today();
