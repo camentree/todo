@@ -75,6 +75,7 @@ console.log(
 );
 
 await page.locator('.sheet-field input[type="time"]').fill("07:30");
+await page.locator('.sheet-field input[type="time"]').blur();
 await page.waitForTimeout(1400);
 
 const linked = await taskById(created.id);

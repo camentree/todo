@@ -110,6 +110,17 @@ starts open if the task already has one and collapsed if it does not. So a bare
 task is four headings, and a task with a date, a note and comments shows all
 three without a tap.
 
+**The date and the time only save once you have finished typing them.** Every
+keystroke into a date field leaves it briefly holding no date at all, so nothing
+is written until you leave the field or press Enter, and a half-typed date is
+abandoned rather than saved.
+
+**An empty date field reads as empty.** Its `mm/dd/yyyy` skeleton is the same
+grey as every other placeholder in the sheet rather than the black of a real
+date, and a field holding a date or a time carries a `×` beside it. That `×` is
+the only way to clear one, so clearing works on a phone and not only on a
+keyboard.
+
 The note grows to fit what is in it rather than scrolling inside a fixed box, and
 Tab indents the lines you have selected by two spaces, Shift-Tab takes them back
 out. Single-line fields ignore Tab as usual.

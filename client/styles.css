@@ -917,6 +917,33 @@ a {
   text-align: left;
 }
 
+.sheet-value {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sheet-value input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sheet-value input[data-empty="true"]::-webkit-datetime-edit {
+  color: var(--faint);
+}
+
+.sheet-clear {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 9px;
+  color: var(--dim);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .sheet-field > span {
   font-family: var(--mono);
   font-size: 0.63rem;

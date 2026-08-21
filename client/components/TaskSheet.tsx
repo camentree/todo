@@ -63,6 +63,8 @@ export function TaskSheet({
   const [newSubtask, setNewSubtask] = useState("");
   const [newTag, setNewTag] = useState("");
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
+  const [dateDraft, setDateDraft] = useState<string | null>(null);
+  const [timeDraft, setTimeDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [closing, setClosing] = useState(false);
   const [pendingRepeats, setPendingRepeats] = useState<
@@ -115,6 +117,10 @@ export function TaskSheet({
   }, [task]);
 
   const savedRepeats = Boolean(schedule && !schedule.paused);
+  const repeats = pendingRepeats ?? savedRepeats;
+  const shownDate =
+    repeats && schedule ? schedule.startsOn : (task?.dueDate ?? "");
+  const shownTime = task?.dueTime?.slice(0, 5) ?? "";
 
   useEffect(() => {
     if (pendingRepeats === savedRepeats) {
@@ -242,6 +248,32 @@ export function TaskSheet({
     );
   }
 
+  function commitDate(): void {
+    const typed = dateDraft;
+    setDateDraft(null);
+    if (!typed || typed === shownDate) {
+      return;
+    }
+    if (repeats && schedule) {
+      configureSchedule.mutate({ startsOn: typed });
+      return;
+    }
+    save.mutate({ dueDate: typed });
+  }
+
+  function commitTime(): void {
+    const typed = timeDraft;
+    setTimeDraft(null);
+    if (!typed || typed === shownTime) {
+      return;
+    }
+    if (repeats && schedule) {
+      configureSchedule.mutate({ dueTime: typed });
+      return;
+    }
+    save.mutate({ dueTime: typed });
+  }
+
   function closeSlowly(): void {
     drag.slideOut();
     if (task && title !== task.title) {
@@ -250,6 +282,8 @@ export function TaskSheet({
     if (task && note !== (task.note ?? "")) {
       save.mutate({ note: note || null });
     }
+    commitDate();
+    commitTime();
     setClosing(true);
     setTimeout(onClose, CLOSE_MILLISECONDS);
   }
@@ -259,7 +293,6 @@ export function TaskSheet({
   }
 
   const subtasks = task.subtasks ?? [];
-  const repeats = pendingRepeats ?? savedRepeats;
 
   return (
     <>
@@ -520,44 +553,77 @@ export function TaskSheet({
               </div>
             </div>
 
-            <label className="sheet-field">
+            <div className="sheet-field">
               <span>{repeats ? "Starts" : "Date"}</span>
-              <input
-                type="date"
-                value={
-                  repeats && schedule
-                    ? schedule.startsOn
-                    : (task.dueDate ?? "")
-                }
-                onChange={(event) =>
-                  repeats && schedule
-                    ? configureSchedule.mutate({
-                        startsOn:
-                          event.target.value || schedule.startsOn,
-                      })
-                    : save.mutate({
-                        dueDate: event.target.value || null,
-                      })
-                }
-              />
-            </label>
+              <div className="sheet-value">
+                <input
+                  type="date"
+                  aria-label={repeats ? "Starts on" : "Date"}
+                  data-empty={(dateDraft ?? shownDate) === ""}
+                  value={dateDraft ?? shownDate}
+                  onChange={(event) =>
+                    setDateDraft(event.target.value)
+                  }
+                  onBlur={commitDate}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+                {shownDate && !repeats && (
+                  <button
+                    type="button"
+                    className="sheet-clear"
+                    aria-label="Clear the date"
+                    onClick={() => {
+                      setDateDraft(null);
+                      save.mutate({ dueDate: null });
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
 
-            <label className="sheet-field">
+            <div className="sheet-field">
               <span>Time</span>
-              <input
-                type="time"
-                value={task.dueTime?.slice(0, 5) ?? ""}
-                onChange={(event) =>
-                  repeats && schedule
-                    ? configureSchedule.mutate({
-                        dueTime: event.target.value || null,
-                      })
-                    : save.mutate({
-                        dueTime: event.target.value || null,
-                      })
-                }
-              />
-            </label>
+              <div className="sheet-value">
+                <input
+                  type="time"
+                  aria-label="Time"
+                  data-empty={(timeDraft ?? shownTime) === ""}
+                  value={timeDraft ?? shownTime}
+                  onChange={(event) =>
+                    setTimeDraft(event.target.value)
+                  }
+                  onBlur={commitTime}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+                {shownTime && (
+                  <button
+                    type="button"
+                    className="sheet-clear"
+                    aria-label="Clear the time"
+                    onClick={() => {
+                      setTimeDraft(null);
+                      if (repeats && schedule) {
+                        configureSchedule.mutate({ dueTime: null });
+                        return;
+                      }
+                      save.mutate({ dueTime: null });
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
           </Section>
 
           <Section
