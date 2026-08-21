@@ -20,9 +20,9 @@ All TypeScript. React 19 with react-router and TanStack Query, Hono on the
 server, hand-written SQL over Postgres, no ORM.
 
 - `client/` — the app. `components/TaskBoard.tsx` is the one list component
-  every screen is a preset of; `components/TaskSheet.tsx` is the detail sheet,
-  `components/NewTask.tsx` the capture row, `components/Chrome.tsx` the top bar.
-  `screens/Tasks.tsx` chooses the preset. One stylesheet, `styles.css`.
+  every screen is a preset of, and `screens/` picks the preset. Everything else
+  under `components/` is a piece of chrome around it. One stylesheet,
+  `styles.css`.
 - `server/` — `routes.ts` is thin HTTP over `operations/`, which owns every
   database query.
 - `shared/` — code both sides import: the capture parser, recurrence maths, task
@@ -32,20 +32,14 @@ server, hand-written SQL over Postgres, no ORM.
 
 ## Commands
 
-`DATABASE_URL` must be set for anything that touches the database.
+The developer commands are the files in `scripts/` and the `npm run` entries in
+`package.json`. Read those for the current list rather than trusting one written
+down here.
 
-| | |
-|---|---|
-| `scripts/start` | build and serve the app in the background on `PORT`, default 8791 |
-| `scripts/stop` | stop it |
-| `scripts/test` | typecheck, then run the vitest suite |
-| `npm run dev` | the watch loop: API server plus vite with hot reload |
-| `npm run seed` | reset the database to known fixture data |
-| `npm run migrate` | apply any unapplied migrations in `sql/` |
-| `npm run shoot` | write screenshots of the app to `SHOT_DIR` |
-
-`npm start` is not a developer command. It runs the server in the foreground and
-is what the launchd agent on this machine invokes, so it must stay as it is.
+Two things about them are not obvious from the names. Anything that touches the
+database needs `DATABASE_URL` set. And `npm start` is not a developer command —
+it runs the server in the foreground and is what the launchd agent on this
+machine invokes, so it must stay as it is.
 
 ## The database
 
@@ -71,19 +65,20 @@ it, and it needs to go out with the deploy that needs it, not after.
 Coverage is deliberately narrow. Tests exist where being wrong would be silent
 and where a person would not notice for weeks: the capture parser, recurrence
 arithmetic, case folding, grouping. Rendering details and layout are not tested,
-because a screenshot settles those faster and a test asserting them just breaks
-on every change.
+because looking at the app settles those faster and a test asserting them just
+breaks on every change.
 
-This repository used to carry twenty-one Playwright scripts that drove the real
-app in a browser. They were removed. They took four minutes, and because they
-printed their observations rather than asserting them, a script could report a
-completely wrong value and still be counted as passing. Do not reintroduce that
-shape. If a change genuinely needs driving in a browser to believe it — drag and
-drop, swipe thresholds, sheet gestures — write a throwaway script outside the
-repository, or add one that makes real assertions and earns its runtime.
+**Nothing in this repository drives a browser, and that is deliberate.** It used
+to carry twenty-one Playwright scripts plus a screenshot script. They took four
+minutes, and because they printed their observations rather than asserting them,
+a script could report a completely wrong value and still be counted as passing.
+Do not add any of it back.
 
-`npm run shoot` is the tool for seeing what the app looks like. Screenshots at
-390x844 match the phone, which is the primary surface.
+To see the app, run it and look at it. If a change genuinely needs driving in a
+browser to believe it — drag and drop, swipe thresholds, sheet gestures — write
+a throwaway script somewhere outside the repository and delete it afterwards.
+Playwright is still a devDependency so that stays possible; nothing imports it.
+390x844 is the phone, which is the surface that matters.
 
 ## Deploying
 

@@ -5,15 +5,17 @@ import { useLocation, useParams } from "react-router-dom";
 import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
 import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
+import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
-import { TaskSheet } from "../components/TaskSheet.tsx";
+import { TaskInfo } from "../components/TaskInfo.tsx";
 import {
   asTitle,
   attributeText,
   dueDateFromLabel,
 } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
+import { useShortcuts } from "../useShortcuts.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
 import { asAttribute } from "@shared/attributes.ts";
@@ -43,6 +45,7 @@ export function Tasks() {
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
     scope.field ? `${scope.field}:${scope.value}` : "all",
     defaultView(scope),
@@ -61,6 +64,17 @@ export function Tasks() {
   const { data: tasks = [], isPending } = useQuery({
     queryKey: ["tasks", scope.field, scope.value],
     queryFn: () => fetchTasks(scope),
+  });
+
+  useShortcuts((event) => {
+    if (event.key === "c" && !archived && !finished) {
+      event.preventDefault();
+      setAdding(true);
+    }
+    if (event.key === "?") {
+      event.preventDefault();
+      setHelping(true);
+    }
   });
 
   const groups = buildGroups({
@@ -83,6 +97,7 @@ export function Tasks() {
         <p className="empty">{emptyFor(scope)}</p>
       ) : (
         <TaskBoard
+          key={pathname}
           groups={groups}
           density={view.density}
           layout={view.layout}
@@ -90,6 +105,7 @@ export function Tasks() {
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),
             rename: actions.rename,
+            remove: actions.remove,
             swipeLeft: actions.swipeLeft,
             swipeRight: actions.swipeRight,
           }}
@@ -110,11 +126,13 @@ export function Tasks() {
       )}
 
       {openTaskId !== null && (
-        <TaskSheet
+        <TaskInfo
           taskId={openTaskId}
           onClose={() => setOpenTaskId(null)}
         />
       )}
+
+      {helping && <Shortcuts onClose={() => setHelping(false)} />}
     </>
   );
 }
