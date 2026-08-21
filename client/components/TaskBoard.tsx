@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { SubtaskRow } from "./SubtaskRow.tsx";
 import {
   formatDueDate,
   formatDueTime,
@@ -38,6 +39,7 @@ export interface RowActions {
   toggle: (task: Task) => void;
   open: (task: Task) => void;
   rename: (task: Task, title: string) => void;
+  remove: (task: Task) => void;
   swipeLeft: (task: Task) => void;
   swipeRight: (task: Task) => void;
 }
@@ -472,16 +474,13 @@ function Row({
             <div>
               <div className="subtasks">
                 {subtasks.map((subtask) => (
-                  <button
-                    type="button"
+                  <SubtaskRow
                     key={subtask.id}
-                    className="subtask"
-                    data-done={isTerminal(subtask.state)}
-                    onClick={() => actions.toggle(subtask)}
-                  >
-                    <span className="subtask-tick" />
-                    <span>{subtask.title}</span>
-                  </button>
+                    subtask={subtask}
+                    onToggle={() => actions.toggle(subtask)}
+                    onRename={(next) => actions.rename(subtask, next)}
+                    onDelete={() => actions.remove(subtask)}
+                  />
                 ))}
               </div>
             </div>

@@ -1,14 +1,14 @@
 import { chromium, type Locator, type Page } from "playwright";
 
-async function openSheetFor(page: Page, row: Locator): Promise<void> {
+async function openTaskInfoFor(page: Page, row: Locator): Promise<void> {
   await row.locator(".task-title").first().click();
   await page.waitForTimeout(450);
   await page.locator('.task[data-editing="true"] .task-info').click();
   await page.waitForTimeout(600);
 }
 
-async function openFirstSheet(page: Page): Promise<void> {
-  await openSheetFor(page, page.locator(".task").first());
+async function openFirstTaskInfo(page: Page): Promise<void> {
+  await openTaskInfoFor(page, page.locator(".task").first());
 }
 
 const BASE_URL = process.env.APP_URL ?? "http://localhost:8790";
@@ -52,12 +52,12 @@ const SHOTS: Shot[] = [
     },
   },
   {
-    name: "sheet",
+    name: "info",
     path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
-      await openFirstSheet(page);
+      await openFirstTaskInfo(page);
     },
   },
   {
@@ -114,12 +114,12 @@ const SHOTS: Shot[] = [
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
-      await openSheetFor(
+      await openTaskInfoFor(
         page,
         page.locator(".task", { hasText: "10 pushups" }).first(),
       );
       await page
-        .locator(".sheet-every select")
+        .locator(".info-every select")
         .selectOption("weekly");
       await page.waitForTimeout(900);
       await page.locator(".weekday").nth(4).click();
@@ -178,12 +178,12 @@ const SHOTS: Shot[] = [
     },
   },
   {
-    name: "sheet-tags",
+    name: "info-tags",
     path: "/list/Programming",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
-      await openSheetFor(
+      await openTaskInfoFor(
         page,
         page
           .locator(".task", { hasText: "Refactor the auth" })
@@ -208,17 +208,17 @@ const SHOTS: Shot[] = [
     },
   },
   {
-    name: "sheet-sections",
+    name: "info-sections",
     path: "/list/Habits",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
-      await openSheetFor(
+      await openTaskInfoFor(
         page,
         page.locator(".task", { hasText: "10 pushups" }).first(),
       );
       await page
-        .locator(".sheet-section-head", { hasText: "Subtasks" })
+        .locator(".info-section-head", { hasText: "Subtasks" })
         .click();
       await page.waitForTimeout(250);
     },

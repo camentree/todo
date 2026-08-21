@@ -21,7 +21,7 @@ Cloudflare Access, running on the same machine and Postgres server as Parallax.
   ticking something never makes the list jump under your finger.
 - **Empty states state a fact.** "Nothing today." No congratulation.
 - **Archive is how things leave.** Deleting exists in exactly two places —
-  a subtask in the detail sheet, and a task already sitting in the Archive —
+  a subtask in the task info modal, and a task already sitting in the Archive —
   because a mistyped checklist line is worth removing rather than filing.
   Nothing else deletes.
 
@@ -121,7 +121,7 @@ added to.
 ## Editing
 
 **Tap a title to edit it in place.** While a row is being edited, an info button
-appears at its right, which opens the full detail sheet and hands focus back so
+appears at its right, which opens the full task info modal and hands focus back so
 the keyboard goes away. So renaming is one tap and everything else is two. No
 outline or box appears around the text — the blinking caret is the only signal
 that you are editing.
@@ -133,16 +133,19 @@ tags add to what is already there rather than replacing them. Words like
 editing contain one and fixing a typo should not silently move a due date. Any
 field you do not mention keeps its value.
 
-**Subtasks edit the same way.** In the detail sheet, tapping a subtask's tick
-ticks it and tapping its title renames it in place; swiping it left deletes it.
+**Subtasks edit the same way.** They are the same row as a task, indented under
+their parent on a list screen and listed in the task info modal: tapping the tick
+ticks it, tapping the title renames it in place, and swiping it left deletes it.
 
-The detail sheet holds the list, the stage, tags, repetition, the date and time,
+The task info modal holds the list, the stage, tags, repetition, the date and time,
 the note, subtasks, and comments. Tags there are chips you tap to remove, plus a
 field that suggests the other tags already used in that same list and accepts new
-ones.
+ones. The date and time each grow an × at the right edge of the field once they
+hold a value, because a phone's native picker gives no dependable way to empty
+one.
 
-**Closing the sheet** by dragging: pulling down on the grab handle at its top
-always closes it; pulling down anywhere else closes it once the sheet is scrolled
+**Closing the modal** by dragging: pulling down on the grab handle at its top
+always closes it; pulling down anywhere else closes it once the modal is scrolled
 to the top; dragging inside the note, the comments, or the subtasks scrolls those
 as usual. Tapping outside also closes it.
 
@@ -174,7 +177,7 @@ group and it changes list; into the Complete stage and it is marked done.
 A repeating task is a schedule that generates ordinary tasks with due dates. The
 schedule is anchored to the calendar, never counted from when you last finished.
 
-In the detail sheet, ticking Repeats turns the task you are looking at into the
+In the task info modal, ticking Repeats turns the task you are looking at into the
 repeating one — it does not create a copy alongside it. Then: how often (every N
 days, weeks, or months), which weekdays for a weekly schedule, and the date and
 time it starts. So "every two weeks on Tuesday and Thursday" is expressible.
@@ -195,7 +198,7 @@ one instance.
 |---|---|
 | Swipe a row left | archive it, or unarchive if already archived |
 | Swipe a row right | skip it if it repeats or is due today, otherwise hide it; delete it if it is already archived |
-| Swipe a subtask left in the detail sheet | delete it |
+| Swipe a subtask left | delete it |
 | Long-press and drag | reorder, including across groups |
 | Tap the circle | tick it off |
 | Tap the title | rename it |
@@ -272,9 +275,9 @@ design on two grounds. A clean sans for task text, a mono for tags and metadata.
 - **Selecting several tasks** to archive or skip in one go.
 - **Search.** The parser that would drive it already exists and is tested; there
   is no search field on any screen.
-- **A field for who a task belongs to.** Tags are editable in the sheet; the
+- **A field for who a task belongs to.** Tags are editable in the task info modal; the
   person is only settable by typing `@name` into a title.
-- **Editing a schedule's interval beyond the sheet's controls**, such as "the
+- **Editing a schedule's interval beyond the modal's controls**, such as "the
   last Friday of the month".
 - **Workout and physio plans**, the next kind of task. A session would be a task
   whose subtasks are exercises. That needs two nullable columns — what kind of

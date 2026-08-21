@@ -7,7 +7,7 @@ import { TopBar } from "../components/Chrome.tsx";
 import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
-import { TaskSheet } from "../components/TaskSheet.tsx";
+import { TaskInfo } from "../components/TaskInfo.tsx";
 import {
   asTitle,
   attributeText,
@@ -90,6 +90,7 @@ export function Tasks() {
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),
             rename: actions.rename,
+            remove: actions.remove,
             swipeLeft: actions.swipeLeft,
             swipeRight: actions.swipeRight,
           }}
@@ -110,7 +111,7 @@ export function Tasks() {
       )}
 
       {openTaskId !== null && (
-        <TaskSheet
+        <TaskInfo
           taskId={openTaskId}
           onClose={() => setOpenTaskId(null)}
         />

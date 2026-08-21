@@ -20,7 +20,7 @@ All TypeScript. React 19 with react-router and TanStack Query, Hono on the
 server, hand-written SQL over Postgres, no ORM.
 
 - `client/` — the app. `components/TaskBoard.tsx` is the one list component
-  every screen is a preset of; `components/TaskSheet.tsx` is the detail sheet,
+  every screen is a preset of; `components/TaskInfo.tsx` is the task info modal,
   `components/NewTask.tsx` the capture row, `components/Chrome.tsx` the top bar.
   `screens/Tasks.tsx` chooses the preset. One stylesheet, `styles.css`.
 - `server/` — `routes.ts` is thin HTTP over `operations/`, which owns every
@@ -79,7 +79,7 @@ app in a browser. They were removed. They took four minutes, and because they
 printed their observations rather than asserting them, a script could report a
 completely wrong value and still be counted as passing. Do not reintroduce that
 shape. If a change genuinely needs driving in a browser to believe it — drag and
-drop, swipe thresholds, sheet gestures — write a throwaway script outside the
+drop, swipe thresholds, modal gestures — write a throwaway script outside the
 repository, or add one that makes real assertions and earns its runtime.
 
 `npm run shoot` is the tool for seeing what the app looks like. Screenshots at
