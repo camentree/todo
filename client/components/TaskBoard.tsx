@@ -5,6 +5,7 @@ import {
   formatDueTime,
   isDueToday,
 } from "../format.ts";
+import { useShortcuts } from "../useShortcuts.ts";
 import { stageLabel } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
@@ -68,8 +69,66 @@ export function TaskBoard({
 }: TaskBoardProps) {
   const [lift, setLift] = useState<Lift | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [focusedId, setFocusedId] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const boardRef = useRef<HTMLDivElement>(null);
+
+  const shown = groups
+    .filter((group) => !collapsed.has(group.key))
+    .flatMap((group) => group.tasks);
+  const focusedIndex = shown.findIndex(
+    (task) => task.id === focusedId,
+  );
+
+  function focusAt(index: number): void {
+    const task =
+      shown[Math.min(Math.max(index, 0), shown.length - 1)];
+    if (!task) {
+      return;
+    }
+    setFocusedId(task.id);
+    boardRef.current
+      ?.querySelector(`[data-task="${task.id}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }
+
+  useShortcuts((event) => {
+    if (event.key === "Escape") {
+      setFocusedId(null);
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      focusAt(focusedIndex + (event.key === "ArrowDown" ? 1 : -1));
+      return;
+    }
+
+    const task = shown[focusedIndex];
+    if (!task) {
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      setEditingId(task.id);
+      return;
+    }
+    if (event.key === " ") {
+      event.preventDefault();
+      actions.toggle(task);
+      return;
+    }
+    if (isTerminal(task.state)) {
+      return;
+    }
+    if (event.key === "a") {
+      focusAt(focusedIndex + 1);
+      actions.swipeLeft(task);
+    }
+    if (event.key === "h" && task.archivedAt === null) {
+      focusAt(focusedIndex + 1);
+      actions.swipeRight(task);
+    }
+  });
 
   function placeAt(
     pointerX: number,
@@ -178,6 +237,8 @@ export function TaskBoard({
           actions={actions}
           editingId={editingId}
           onEditingIdChange={setEditingId}
+          focusedId={focusedId}
+          onFocusedIdChange={setFocusedId}
           collapsed={collapsed.has(group.key)}
           onToggleCollapsed={() =>
             setCollapsed((current) => {
@@ -219,6 +280,8 @@ function Group({
   lift,
   editingId,
   onEditingIdChange,
+  focusedId,
+  onFocusedIdChange,
   onLiftStart,
   onLiftMove,
   onLiftEnd,
@@ -230,6 +293,8 @@ function Group({
   lift: Lift | null;
   editingId: number | null;
   onEditingIdChange: (taskId: number | null) => void;
+  focusedId: number | null;
+  onFocusedIdChange: (taskId: number | null) => void;
   onLiftStart: (
     taskId: number,
     pointerX: number,
@@ -272,6 +337,8 @@ function Group({
                 editing={editingId === task.id}
                 onEditStart={() => onEditingIdChange(task.id)}
                 onEditEnd={() => onEditingIdChange(null)}
+                focused={focusedId === task.id}
+                onFocus={() => onFocusedIdChange(task.id)}
                 onLiftStart={onLiftStart}
                 onLiftMove={onLiftMove}
                 onLiftEnd={onLiftEnd}
@@ -297,6 +364,8 @@ function Row({
   editing,
   onEditStart,
   onEditEnd,
+  focused,
+  onFocus,
   onLiftStart,
   onLiftMove,
   onLiftEnd,
@@ -309,6 +378,8 @@ function Row({
   editing: boolean;
   onEditStart: () => void;
   onEditEnd: () => void;
+  focused: boolean;
+  onFocus: () => void;
   onLiftStart: (
     taskId: number,
     pointerX: number,
@@ -349,6 +420,7 @@ function Row({
       <div
         className="task-shell"
         data-row="true"
+        data-task={task.id}
         data-group={group.key}
         data-index={index}
         data-lifting={lifting}
@@ -372,8 +444,10 @@ function Row({
             ref={gesture.ref}
             data-done={isTerminal(task.state)}
             data-editing={editing}
+            data-focused={focused}
             data-swiping={gesture.swiping}
             style={{ transform: `translateX(${gesture.offset}px)` }}
+            onMouseEnter={onFocus}
             onPointerDown={gesture.down}
             onPointerMove={gesture.move}
             onPointerUp={gesture.up}

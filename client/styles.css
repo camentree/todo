@@ -1233,7 +1233,7 @@ a {
 }
 
 @media (hover: hover) {
-  .task:hover {
+  .task[data-focused="true"] {
     background: var(--hover);
     border-radius: 9px;
   }
@@ -1243,7 +1243,7 @@ a {
     visibility: hidden;
   }
 
-  .task:hover .task-info,
+  .task[data-focused="true"] .task-info,
   .task[data-editing="true"] .task-info {
     visibility: visible;
   }
