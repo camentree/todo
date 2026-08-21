@@ -20,9 +20,9 @@ All TypeScript. React 19 with react-router and TanStack Query, Hono on the
 server, hand-written SQL over Postgres, no ORM.
 
 - `client/` — the app. `components/TaskBoard.tsx` is the one list component
-  every screen is a preset of; `components/TaskInfo.tsx` is the task info modal,
-  `components/NewTask.tsx` the capture row, `components/Chrome.tsx` the top bar.
-  `screens/Tasks.tsx` chooses the preset. One stylesheet, `styles.css`.
+  every screen is a preset of, and `screens/` picks the preset. Everything else
+  under `components/` is a piece of chrome around it. One stylesheet,
+  `styles.css`.
 - `server/` — `routes.ts` is thin HTTP over `operations/`, which owns every
   database query.
 - `shared/` — code both sides import: the capture parser, recurrence maths, task
@@ -32,19 +32,14 @@ server, hand-written SQL over Postgres, no ORM.
 
 ## Commands
 
-`DATABASE_URL` must be set for anything that touches the database.
+The developer commands are the files in `scripts/` and the `npm run` entries in
+`package.json`. Read those for the current list rather than trusting one written
+down here.
 
-| | |
-|---|---|
-| `scripts/start` | build and serve the app in the background on `PORT`, default 8791 |
-| `scripts/stop` | stop it |
-| `scripts/test` | typecheck, then run the vitest suite |
-| `npm run dev` | the watch loop: API server plus vite with hot reload |
-| `npm run seed` | reset the database to known fixture data |
-| `npm run migrate` | apply any unapplied migrations in `sql/` |
-
-`npm start` is not a developer command. It runs the server in the foreground and
-is what the launchd agent on this machine invokes, so it must stay as it is.
+Two things about them are not obvious from the names. Anything that touches the
+database needs `DATABASE_URL` set. And `npm start` is not a developer command —
+it runs the server in the foreground and is what the launchd agent on this
+machine invokes, so it must stay as it is.
 
 ## The database
 
