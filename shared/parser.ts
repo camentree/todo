@@ -87,10 +87,12 @@ export function parse({
   input,
   today,
   dismissed = [],
+  search = false,
 }: {
   input: string;
   today: Date;
   dismissed?: string[];
+  search?: boolean;
 }): ParseResult {
   const words = input.split(/\s+/).filter((word) => word.length > 0);
   const dismissedTexts = new Set(
@@ -102,10 +104,18 @@ export function parse({
   let index = 0;
 
   while (index < words.length) {
+    const word = wordAt(words, index);
+    if (word.startsWith("\\") && word.length > 1) {
+      leftover.push(word.slice(1));
+      index += 1;
+      continue;
+    }
+
     const match = matchAt({
       words: words,
       index: index,
       today: today,
+      search: search,
     });
     if (
       match &&
@@ -115,10 +125,7 @@ export function parse({
       index += match.consumed;
       continue;
     }
-    const word = words[index];
-    if (word !== undefined) {
-      leftover.push(word);
-    }
+    leftover.push(word);
     index += 1;
   }
 
@@ -129,15 +136,16 @@ function matchAt({
   words,
   index,
   today,
+  search,
 }: {
   words: string[];
   index: number;
   today: Date;
+  search: boolean;
 }): Match | null {
   const matchers = [
     matchSigil,
-    matchQuotedPhrase,
-    matchSearchFlag,
+    ...(search ? [matchQuotedPhrase, matchSearchFlag] : []),
     matchRecurrence,
     matchRelativeDate,
     matchWeekday,
@@ -172,7 +180,8 @@ function wordAt(words: string[], index: number): string {
 function bareWordAt(words: string[], index: number): string {
   return wordAt(words, index)
     .toLowerCase()
-    .replace(/[,.;:]+$/, "");
+    .replace(/^[(\[]+/, "")
+    .replace(/[)\]!?,.;:]+$/, "");
 }
 
 function matchSigil({ words, index }: MatcherInput): Match | null {
@@ -275,6 +284,12 @@ function matchRecurrence({
       weekdays: [],
       dayOfMonth: null,
     },
+    everyday: {
+      frequency: "daily",
+      repeatEvery: 1,
+      weekdays: [],
+      dayOfMonth: null,
+    },
     weekly: {
       frequency: "weekly",
       repeatEvery: 1,
@@ -304,8 +319,8 @@ function matchRecurrence({
     return null;
   }
 
-  const second = wordAt(words, index + 1).toLowerCase();
-  const unitAfterCount = wordAt(words, index + 2).toLowerCase();
+  const second = bareWordAt(words, index + 1);
+  const unitAfterCount = bareWordAt(words, index + 2);
   const count = Number.parseInt(second, 10);
 
   if (!Number.isNaN(count) && count > 0) {
@@ -348,10 +363,7 @@ function matchRecurrence({
   const weekdays: number[] = [];
   let cursor = index + 1;
   while (cursor < words.length) {
-    const candidate = wordAt(words, cursor)
-      .toLowerCase()
-      .replace(/,$/, "");
-    const weekday = WEEKDAYS[candidate];
+    const weekday = WEEKDAYS[bareWordAt(words, cursor)];
     if (weekday === undefined) {
       break;
     }
@@ -408,8 +420,8 @@ function matchRelativeDate({
   }
 
   if (word === "in") {
-    const count = Number.parseInt(wordAt(words, index + 1), 10);
-    const unit = wordAt(words, index + 2).toLowerCase();
+    const count = Number.parseInt(bareWordAt(words, index + 1), 10);
+    const unit = bareWordAt(words, index + 2);
     if (Number.isNaN(count) || count <= 0) {
       return null;
     }
@@ -461,10 +473,8 @@ function matchMonthAndDay({
   index,
   today,
 }: MatcherInput): Match | null {
-  const first = wordAt(words, index).toLowerCase().replace(/,$/, "");
-  const second = wordAt(words, index + 1)
-    .toLowerCase()
-    .replace(/,$/, "");
+  const first = bareWordAt(words, index);
+  const second = bareWordAt(words, index + 1);
 
   const monthFirst = MONTHS[first];
   const dayFromSecond = Number.parseInt(second, 10);
@@ -525,7 +535,7 @@ function nextOccurrenceOf({
 }
 
 function matchIsoDate({ words, index }: MatcherInput): Match | null {
-  const word = wordAt(words, index);
+  const word = bareWordAt(words, index);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(word)) {
     return null;
   }
@@ -533,13 +543,17 @@ function matchIsoDate({ words, index }: MatcherInput): Match | null {
   if (Number.isNaN(date.getTime())) {
     return null;
   }
-  return dueDateMatch({ text: word, date: date, consumed: 1 });
+  return dueDateMatch({
+    text: wordAt(words, index),
+    date: date,
+    consumed: 1,
+  });
 }
 
 function matchTime({ words, index }: MatcherInput): Match | null {
-  const isAt = wordAt(words, index).toLowerCase() === "at";
+  const isAt = bareWordAt(words, index) === "at";
   const timeIndex = isAt ? index + 1 : index;
-  const word = wordAt(words, timeIndex).toLowerCase();
+  const word = bareWordAt(words, timeIndex);
 
   const meridiem = word.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/);
   if (meridiem) {
