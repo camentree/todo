@@ -107,11 +107,12 @@ export function parse({
       index: index,
       today: today,
     });
-    if (
-      match &&
-      !dismissedTexts.has(match.token.text.toLowerCase())
-    ) {
-      tokens.push(match.token);
+    if (match) {
+      if (!dismissedTexts.has(match.token.text.toLowerCase())) {
+        tokens.push(match.token);
+      } else {
+        leftover.push(...words.slice(index, index + match.consumed));
+      }
       index += match.consumed;
       continue;
     }
@@ -624,26 +625,37 @@ export function tagsIn(tokens: ParsedToken[]): string[] {
 }
 
 export function whoIn(tokens: ParsedToken[]): string | null {
-  return tokens.filter((token) => token.kind === "who").at(-1)?.value ?? null;
+  return (
+    tokens.filter((token) => token.kind === "who").at(-1)?.value ??
+    null
+  );
 }
 
 export function listIn(tokens: ParsedToken[]): string | null {
-  return tokens.filter((token) => token.kind === "list").at(-1)?.value ?? null;
+  return (
+    tokens.filter((token) => token.kind === "list").at(-1)?.value ??
+    null
+  );
 }
 
 export function stageIn(tokens: ParsedToken[]): TaskStage | null {
-  return tokens.filter((token) => token.kind === "stage").at(-1)?.value ?? null;
+  return (
+    tokens.filter((token) => token.kind === "stage").at(-1)?.value ??
+    null
+  );
 }
 
 export function dueDateIn(tokens: ParsedToken[]): string | null {
   return (
-    tokens.filter((token) => token.kind === "dueDate").at(-1)?.value ?? null
+    tokens.filter((token) => token.kind === "dueDate").at(-1)
+      ?.value ?? null
   );
 }
 
 export function dueTimeIn(tokens: ParsedToken[]): string | null {
   return (
-    tokens.filter((token) => token.kind === "dueTime").at(-1)?.value ?? null
+    tokens.filter((token) => token.kind === "dueTime").at(-1)
+      ?.value ?? null
   );
 }
 
@@ -651,6 +663,7 @@ export function recurrenceIn(
   tokens: ParsedToken[],
 ): RecurrenceValue | null {
   return (
-    tokens.filter((token) => token.kind === "recurrence").at(-1)?.value ?? null
+    tokens.filter((token) => token.kind === "recurrence").at(-1)
+      ?.value ?? null
   );
 }
