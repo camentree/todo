@@ -24,7 +24,7 @@ export function buildGroups({
     settling: settling,
   });
 
-  if (view.breakUpBy === "none") {
+  if (view.breakUpBy === "none" || sorted.length === 0) {
     return [{ key: "all", label: "", tasks: sorted }];
   }
 
@@ -34,6 +34,7 @@ export function buildGroups({
         key: `list-${list}`,
         label: list,
         list: list,
+        prefill: `/${list}`,
         tasks: sorted.filter((task) => task.list === list),
       }))
       .filter((group) => group.tasks.length > 0);
@@ -44,6 +45,7 @@ export function buildGroups({
       key: `stage-${stage}`,
       label: stageLabel(stage),
       stage: stage,
+      prefill: `!${stage}`,
       omitFromMeta: "stage" as const,
       tasks: sorted.filter((task) => stageOf(task) === stage),
     })).filter((group) => group.tasks.length > 0);
@@ -51,6 +53,7 @@ export function buildGroups({
 
   const buckets = new Map<string, Task[]>();
   const rank = new Map<string, string | null>();
+  const prefill = new Map<string, string | undefined>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
@@ -64,6 +67,14 @@ export function buildGroups({
         rank.set(
           label,
           rankFor({
+            task: task,
+            breakUpBy: view.breakUpBy,
+            label: label,
+          }),
+        );
+        prefill.set(
+          label,
+          prefillFor({
             task: task,
             breakUpBy: view.breakUpBy,
             label: label,
@@ -89,9 +100,28 @@ export function buildGroups({
   return entries.map(([label, grouped]) => ({
     key: `${view.breakUpBy}-${label}`,
     label: label,
+    prefill: prefill.get(label),
     omitFromMeta: view.breakUpBy,
     tasks: grouped,
   }));
+}
+
+function prefillFor({
+  task,
+  breakUpBy,
+  label,
+}: {
+  task: Task;
+  breakUpBy: ViewPreference["breakUpBy"];
+  label: string;
+}): string | undefined {
+  if (breakUpBy === "due_date") {
+    return task.dueDate ?? undefined;
+  }
+  if (breakUpBy === "who") {
+    return task.who ? `@${task.who}` : undefined;
+  }
+  return task.tags.includes(label) ? `#${label}` : undefined;
 }
 
 function stageOf(task: Task): TaskStage {

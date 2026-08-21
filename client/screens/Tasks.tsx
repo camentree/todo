@@ -4,7 +4,10 @@ import { useParams } from "react-router-dom";
 
 import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
-import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
+import {
+  AddButton,
+  focusLastCaptureRow,
+} from "../components/NewTask.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import { TaskSheet } from "../components/TaskSheet.tsx";
 import { buildGroups } from "../grouping.ts";
@@ -20,7 +23,6 @@ export function Tasks({ scope }: { scope: Scope }) {
   const key = scope === "list" ? `list:${list}` : scope;
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
-  const [adding, setAdding] = useState(false);
   const [view, changeView] = useViewPreference(
     key,
     defaultView(scope),
@@ -48,6 +50,15 @@ export function Tasks({ scope }: { scope: Scope }) {
     settling: actions.settling,
   });
 
+  const capturePrefix =
+    scope === "archive"
+      ? null
+      : scope === "today" && view.breakUpBy !== "due_date"
+        ? "today"
+        : scope === "list" && view.breakUpBy !== "list"
+          ? `/${list}`
+          : "";
+
   return (
     <>
       <TopBar
@@ -56,34 +67,30 @@ export function Tasks({ scope }: { scope: Scope }) {
         onViewChange={changeView}
       />
 
-      {isPending ? null : tasks.length === 0 && !adding ? (
-        <p className="empty">{emptyFor(scope)}</p>
-      ) : (
-        <TaskBoard
-          groups={groups}
-          density={view.density}
-          layout={view.layout}
-          actions={{
-            toggle: actions.toggleTask,
-            open: (task) => setOpenTaskId(task.id),
-            rename: actions.rename,
-            swipeLeft: actions.swipeLeft,
-            swipeRight: actions.swipeRight,
-          }}
-          onMove={actions.move}
-        />
+      {isPending ? null : (
+        <>
+          {tasks.length === 0 && (
+            <p className="empty">{emptyFor(scope)}</p>
+          )}
+          <TaskBoard
+            groups={groups}
+            density={view.density}
+            layout={view.layout}
+            capturePrefix={capturePrefix}
+            actions={{
+              toggle: actions.toggleTask,
+              open: (task) => setOpenTaskId(task.id),
+              rename: actions.rename,
+              swipeLeft: actions.swipeLeft,
+              swipeRight: actions.swipeRight,
+            }}
+            onMove={actions.move}
+          />
+        </>
       )}
 
-      {adding && (
-        <NewTaskRow
-          list={list}
-          density={view.density}
-          onClose={() => setAdding(false)}
-        />
-      )}
-
-      {scope !== "archive" && !adding && (
-        <AddButton onClick={() => setAdding(true)} />
+      {scope !== "archive" && (
+        <AddButton onClick={focusLastCaptureRow} />
       )}
 
       {openTaskId !== null && (

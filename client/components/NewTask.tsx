@@ -3,11 +3,10 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api.ts";
 import { todayAsDateString } from "../format.ts";
-import type { Density } from "@shared/types.ts";
 import {
   dueDateIn,
   dueTimeIn,
@@ -22,6 +21,7 @@ import {
 
 const GUESSED_KINDS = new Set(["dueDate", "dueTime", "recurrence"]);
 const LAST_LIST_KEY = "todo.lastList";
+const MOST_SUGGESTIONS = 5;
 
 function rememberList(list: string): void {
   window.localStorage.setItem(LAST_LIST_KEY, list);
@@ -31,17 +31,19 @@ function lastUsedList(): string | null {
   return window.localStorage.getItem(LAST_LIST_KEY);
 }
 
-export function NewTaskRow({
-  list,
-  density,
-  onClose,
-}: {
-  list?: string;
-  density: Density;
-  onClose: () => void;
-}) {
+export function NewTaskRow({ prefill }: { prefill: string }) {
   const [input, setInput] = useState("");
+  const [note, setNote] = useState("");
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const [active, setActive] = useState(false);
+  const [caret, setCaret] = useState(0);
+  const [suppressed, setSuppressed] = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
+  const [pendingCaret, setPendingCaret] = useState<number | null>(
+    null,
+  );
+  const titleRef = useRef<HTMLInputElement>(null);
+  const closeAfterSave = useRef(false);
   const queryClient = useQueryClient();
 
   const { data: lists = [] } = useQuery({
@@ -59,11 +61,41 @@ export function NewTaskRow({
     [input, dismissed],
   );
 
+  const namedList = listIn(parsed.tokens);
+
+  const { data: knownTags = [] } = useQuery({
+    queryKey: ["tags", namedList],
+    queryFn: () => api.tags(namedList ?? undefined),
+    enabled: active,
+  });
+  const { data: knownWho = [] } = useQuery({
+    queryKey: ["who", namedList],
+    queryFn: () => api.knownWho(namedList ?? undefined),
+    enabled: active,
+  });
+
+  const opening = suppressed
+    ? null
+    : sigilBefore({ input: input, caret: caret });
+  const matches = suggestionsFor({
+    opening: opening,
+    lists: lists,
+    knownTags: knownTags,
+    knownWho: knownWho,
+  });
+
   const targetList = resolveList({
     tokens: parsed.tokens,
     lists: lists,
-    list: list,
   });
+
+  useEffect(() => {
+    if (pendingCaret === null) {
+      return;
+    }
+    titleRef.current?.setSelectionRange(pendingCaret, pendingCaret);
+    setPendingCaret(null);
+  }, [pendingCaret]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -81,6 +113,7 @@ export function NewTaskRow({
         return api.createRecurring({
           list: targetList,
           title: parsed.title,
+          note: note.trim() || null,
           tags: tags,
           who: who,
           frequency: recurrence.frequency,
@@ -95,6 +128,7 @@ export function NewTaskRow({
       return api.createTask({
         list: targetList,
         title: parsed.title,
+        note: note.trim() || null,
         tags: tags,
         who: who ?? null,
         dueDate: dueDate ?? null,
@@ -106,69 +140,212 @@ export function NewTaskRow({
       if (targetList) {
         rememberList(targetList);
       }
-      setInput("");
-      setDismissed([]);
       queryClient.invalidateQueries();
+      setNote("");
+      setDismissed([]);
+      setSuppressed(false);
+      if (closeAfterSave.current) {
+        closeAfterSave.current = false;
+        setInput("");
+        titleRef.current?.blur();
+        return;
+      }
+      moveTo(prefill);
     },
   });
 
   const canSubmit =
     parsed.title.trim().length > 0 && Boolean(targetList);
 
+  function moveTo(next: string): void {
+    setInput(next);
+    setCaret(next.length);
+    setPendingCaret(next.length);
+  }
+
+  function submit(): void {
+    if (canSubmit) {
+      create.mutate();
+    }
+  }
+
+  function saveAndClose(): void {
+    closeAfterSave.current = true;
+    submit();
+  }
+
+  function discard(): void {
+    setInput("");
+    setNote("");
+    setDismissed([]);
+    titleRef.current?.blur();
+  }
+
+  function pick(candidate: string): void {
+    if (!opening) {
+      return;
+    }
+    const tail = input.slice(caret);
+    const head = `${input.slice(0, opening.start)}${opening.sigil}${candidate} `;
+    setInput(`${head}${tail}`);
+    setCaret(head.length);
+    setPendingCaret(head.length);
+    setHighlighted(0);
+  }
+
   return (
-    <div className="tasks" data-density={density}>
-      <form
-        className="task new-task"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (canSubmit) {
-            create.mutate();
+    <form
+      className="task new-task"
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+      onFocus={() => setActive(true)}
+      onBlur={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget)) {
+          return;
+        }
+        setActive(false);
+        setSuppressed(false);
+        if (
+          parsed.title.trim().length === 0 &&
+          note.trim().length === 0
+        ) {
+          setInput("");
+          setDismissed([]);
+          setNote("");
+        }
+      }}
+    >
+      <div className="task-main">
+        <span className="task-tick" data-state="to_do" />
+        <input
+          ref={titleRef}
+          className="task-title editing"
+          value={input}
+          onFocus={() => {
+            if (input.length === 0) {
+              moveTo(prefill);
+            }
+          }}
+          onChange={(event) => {
+            setInput(event.target.value);
+            setCaret(event.target.selectionStart ?? 0);
+            setSuppressed(false);
+            setHighlighted(0);
+          }}
+          onSelect={(event) =>
+            setCaret(event.currentTarget.selectionStart ?? 0)
           }
-        }}
-      >
-        <div className="task-main">
-          <span className="task-tick" data-state="to_do" />
-          <input
-            className="task-title editing"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onBlur={() => {
-              if (input.trim().length === 0) {
-                onClose();
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              (event.metaKey || event.ctrlKey)
+            ) {
+              event.preventDefault();
+              saveAndClose();
+              return;
+            }
+            if (matches.length > 0) {
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setHighlighted((highlighted + 1) % matches.length);
+                return;
               }
-            }}
-            onKeyDown={(event) => {
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setHighlighted(
+                  (highlighted + matches.length - 1) % matches.length,
+                );
+                return;
+              }
+              if (event.key === "Enter") {
+                event.preventDefault();
+                pick(matches[highlighted] ?? "");
+                return;
+              }
               if (event.key === "Escape") {
-                onClose();
+                setSuppressed(true);
+                return;
               }
-            }}
-            placeholder="New task"
-            aria-label="New task"
-            enterKeyHint="done"
-            autoFocus
-          />
+            }
+            if (event.key === "Escape") {
+              discard();
+            }
+          }}
+          placeholder="New task"
+          aria-label="New task"
+          enterKeyHint="done"
+        />
+      </div>
+
+      {matches.length > 0 && (
+        <div className="capture-suggestions">
+          {matches.map((candidate, index) => (
+            <button
+              type="button"
+              key={candidate}
+              tabIndex={-1}
+              className="capture-suggestion"
+              data-on={index === highlighted}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => pick(candidate)}
+            >
+              {opening?.sigil}
+              {candidate}
+            </button>
+          ))}
         </div>
-        {parsed.tokens.length > 0 && (
-          <span className="task-meta">
-            {parsed.tokens.map((token) => (
-              <button
-                type="button"
-                key={`${token.kind}-${token.text}`}
-                className="capture-chip"
-                data-guess={GUESSED_KINDS.has(token.kind)}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() =>
-                  setDismissed([...dismissed, token.text])
-                }
-                title="Put this back in the title"
-              >
-                {describe(token)}
-              </button>
-            ))}
-          </span>
-        )}
-      </form>
-    </div>
+      )}
+
+      {parsed.tokens.length > 0 && (
+        <span className="task-meta">
+          {parsed.tokens.map((token) => (
+            <button
+              type="button"
+              key={`${token.kind}-${token.text}`}
+              tabIndex={-1}
+              className="capture-chip"
+              data-guess={GUESSED_KINDS.has(token.kind)}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setDismissed([...dismissed, token.text])}
+              title="Put this back in the title"
+            >
+              {describe(token)}
+            </button>
+          ))}
+        </span>
+      )}
+
+      {(active || note.length > 0) && (
+        <textarea
+          className="capture-note"
+          rows={1}
+          value={note}
+          placeholder="Notes"
+          aria-label="Notes"
+          onChange={(event) => setNote(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              (event.metaKey || event.ctrlKey)
+            ) {
+              event.preventDefault();
+              saveAndClose();
+              return;
+            }
+            if (event.key === "Tab" && !event.shiftKey) {
+              event.preventDefault();
+              titleRef.current?.focus();
+              return;
+            }
+            if (event.key === "Escape") {
+              discard();
+            }
+          }}
+        />
+      )}
+    </form>
   );
 }
 
@@ -187,6 +364,72 @@ export function AddButton({ onClick }: { onClick: () => void }) {
       </div>
     </div>
   );
+}
+
+export function focusLastCaptureRow(): void {
+  const rows = document.querySelectorAll<HTMLInputElement>(
+    ".new-task .task-title",
+  );
+  const last = rows[rows.length - 1];
+  last?.scrollIntoView({ block: "center", behavior: "smooth" });
+  last?.focus({ preventScroll: true });
+}
+
+interface Opening {
+  sigil: string;
+  typed: string;
+  start: number;
+}
+
+function sigilBefore({
+  input,
+  caret,
+}: {
+  input: string;
+  caret: number;
+}): Opening | null {
+  const before = input.slice(0, caret);
+  const found = before.match(/(?:^|\s)([#@/])(\S*)$/);
+  const sigil = found?.[1];
+  const typed = found?.[2];
+  if (!sigil || typed === undefined) {
+    return null;
+  }
+  return {
+    sigil: sigil,
+    typed: typed.toLowerCase(),
+    start: before.length - typed.length - 1,
+  };
+}
+
+function suggestionsFor({
+  opening,
+  lists,
+  knownTags,
+  knownWho,
+}: {
+  opening: Opening | null;
+  lists: string[];
+  knownTags: string[];
+  knownWho: string[];
+}): string[] {
+  if (!opening) {
+    return [];
+  }
+  const candidates =
+    opening.sigil === "/"
+      ? lists
+      : opening.sigil === "#"
+        ? knownTags
+        : knownWho;
+
+  return candidates
+    .filter(
+      (candidate) =>
+        candidate.toLowerCase().startsWith(opening.typed) &&
+        candidate.toLowerCase() !== opening.typed,
+    )
+    .slice(0, MOST_SUGGESTIONS);
 }
 
 function describe(token: ParsedToken): string {
@@ -213,11 +456,9 @@ function describe(token: ParsedToken): string {
 function resolveList({
   tokens,
   lists,
-  list,
 }: {
   tokens: ParsedToken[];
   lists: string[];
-  list: string | undefined;
 }): string | null {
   const named = listIn(tokens);
   if (named) {
@@ -228,7 +469,6 @@ function resolveList({
   }
   const remembered = lastUsedList();
   return (
-    list ??
     (remembered && lists.includes(remembered) ? remembered : null) ??
     lists[0] ??
     null
