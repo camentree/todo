@@ -5,7 +5,7 @@ import * as events from "./operations/events.ts";
 import * as lists from "./operations/lists.ts";
 import * as recurring from "./operations/recurring.ts";
 import * as tasks from "./operations/tasks.ts";
-import { asStage } from "@shared/stages.ts";
+import { asAttribute } from "@shared/attributes.ts";
 import { TASK_STATES } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
 
@@ -45,36 +45,21 @@ api.get("/who", async (context) => {
   return context.json(await lists.knownWho());
 });
 
-api.get("/today", async (context) => {
-  await recurring.generateDue();
-  return context.json(await tasks.today());
-});
-
 api.get("/tasks", async (context) => {
   await recurring.generateDue();
   const query = context.req.query();
-  const states = query.states
-    ? query.states.split(",").map(taskState)
-    : undefined;
+  const attribute = asAttribute(query.attribute);
+
+  if (query.attribute && !attribute) {
+    throw new Error(`${query.attribute} is not an attribute`);
+  }
 
   return context.json(
     await tasks.query({
-      list: query.list || undefined,
-      stage: asStage(query.stage) ?? undefined,
-      states: states,
-      search: query.search || undefined,
-      tags: query.tags ? query.tags.split(",") : undefined,
-      who: query.who || undefined,
-      dueOnOrBefore: query.dueOnOrBefore || undefined,
-      overdue: query.overdue === "true",
-      hasNoDueDate: query.hasNoDueDate === "true",
-      includeArchived: query.includeArchived === "true",
+      attribute: attribute,
+      value: query.value ?? "",
     }),
   );
-});
-
-api.get("/archive", async (context) => {
-  return context.json(await tasks.archived());
 });
 
 api.get("/tasks/:id", async (context) => {

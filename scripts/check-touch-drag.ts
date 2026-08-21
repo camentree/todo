@@ -63,13 +63,16 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 page.on("console", (message) => {
   if (message.type() === "error")
     console.log("  console:", message.text());
 });
 
-await page.goto(`${BASE_URL}/list/Personal`, { waitUntil: "networkidle" });
+await page.goto(`${BASE_URL}/list/Personal`, {
+  waitUntil: "networkidle",
+});
 
 console.log("TOUCH DRAG (how a phone actually does it)");
 console.log(

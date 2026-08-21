@@ -1,7 +1,7 @@
 {
   "name": "Todo",
   "short_name": "Todo",
-  "start_url": "/",
+  "start_url": "/due_date/today",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f5f8f6",

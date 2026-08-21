@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { chromium, devices } from "playwright";
 
 import type { Task } from "@shared/types.ts";
@@ -5,7 +6,9 @@ import type { Task } from "@shared/types.ts";
 const BASE_URL = process.env.APP_URL ?? "http://localhost:8790";
 
 async function titlesInToday(): Promise<string[]> {
-  const response = await fetch(`${BASE_URL}/api/today`);
+  const response = await fetch(
+    `${BASE_URL}/api/tasks?attribute=due_date&value=${format(new Date(), "yyyy-MM-dd")}`,
+  );
   const tasks = (await response.json()) as Task[];
   return tasks.map((task) => task.title);
 }
@@ -16,6 +19,7 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 
 await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
@@ -52,7 +56,7 @@ console.log(
 console.log("\nOPENING INFO FROM THE ROW");
 await page.locator(".task-title").first().click();
 await page.waitForTimeout(400);
-await page.locator(".task-info").click();
+await page.locator('.task[data-editing="true"] .task-info').click();
 await page.waitForTimeout(700);
 console.log(
   "  sheet opened:",
