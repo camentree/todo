@@ -24,7 +24,7 @@ Cloudflare Access, running on the same machine and Postgres server as Parallax.
 
 ## Screens
 
-Four scopes, one screen component, chosen from a menu that drops out of the
+Six scopes, one screen component, chosen from a menu that drops out of the
 title:
 
 | Scope | Shows |
@@ -32,7 +32,12 @@ title:
 | Today | anything due today or earlier, plus anything with an unread comment |
 | To Do | everything open, whatever its date |
 | A list | one list, everything open |
+| A tag | everything open carrying that tag |
+| A person | everything open belonging to that person |
 | Archive | everything archived |
+
+The scope menu offers the lists; a tag or a person screen is reached by tapping
+that tag or that name under a row.
 
 The title itself opens that menu. Beside it sit the date, a control for
 grouping and sorting, and a bell. Each of those three opens a small menu
@@ -112,9 +117,15 @@ as usual. Tapping outside also closes it.
 ## Grouping, sorting, ordering
 
 Tasks can be grouped by list, stage, tag, due date, or who they belong to, and
-sorted by hand, due date, title, or creation date. **A group heading does not
-repeat itself in its rows** — group by stage and the rows stop showing their
-stage.
+sorted by hand, due date, title, or creation date.
+
+**A row carries every attribute its task has**, under the title: its tags, its
+list, who it belongs to, its date and time, whether it repeats, and its stage.
+Tapping the list, a tag, or the person goes to the screen for that one.
+
+**A heading does not repeat itself in its rows** — group by stage and the rows
+stop showing their stage, and the same goes for the screen's own filter, so a
+list screen's rows do not each name that list.
 
 Groups collapse by tapping their heading.
 

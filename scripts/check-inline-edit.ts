@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { chromium, devices } from "playwright";
 
 import type { Task } from "@shared/types.ts";
@@ -5,7 +6,9 @@ import type { Task } from "@shared/types.ts";
 const BASE_URL = process.env.APP_URL ?? "http://localhost:8790";
 
 async function titlesInToday(): Promise<string[]> {
-  const response = await fetch(`${BASE_URL}/api/today`);
+  const response = await fetch(
+    `${BASE_URL}/api/tasks?attribute=due_date&value=${format(new Date(), "yyyy-MM-dd")}`,
+  );
   const tasks = (await response.json()) as Task[];
   return tasks.map((task) => task.title);
 }

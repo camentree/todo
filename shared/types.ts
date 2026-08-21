@@ -90,17 +90,3 @@ export interface ViewPreference {
   density: Density;
   layout: Layout;
 }
-
-export interface TaskQuery {
-  list?: string;
-  stage?: TaskStage;
-  states?: TaskState[];
-  dueOnOrBefore?: string;
-  includeArchived?: boolean;
-  recurringTaskId?: number;
-  search?: string;
-  tags?: string[];
-  who?: string;
-  hasNoDueDate?: boolean;
-  overdue?: boolean;
-}

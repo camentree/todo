@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { chromium, devices } from "playwright";
 
 import type { Task } from "@shared/types.ts";
@@ -11,7 +12,9 @@ async function taskById(id: number): Promise<Task> {
 }
 
 const today = (await (
-  await fetch(`${BASE_URL}/api/today`)
+  await fetch(
+    `${BASE_URL}/api/tasks?attribute=due_date&value=${format(new Date(), "yyyy-MM-dd")}`,
+  )
 ).json()) as Task[];
 const commented = today.find((task) => task.commentCount > 0);
 
@@ -59,7 +62,9 @@ await fetch(`${BASE_URL}/api/tasks/archive`, {
     ids: today.slice(0, 3).map((task) => task.id),
   }),
 });
-await page.goto(`${BASE_URL}/archive`, { waitUntil: "networkidle" });
+await page.goto(`${BASE_URL}/archived/true`, {
+  waitUntil: "networkidle",
+});
 await page.waitForTimeout(500);
 
 const rows = await page.locator(".task").count();
