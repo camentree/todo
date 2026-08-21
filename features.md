@@ -40,10 +40,13 @@ then it stays on the screen it was ticked off on, struck through. Ticking its
 circle again marks it To Do and it leaves Done. There is no add button on Done
 or on Archive.
 
-**Each screen remembers its own grouping, sorting, spacing and layout.** So
-Today can stay airy while To Do stays compact. All list screens share one
-preference between them, because a list is free text with no identity of its
-own. The defaults are Today airy and sorted by due date, To Do compact and
+**Every screen remembers its own grouping, sorting, spacing and layout**, each
+list included. So Today can stay airy while To Do stays compact, and Errands
+can be grouped by who while Reading is grouped by nothing. Appearance is the
+exception: light or dark is one choice that holds everywhere.
+
+A screen nobody has arranged yet starts from a default that depends on what it
+shows. Today is airy and sorted by due date, To Do compact and
 grouped by list, Done compact and newest finished first, and lists and Archive
 compact and in manual order.
 

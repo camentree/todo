@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import type { Scope } from "./screens/Tasks.tsx";
 import type {
@@ -51,16 +52,17 @@ const DEFAULTS: Record<Scope, ViewPreference> = {
 export function useViewPreference(
   scope: Scope,
 ): [ViewPreference, (changes: Partial<ViewPreference>) => void] {
-  const storageKey = `view:${scope}`;
+  const { pathname } = useLocation();
+  const storageKey = `view:${pathname}`;
 
   const [preference, setPreference] = useState<ViewPreference>(() =>
-    read(scope),
+    read({ storageKey: storageKey, scope: scope }),
   );
-  const [shown, setShown] = useState<Scope>(scope);
+  const [shown, setShown] = useState<string>(pathname);
 
-  if (shown !== scope) {
-    setShown(scope);
-    setPreference(read(scope));
+  if (shown !== pathname) {
+    setShown(pathname);
+    setPreference(read({ storageKey: storageKey, scope: scope }));
   }
 
   const change = useCallback(
@@ -77,10 +79,16 @@ export function useViewPreference(
   return [preference, change];
 }
 
-function read(scope: Scope): ViewPreference {
+function read({
+  storageKey,
+  scope,
+}: {
+  storageKey: string;
+  scope: Scope;
+}): ViewPreference {
   const fallback = DEFAULTS[scope];
   try {
-    const stored = window.localStorage.getItem(`view:${scope}`);
+    const stored = window.localStorage.getItem(storageKey);
     if (!stored) {
       return fallback;
     }
