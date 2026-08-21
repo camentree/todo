@@ -9,8 +9,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { Chevron } from "./TaskBoard.tsx";
 import { api } from "../api.ts";
-import { formatWhen } from "../format.ts";
+import { asTitle, formatWhen } from "../format.ts";
 import { useTheme, type Theme } from "../theme.ts";
+import { canonicalName } from "@shared/names.ts";
 import type {
   BreakUpField,
   Density,
@@ -247,11 +248,12 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
           {lists.map((list) => (
             <MenuLink
               key={list}
-              label={list}
+              label={asTitle(list)}
               small
               here={
-                location.pathname ===
-                `/list/${encodeURIComponent(list)}`
+                canonicalName(
+                  decodeURIComponent(location.pathname),
+                ) === `/list/${list}`
               }
               onGo={() => go(`/list/${encodeURIComponent(list)}`)}
             />

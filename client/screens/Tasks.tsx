@@ -8,12 +8,17 @@ import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
 import { TaskSheet } from "../components/TaskSheet.tsx";
-import { attributeText, dueDateFromLabel } from "../format.ts";
+import {
+  asTitle,
+  attributeText,
+  dueDateFromLabel,
+} from "../format.ts";
 import { buildGroups } from "../grouping.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
 import { asAttribute } from "@shared/attributes.ts";
 import type { Attribute } from "@shared/attributes.ts";
+import { canonicalName } from "@shared/names.ts";
 import type { Task } from "@shared/types.ts";
 
 export interface Scope {
@@ -27,7 +32,7 @@ export function Tasks() {
   const scope: Scope = {
     field: asAttribute(parameters.field),
     value: parameters.value
-      ? decodeURIComponent(parameters.value)
+      ? canonicalName(decodeURIComponent(parameters.value))
       : "",
   };
   const list = scope.field === "list" ? scope.value : undefined;
@@ -139,7 +144,7 @@ function titleFor(scope: Scope): string {
   if (scope.field === "who") {
     return `@${text}`;
   }
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return asTitle(text);
 }
 
 function scopedTo(scope: Scope): MetaOmission | null {

@@ -5,6 +5,7 @@ import {
   parse as parseDate,
 } from "date-fns";
 
+import { canonicalName } from "./names.ts";
 import { asStage, type TaskStage } from "./stages.ts";
 import type { Frequency } from "./types.ts";
 
@@ -184,19 +185,19 @@ function matchSigil({ words, index }: MatcherInput): Match | null {
 
   if (word.startsWith("#")) {
     return {
-      token: { kind: "tag", text: word, value: body.toLowerCase() },
+      token: { kind: "tag", text: word, value: canonicalName(body) },
       consumed: 1,
     };
   }
   if (word.startsWith("@")) {
     return {
-      token: { kind: "who", text: word, value: body },
+      token: { kind: "who", text: word, value: canonicalName(body) },
       consumed: 1,
     };
   }
   if (word.startsWith("/")) {
     return {
-      token: { kind: "list", text: word, value: body },
+      token: { kind: "list", text: word, value: canonicalName(body) },
       consumed: 1,
     };
   }
@@ -624,26 +625,37 @@ export function tagsIn(tokens: ParsedToken[]): string[] {
 }
 
 export function whoIn(tokens: ParsedToken[]): string | null {
-  return tokens.filter((token) => token.kind === "who").at(-1)?.value ?? null;
+  return (
+    tokens.filter((token) => token.kind === "who").at(-1)?.value ??
+    null
+  );
 }
 
 export function listIn(tokens: ParsedToken[]): string | null {
-  return tokens.filter((token) => token.kind === "list").at(-1)?.value ?? null;
+  return (
+    tokens.filter((token) => token.kind === "list").at(-1)?.value ??
+    null
+  );
 }
 
 export function stageIn(tokens: ParsedToken[]): TaskStage | null {
-  return tokens.filter((token) => token.kind === "stage").at(-1)?.value ?? null;
+  return (
+    tokens.filter((token) => token.kind === "stage").at(-1)?.value ??
+    null
+  );
 }
 
 export function dueDateIn(tokens: ParsedToken[]): string | null {
   return (
-    tokens.filter((token) => token.kind === "dueDate").at(-1)?.value ?? null
+    tokens.filter((token) => token.kind === "dueDate").at(-1)
+      ?.value ?? null
   );
 }
 
 export function dueTimeIn(tokens: ParsedToken[]): string | null {
   return (
-    tokens.filter((token) => token.kind === "dueTime").at(-1)?.value ?? null
+    tokens.filter((token) => token.kind === "dueTime").at(-1)
+      ?.value ?? null
   );
 }
 
@@ -651,6 +663,7 @@ export function recurrenceIn(
   tokens: ParsedToken[],
 ): RecurrenceValue | null {
   return (
-    tokens.filter((token) => token.kind === "recurrence").at(-1)?.value ?? null
+    tokens.filter((token) => token.kind === "recurrence").at(-1)
+      ?.value ?? null
   );
 }

@@ -13,6 +13,12 @@ import { asStage, stageLabel } from "@shared/stages.ts";
 
 const NAMED_WEEKDAY_DAYS = 7;
 
+export function asTitle(name: string): string {
+  return name.replace(/(^|\s)\p{Ll}/gu, (start) =>
+    start.toUpperCase(),
+  );
+}
+
 export function formatDueDate(dueDate: string | null): string | null {
   if (!dueDate) {
     return null;

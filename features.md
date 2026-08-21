@@ -68,6 +68,11 @@ exists because some task names it, and stops existing when none do. The same
 for tags and for who a task belongs to. Every field with known values offers
 them as you type.
 
+**Their case does not matter.** `/Programming` and `/programming` are the same
+list, and so are `#Health` and `#health`, `@Claude` and `@claude`. Names are
+stored lowercase; where one is read as prose — the title of a list screen, its
+entry in the scope menu — it is capitalised for display.
+
 **Subtasks are tasks** with a parent. A subtask cannot have subtasks of its
 own. Nothing else distinguishes them, so promoting a checklist line into a real
 task is just clearing its parent.

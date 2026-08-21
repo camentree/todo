@@ -1,6 +1,7 @@
 import { sql } from "../database.ts";
 import { CAMEN } from "./comments.ts";
 import * as events from "./events.ts";
+import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
@@ -36,9 +37,9 @@ const FILTERS: Record<
   Attribute,
   (value: string) => ReturnType<typeof sql>
 > = {
-  list: (value) => sql`list = ${value}`,
-  tag: (value) => sql`tags @> ${[value]}`,
-  who: (value) => sql`who = ${value}`,
+  list: (value) => sql`list = ${canonicalName(value)}`,
+  tag: (value) => sql`tags @> ${[canonicalName(value)]}`,
+  who: (value) => sql`who = ${canonicalName(value)}`,
   stage: (value) => sql`stage = ${value}`,
   state: (value) => sql`state = ${value}`,
   due_time: (value) => sql`due_time = ${value}::time`,
@@ -144,15 +145,15 @@ export async function create(
       due_date, due_time, sort_order
     )
     values (
-      ${task.list},
+      ${canonicalName(task.list)},
       ${task.parentId ?? null},
       ${task.recurringTaskId ?? null},
       ${task.title},
       ${task.note ?? null},
       ${task.state ?? "to_do"},
       ${task.stage ?? null},
-      ${task.tags ?? []},
-      ${task.who ?? null},
+      ${(task.tags ?? []).map(canonicalName)},
+      ${task.who ? canonicalName(task.who) : null},
       ${task.dueDate ?? null},
       ${task.dueTime ?? null},
       coalesce((select max(sort_order) + 1 from todo.tasks), 0)
@@ -201,6 +202,19 @@ export interface TaskChanges {
   parentId?: number | null;
 }
 
+function canonicalNamesIn(changes: TaskChanges): TaskChanges {
+  return {
+    ...changes,
+    ...(changes.list === undefined
+      ? {}
+      : { list: canonicalName(changes.list) }),
+    ...(changes.who ? { who: canonicalName(changes.who) } : {}),
+    ...(changes.tags
+      ? { tags: changes.tags.map(canonicalName) }
+      : {}),
+  };
+}
+
 export async function update(
   id: number,
   changes: TaskChanges,
@@ -208,7 +222,7 @@ export async function update(
 ): Promise<Task> {
   const [updated] = await sql<Task[]>`
     update todo.tasks
-    set ${sql(pruneUndefined(changes))}, updated_at = now()
+    set ${sql(pruneUndefined(canonicalNamesIn(changes)))}, updated_at = now()
     where id = ${id}
     returning ${COLUMNS}
   `;
