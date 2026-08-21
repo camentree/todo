@@ -61,13 +61,30 @@ unticking it returns it to To Do.
 
 ## Adding
 
-The button at the bottom right opens a new row at the end of the list, styled
-exactly like every other row: an empty circle and a place to type. Return saves
-it and leaves the row open for the next one. Leaving it empty closes it.
+Every group ends in a capture row, styled exactly like every other row: an empty
+circle and a place to type. Return saves it and leaves the row open for the next
+one; command and Return saves it and closes the row. Escape throws the draft
+away. The button at the bottom right no longer opens anything — it jumps to the
+last capture row on the screen and puts the caret in it.
+
+**A capture row prefills what its place implies.** Focus one and the text
+appears in the input as ordinary words you can edit or delete: the Programming
+group's row starts `/Programming`, the parallax tag group's starts `#parallax`,
+Today's rows start `today`. The group wins where the screen would say the same
+kind of thing twice.
 
 **What you type is parsed as you type it.** Recognised parts are lifted out of
 the title and shown as chips under the row; tapping a chip puts those words back
 into the title.
+
+**Typing a sigil suggests what it could be.** `/` offers your lists, `#` the
+tags and `@` the people — scoped to the list the row already names, or drawn
+from everywhere when it names none. Arrows move through them, Return picks,
+Escape puts them away.
+
+**A capture row takes a note as well as a title.** The note field appears under
+the row while it is being typed into, and on a computer Tab moves between the
+two.
 
 | You type | It becomes |
 |---|---|
@@ -107,7 +124,8 @@ ones.
 **Closing the sheet** by dragging: pulling down on the grab handle at its top
 always closes it; pulling down anywhere else closes it once the sheet is scrolled
 to the top; dragging inside the note, the comments, or the subtasks scrolls those
-as usual. Tapping outside also closes it.
+as usual. Tapping outside also closes it. On a computer, command and Return
+closes it too, saving the title and note on the way out.
 
 ## Grouping, sorting, ordering
 

@@ -23,7 +23,7 @@ async function renameFirstTo(text: string): Promise<void> {
   await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
   await page.locator(".task-title").first().click();
   await page.waitForTimeout(400);
-  await page.locator("input.task-title").fill(text);
+  await page.locator(".task-shell input.task-title").fill(text);
   await page.keyboard.press("Enter");
   await page.waitForTimeout(1300);
 }

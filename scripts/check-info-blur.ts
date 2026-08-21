@@ -41,7 +41,7 @@ console.log(
 );
 console.log(
   "row left edit mode:",
-  (await page.locator("input.task-title").count()) === 0,
+  (await page.locator(".task-shell input.task-title").count()) === 0,
 );
 
 await page.locator(".scrim").click({ position: { x: 10, y: 10 } });
@@ -50,7 +50,7 @@ await page.waitForTimeout(1100);
 console.log("\nAN EDIT IN PROGRESS IS KEPT");
 await page.locator(".task-title").first().click();
 await page.waitForTimeout(400);
-await page.locator("input.task-title").fill("Edited then opened");
+await page.locator(".task-shell input.task-title").fill("Edited then opened");
 await page.locator(".task-info").first().click();
 await page.waitForTimeout(1200);
 console.log(

@@ -35,7 +35,7 @@ console.log(
 );
 
 await page
-  .locator("input.task-title")
+  .locator(".task-shell input.task-title")
   .fill("Renamed without the sheet");
 await page.keyboard.press("Enter");
 await page.waitForTimeout(1200);
