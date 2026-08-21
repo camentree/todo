@@ -5,7 +5,15 @@ export function useShortcuts(
 ): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
-      if (event.metaKey || event.ctrlKey || event.altKey) {
+      const chord =
+        event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        (event.key === "n" || event.key === "p");
+      if (
+        !chord &&
+        (event.metaKey || event.ctrlKey || event.altKey)
+      ) {
         return;
       }
       const active = document.activeElement;

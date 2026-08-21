@@ -894,6 +894,59 @@ a {
   }
 }
 
+.help {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 45;
+  width: min(30rem, calc(100vw - 2.5rem));
+  height: max-content;
+  max-height: 82vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--ground);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  box-shadow: 0 26px 64px -28px rgba(0, 0, 0, 0.55);
+  padding: 1.3rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: modal-in var(--motion-menu) var(--ease);
+}
+
+.help-head {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: 0.7rem;
+}
+
+.help-rows {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.42rem 1rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+}
+
+.help-keys {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.help-key {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  padding: 0.22rem 0.5rem;
+  border-radius: 5px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+}
+
 .info-handle {
   flex-shrink: 0;
   padding: 0.9rem 0 0.7rem;

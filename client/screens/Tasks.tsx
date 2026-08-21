@@ -5,6 +5,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
 import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
+import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
 import { TaskInfo } from "../components/TaskInfo.tsx";
@@ -44,6 +45,7 @@ export function Tasks() {
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
     scope.field ? `${scope.field}:${scope.value}` : "all",
     defaultView(scope),
@@ -69,14 +71,9 @@ export function Tasks() {
       event.preventDefault();
       setAdding(true);
     }
-    if (event.key === "f") {
-      const field = document.querySelector<HTMLInputElement>(
-        "[data-search-field]",
-      );
-      if (field) {
-        event.preventDefault();
-        field.focus();
-      }
+    if (event.key === "?") {
+      event.preventDefault();
+      setHelping(true);
     }
   });
 
@@ -100,6 +97,7 @@ export function Tasks() {
         <p className="empty">{emptyFor(scope)}</p>
       ) : (
         <TaskBoard
+          key={pathname}
           groups={groups}
           density={view.density}
           layout={view.layout}
@@ -133,6 +131,8 @@ export function Tasks() {
           onClose={() => setOpenTaskId(null)}
         />
       )}
+
+      {helping && <Shortcuts onClose={() => setHelping(false)} />}
     </>
   );
 }
