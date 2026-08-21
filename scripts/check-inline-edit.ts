@@ -19,6 +19,7 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 
 await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
@@ -55,7 +56,7 @@ console.log(
 console.log("\nOPENING INFO FROM THE ROW");
 await page.locator(".task-title").first().click();
 await page.waitForTimeout(400);
-await page.locator(".task-info").click();
+await page.locator('.task[data-editing="true"] .task-info').click();
 await page.waitForTimeout(700);
 console.log(
   "  sheet opened:",

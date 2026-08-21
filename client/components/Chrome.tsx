@@ -94,6 +94,18 @@ const SORT_OPTIONS: {
     direction: "asc",
     label: "Added — oldest",
   },
+  {
+    value: "resolved_at:desc",
+    field: "resolved_at",
+    direction: "desc",
+    label: "Finished — newest",
+  },
+  {
+    value: "resolved_at:asc",
+    field: "resolved_at",
+    direction: "asc",
+    label: "Finished — oldest",
+  },
 ];
 
 type OpenMenu = "none" | "scope" | "view" | "bell";
@@ -217,6 +229,11 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
         label="To Do"
         here={location.pathname === "/"}
         onGo={() => go("/")}
+      />
+      <MenuLink
+        label="Done"
+        here={location.pathname === "/state/complete"}
+        onGo={() => go("/state/complete")}
       />
       <MenuLink
         label="Archive"

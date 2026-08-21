@@ -34,9 +34,19 @@ const BY_DUE: ViewPreference = {
   layout: "stacked",
 };
 
+const BY_FINISHED: ViewPreference = {
+  breakUpBy: "none",
+  sortBy: "resolved_at",
+  sortDirection: "desc",
+  density: "compact",
+  layout: "stacked",
+};
+
 export function defaultView(scope: Scope): ViewPreference {
   if (scope.field === "due_date" && scope.value === "today")
     return BY_DUE;
+  if (scope.field === "state" && scope.value === "complete")
+    return BY_FINISHED;
   if (scope.field === null) return BY_LIST;
   return FLAT_MANUAL;
 }
@@ -50,6 +60,12 @@ export function useViewPreference(
   const [preference, setPreference] = useState<ViewPreference>(() =>
     read(storageKey, fallback),
   );
+  const [shown, setShown] = useState<string>(storageKey);
+
+  if (shown !== storageKey) {
+    setShown(storageKey);
+    setPreference(read(storageKey, fallback));
+  }
 
   const change = useCallback(
     (changes: Partial<ViewPreference>) => {

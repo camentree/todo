@@ -14,6 +14,7 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 
 let reorderCalls = 0;
@@ -23,7 +24,9 @@ await page.route("**/api/tasks/reorder", async (route) => {
   await route.continue();
 });
 
-await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
+await page.goto(`${BASE_URL}/due_date/today`, {
+  waitUntil: "networkidle",
+});
 await page.waitForTimeout(400);
 
 console.log("REORDER SHOWS BEFORE THE SERVER ANSWERS");
@@ -81,16 +84,18 @@ await openSheetFor(
 await page.locator(".sheet-every select").selectOption("weekly");
 await page.waitForTimeout(900);
 
-const chip = page.locator(".weekday").nth(5);
-const wasOn = (await chip.getAttribute("data-on")) === "true";
+const chip = page.locator('.weekday[data-on="false"]').first();
+const position = await chip.evaluate((node) =>
+  [...document.querySelectorAll(".weekday")].indexOf(node),
+);
 const tapped = Date.now();
 await chip.click();
 await page.waitForFunction(
-  (expected) => {
-    const nodes = document.querySelectorAll(".weekday");
-    return nodes[5]?.getAttribute("data-on") === String(!expected);
-  },
-  wasOn,
+  (index) =>
+    document
+      .querySelectorAll(".weekday")
+      [index]?.getAttribute("data-on") === "true",
+  position,
   { timeout: 3000 },
 );
 console.log(`  chip flipped after ${Date.now() - tapped}ms`);

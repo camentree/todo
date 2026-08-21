@@ -168,6 +168,14 @@ function compare({
       parseISO(right.createdAt).getTime()
     );
   }
+  if (view.sortBy === "resolved_at") {
+    if (!left.resolvedAt && !right.resolvedAt) {
+      return left.sortOrder - right.sortOrder;
+    }
+    if (!left.resolvedAt) return 1;
+    if (!right.resolvedAt) return -1;
+    return left.resolvedAt.localeCompare(right.resolvedAt);
+  }
   if (view.sortBy === "due_date") {
     if (!left.dueDate && !right.dueDate) {
       return left.sortOrder - right.sortOrder;

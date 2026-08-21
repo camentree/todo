@@ -33,6 +33,8 @@ export function Tasks() {
   const list = scope.field === "list" ? scope.value : undefined;
   const archived =
     scope.field === "archived" && scope.value === "true";
+  const finished =
+    scope.field === "state" && scope.value === "complete";
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
@@ -98,7 +100,7 @@ export function Tasks() {
         />
       )}
 
-      {!archived && !adding && (
+      {!archived && !finished && !adding && (
         <AddButton onClick={() => setAdding(true)} />
       )}
 
@@ -127,6 +129,9 @@ function titleFor(scope: Scope): string {
   if (!scope.field) {
     return "To Do";
   }
+  if (scope.field === "state" && scope.value === "complete") {
+    return "Done";
+  }
   const text = attributeText(scope.field, scope.value);
   if (scope.field === "tag") {
     return `#${text}`;
@@ -152,6 +157,9 @@ function emptyFor(scope: Scope): string {
   }
   if (scope.field === "archived" && scope.value === "true") {
     return "Nothing archived.";
+  }
+  if (scope.field === "state" && scope.value === "complete") {
+    return "Nothing finished yet.";
   }
   return "Nothing here.";
 }
