@@ -6,11 +6,14 @@ import { isDueToday } from "./format.ts";
 import type { Landing } from "./components/TaskBoard.tsx";
 import { reassignSlots } from "@shared/ordering.ts";
 import {
+  dueDateIn,
+  dueTimeIn,
   listIn,
   parse,
   stageIn,
   tagsIn,
   whoIn,
+  type ParsedToken,
 } from "@shared/parser.ts";
 import { isTerminal, type TaskState } from "@shared/states.ts";
 import type { Task, ViewPreference } from "@shared/types.ts";
@@ -69,12 +72,24 @@ function patched({
 
 const GUESSED_KINDS = new Set(["dueDate", "dueTime", "recurrence"]);
 
-function renameChanges(task: Task, input: string): Partial<Task> {
+export function renameChanges({
+  existingTags,
+  input,
+  accepting = [],
+}: {
+  existingTags: string[];
+  input: string;
+  accepting?: ParsedToken[];
+}): Partial<Task> {
+  const acceptedTexts = new Set(accepting.map((token) => token.text));
   const guessed = parse({
     input: input,
     today: new Date(),
     dismissed: [],
-  }).tokens.filter((token) => GUESSED_KINDS.has(token.kind));
+  }).tokens.filter(
+    (token) =>
+      GUESSED_KINDS.has(token.kind) && !acceptedTexts.has(token.text),
+  );
 
   const parsed = parse({
     input: input,
@@ -86,15 +101,19 @@ function renameChanges(task: Task, input: string): Partial<Task> {
   const who = whoIn(parsed.tokens);
   const list = listIn(parsed.tokens);
   const stage = stageIn(parsed.tokens);
+  const dueDate = dueDateIn(parsed.tokens);
+  const dueTime = dueTimeIn(parsed.tokens);
 
   return {
     title: parsed.title,
     ...(tags.length > 0
-      ? { tags: [...new Set([...task.tags, ...tags])] }
+      ? { tags: [...new Set([...existingTags, ...tags])] }
       : {}),
     ...(who ? { who: who } : {}),
     ...(list ? { list: list } : {}),
     ...(stage ? { stage: stage } : {}),
+    ...(dueDate ? { dueDate: dueDate } : {}),
+    ...(dueTime ? { dueTime: dueTime } : {}),
   };
 }
 
@@ -158,9 +177,15 @@ export function useTaskActions(
 
   const rename = useMutation({
     mutationFn: ({ task, title }: { task: Task; title: string }) =>
-      api.updateTask(task.id, renameChanges(task, title)),
+      api.updateTask(
+        task.id,
+        renameChanges({ existingTags: task.tags, input: title }),
+      ),
     onMutate: ({ task, title }) => {
-      patchEverywhere(task.id, renameChanges(task, title));
+      patchEverywhere(
+        task.id,
+        renameChanges({ existingTags: task.tags, input: title }),
+      );
     },
     onSettled: refresh,
   });
