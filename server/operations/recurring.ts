@@ -116,17 +116,19 @@ export async function startFrom({
 
   await sql`
     update todo.recurring_tasks
-    set generated_through = ${today}
+    set generated_through = ${startsOn}
     where id = ${created.id}
   `;
 
   await sql`
     update todo.tasks
-    set recurring_task_id = ${created.id}, updated_at = now()
+    set recurring_task_id = ${created.id},
+        due_date = ${startsOn},
+        updated_at = now()
     where id = ${taskId}
   `;
 
-  return { ...created, generatedThrough: today };
+  return { ...created, generatedThrough: startsOn };
 }
 
 export async function update(

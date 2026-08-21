@@ -79,3 +79,34 @@ console.log(
 );
 
 await browser.close();
+
+const UNDATED = "Wipe down the counters";
+
+const undated = (await fetch(`${BASE_URL}/api/tasks`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ list: "Personal", title: UNDATED }),
+}).then((response) => response.json())) as Task;
+
+await fetch(`${BASE_URL}/api/tasks/${undated.id}/repeat`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ frequency: "daily" }),
+});
+
+const linked = (await fetch(
+  `${BASE_URL}/api/tasks/${undated.id}`,
+).then((response) => response.json())) as Task;
+
+const todaysTasks = (await fetch(`${BASE_URL}/api/today`).then(
+  (response) => response.json(),
+)) as Task[];
+
+console.log(
+  "a dateless task made daily is due today:",
+  linked.dueDate === format(new Date(), "yyyy-MM-dd"),
+);
+console.log(
+  "and shows in Today:",
+  todaysTasks.some((task) => task.title === UNDATED),
+);
