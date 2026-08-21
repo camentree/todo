@@ -19,6 +19,7 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 
 await page.goto(`${BASE_URL}/list/Programming`, {
@@ -31,7 +32,7 @@ await page
   .first()
   .selectOption("stage");
 await page.waitForTimeout(600);
-await page.locator(".scrim").click();
+await page.keyboard.press("Escape");
 await page.waitForTimeout(400);
 
 for (const group of await groupsOnScreen(page)) {
