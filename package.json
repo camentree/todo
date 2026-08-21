@@ -8,13 +8,10 @@
     "dev:client": "vite",
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/main.ts",
+    "test": "scripts/test",
     "migrate": "tsx scripts/migrate.ts",
-    "seed": "tsx scripts/seed.ts",
-    "shoot": "tsx scripts/shoot.ts",
-    "test": "vitest run",
-    "check": "tsc --noEmit && vitest run",
-    "check:app": "tsx scripts/check-all.ts",
-    "check:all": "npm run check && npm run check:app && npm run shoot"
+    "seed": "tsx scripts/seed-database.ts",
+    "shoot": "tsx scripts/shoot.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

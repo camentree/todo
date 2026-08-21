@@ -92,7 +92,8 @@ they filter.
 | `daily`, `every mon`, `every 2 weeks` | makes it recurring | — |
 
 Parsing is visible and reversible: what got extracted shows as chips under the
-field, and tapping one puts the words back in the title. No escape syntax.
+field, and tapping one puts the words back in the title. A backslash escapes the
+word after it and is dropped from the title.
 Sigils are exact; dates are guesses, so they are always shown.
 
 Search adds `overdue`, `no date`, and quoted phrases. Bare words match title and

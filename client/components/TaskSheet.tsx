@@ -10,6 +10,7 @@ import { api, type RecurringTaskDetail } from "../api.ts";
 import { formatWhen } from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import { useLockedScroll } from "../useLockedScroll.ts";
+import { canonicalName } from "@shared/names.ts";
 import { parse, type ParsedToken } from "@shared/parser.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
@@ -347,7 +348,7 @@ export function TaskSheet({
               list="known-lists"
               defaultValue={task.list}
               onBlur={(event) => {
-                const next = event.target.value.trim();
+                const next = canonicalName(event.target.value);
                 if (next && next !== task.list) {
                   save.mutate({ list: next });
                 }
