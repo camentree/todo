@@ -6,11 +6,11 @@ import type { Task } from "@shared/types.ts";
 const BASE_URL = process.env.APP_URL ?? "http://localhost:8790";
 const TITLE = "Refactor the auth middleware";
 
-async function tagsOn(title: string): Promise<string[]> {
+async function taskNamed(title: string): Promise<Task | undefined> {
   const tasks = (await (
     await fetch(`${BASE_URL}/api/tasks`)
   ).json()) as Task[];
-  return tasks.find((task) => task.title === title)?.tags ?? [];
+  return tasks.find((task) => task.title === title);
 }
 
 const browser = await chromium.launch({ channel: "chrome" });
@@ -29,34 +29,51 @@ await openSheetFor(
   page.locator(".task", { hasText: TITLE }).first(),
 );
 
-console.log("starting tags:", (await tagsOn(TITLE)).join(","));
-
 console.log(
-  "suggestions offered:",
-  await page
-    .locator("#known-tags option")
-    .evaluateAll((nodes) =>
-      nodes.map((node) => node.getAttribute("value")).join(","),
-    ),
+  "starting tags:",
+  (await taskNamed(TITLE))?.tags.join(","),
 );
 
-await page.locator(".tag-input").fill("urgent");
-await page.keyboard.press("Enter");
+console.log("\nA TAG TYPED INTO THE TITLE");
+await page.locator(".sheet-title").fill(`${TITLE} #urgent @camen`);
+await page.locator(".sheet-title").blur();
 await page.waitForTimeout(1200);
-console.log("after adding urgent:", (await tagsOn(TITLE)).join(","));
+const tagged = await taskNamed(TITLE);
+console.log("  title:", tagged?.title);
+console.log("  tags:", tagged?.tags.join(","));
+console.log("  who:", tagged?.who);
 
+console.log("\nNO WAY TO ADD A TAG BUT THE TITLE");
+console.log(
+  "  add field present:",
+  (await page.locator(".tag-input").count()) > 0,
+);
+
+console.log("\nA DATE IS OFFERED, NOT TAKEN");
+await page.locator(".sheet-title").fill(`${TITLE} tomorrow`);
+await page.waitForTimeout(300);
+console.log(
+  "  chip offered:",
+  await page
+    .locator(".sheet-guesses .capture-chip")
+    .allTextContents(),
+);
+await page.locator(".sheet-guesses .capture-chip").first().click();
+await page.waitForTimeout(1200);
+const dated = await taskNamed(TITLE);
+console.log("  title:", dated?.title);
+console.log("  due date:", dated?.dueDate);
+
+console.log("\nCHIPS STILL REMOVE A TAG");
 await page
   .locator(".tag-chip", { hasText: "parallax" })
   .first()
   .click();
 await page.waitForTimeout(1200);
 console.log(
-  "after removing parallax:",
-  (await tagsOn(TITLE)).join(","),
-);
-
-console.log(
-  "chips on screen:",
+  "  tags:",
+  (await taskNamed(TITLE))?.tags.join(","),
+  "· chips on screen:",
   await page.locator(".tag-chip").allTextContents(),
 );
 

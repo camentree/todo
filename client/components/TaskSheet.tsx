@@ -3,12 +3,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Chevron } from "./TaskBoard.tsx";
 import { api, type RecurringTaskDetail } from "../api.ts";
 import { formatWhen } from "../format.ts";
+import { renameChanges } from "../useTaskActions.ts";
 import { useLockedScroll } from "../useLockedScroll.ts";
+import { parse, type ParsedToken } from "@shared/parser.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import type { Frequency, Task } from "@shared/types.ts";
@@ -27,6 +29,18 @@ const DRAG_TO_CLOSE = 110;
 const INDENT = "  ";
 
 type SheetSection = "timing" | "subtasks" | "note" | "comments";
+
+type DateGuess = Extract<
+  ParsedToken,
+  { kind: "dueDate" | "dueTime" }
+>;
+
+function dateGuessesIn(title: string): DateGuess[] {
+  return parse({ input: title, today: new Date() }).tokens.filter(
+    (token): token is DateGuess =>
+      token.kind === "dueDate" || token.kind === "dueTime",
+  );
+}
 
 function sectionsHoldingSomething(
   task: Task | undefined,
@@ -61,7 +75,6 @@ export function TaskSheet({
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [newSubtask, setNewSubtask] = useState("");
-  const [newTag, setNewTag] = useState("");
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [closing, setClosing] = useState(false);
@@ -101,11 +114,7 @@ export function TaskSheet({
     queryFn: () => api.comments(taskId),
     enabled: commentsOpen,
   });
-  const { data: knownTags = [] } = useQuery({
-    queryKey: ["tags", task?.list],
-    queryFn: () => api.tags(task?.list),
-    enabled: Boolean(task?.list),
-  });
+  const dateGuesses = useMemo(() => dateGuessesIn(title), [title]);
 
   useEffect(() => {
     if (task) {
@@ -146,7 +155,7 @@ export function TaskSheet({
   const refresh = () => queryClient.invalidateQueries();
 
   const save = useMutation({
-    mutationFn: (changes: Record<string, unknown>) =>
+    mutationFn: (changes: Partial<Task>) =>
       api.updateTask(taskId, changes),
     onSuccess: refresh,
   });
@@ -245,7 +254,9 @@ export function TaskSheet({
   function closeSlowly(): void {
     drag.slideOut();
     if (task && title !== task.title) {
-      save.mutate({ title: title });
+      save.mutate(
+        renameChanges({ existingTags: task.tags, input: title }),
+      );
     }
     if (task && note !== (task.note ?? "")) {
       save.mutate({ note: note || null });
@@ -260,6 +271,16 @@ export function TaskSheet({
 
   const subtasks = task.subtasks ?? [];
   const repeats = pendingRepeats ?? savedRepeats;
+
+  const commitTitle = (accepting: DateGuess[]): void => {
+    const changes = renameChanges({
+      existingTags: task.tags,
+      input: title,
+      accepting: accepting,
+    });
+    setTitle(changes.title ?? title);
+    save.mutate(changes);
+  };
 
   return (
     <>
@@ -297,11 +318,28 @@ export function TaskSheet({
             className="sheet-title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            onBlur={() =>
-              title !== task.title && save.mutate({ title: title })
-            }
+            onBlur={() => title !== task.title && commitTitle([])}
             aria-label="Title"
           />
+
+          {dateGuesses.length > 0 && (
+            <div className="sheet-guesses">
+              {dateGuesses.map((guess) => (
+                <button
+                  type="button"
+                  key={`${guess.kind}-${guess.text}`}
+                  className="capture-chip"
+                  data-guess="true"
+                  aria-label={`Set ${guess.kind === "dueDate" ? "the date" : "the time"} to ${guess.value}`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => commitTitle([guess])}
+                >
+                  {guess.kind === "dueDate" ? "due " : "at "}
+                  {guess.value}
+                </button>
+              ))}
+            </div>
+          )}
 
           <label className="sheet-field">
             <span>List</span>
@@ -341,59 +379,31 @@ export function TaskSheet({
             </select>
           </label>
 
-          <div className="sheet-field">
-            <span>Tags</span>
-            <div className="sheet-tags">
-              {task.tags.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  className="tag-chip"
-                  aria-label={`Remove ${tag}`}
-                  onClick={() =>
-                    save.mutate({
-                      tags: task.tags.filter(
-                        (existing) => existing !== tag,
-                      ),
-                    })
-                  }
-                >
-                  {tag}
-                  <span className="tag-remove">×</span>
-                </button>
-              ))}
-              <input
-                className="tag-input"
-                list="known-tags"
-                value={newTag}
-                placeholder="Add a tag"
-                aria-label="Add a tag"
-                enterKeyHint="done"
-                onChange={(event) => setNewTag(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") {
-                    return;
-                  }
-                  event.preventDefault();
-                  const tag = newTag
-                    .trim()
-                    .replace(/^#/, "")
-                    .toLowerCase();
-                  if (tag && !task.tags.includes(tag)) {
-                    save.mutate({ tags: [...task.tags, tag] });
-                  }
-                  setNewTag("");
-                }}
-              />
-              <datalist id="known-tags">
-                {knownTags
-                  .filter((tag) => !task.tags.includes(tag))
-                  .map((tag) => (
-                    <option key={tag} value={tag} />
-                  ))}
-              </datalist>
+          {task.tags.length > 0 && (
+            <div className="sheet-field">
+              <span>Tags</span>
+              <div className="sheet-tags">
+                {task.tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="tag-chip"
+                    aria-label={`Remove ${tag}`}
+                    onClick={() =>
+                      save.mutate({
+                        tags: task.tags.filter(
+                          (existing) => existing !== tag,
+                        ),
+                      })
+                    }
+                  >
+                    {tag}
+                    <span className="tag-remove">×</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <Section
             label="Timing"

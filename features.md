@@ -92,17 +92,25 @@ the keyboard goes away. So renaming is one tap and everything else is two. No
 outline or box appears around the text — the blinking caret is the only signal
 that you are editing.
 
-**A rename reparses sigils but not date words.** Typing `#health` or `@claude`
-into a title sets the tag or the person and takes those words out of the title;
-tags add to what is already there rather than replacing them. Words like
-"tomorrow" or "weekly" stay in the title verbatim, because half the titles worth
-editing contain one and fixing a typo should not silently move a due date. Any
-field you do not mention keeps its value.
+**A rename applies sigils but never a date on its own.** Typing `#health` or
+`@claude` into a title — in the row or in the detail sheet — sets the tag or the
+person and takes those words out of the title; tags add to what is already there
+rather than replacing them. Words like "tomorrow" or "weekly" stay in the title
+verbatim, because half the titles worth editing contain one and fixing a typo
+should not silently move a due date. Any field you do not mention keeps its
+value.
+
+**A date found in the sheet's title is offered, not taken.** Type "tomorrow" or
+"3pm" into the title there and a dashed chip appears under it naming the date it
+read. Tapping the chip sets that date and lifts those words out of the title;
+ignoring it leaves both alone. Sigils are exact so they need no confirmation;
+dates are guesses so they always get one. The row's own rename has no room for
+the chip and so never reads a date at all.
 
 The detail sheet holds the list, the stage, tags, repetition, the date and time,
-the note, subtasks, and comments. Tags there are chips you tap to remove, plus a
-field that suggests the other tags already used in that same list and accepts new
-ones.
+the note, subtasks, and comments. Tags there are chips you tap to remove, and the
+row of them is only there when the task has tags — the way to add one is to type
+`#tag` into the title.
 
 **A section opens on its own when it holds something.** Timing — repetition, the
 date and the time — subtasks, notes and comments are each collapsible, and each
@@ -237,8 +245,8 @@ design on two grounds. A clean sans for task text, a mono for tags and metadata.
 - **Selecting several tasks** to archive or skip in one go.
 - **Search.** The parser that would drive it already exists and is tested; there
   is no search field on any screen.
-- **A field for who a task belongs to.** Tags are editable in the sheet; the
-  person is only settable by typing `@name` into a title.
+- **A field for who a task belongs to.** Like tags, the person is only settable
+  by typing `@name` into a title.
 - **Editing a schedule's interval beyond the sheet's controls**, such as "the
   last Friday of the month".
 - **Workout and physio plans**, the next kind of task. A session would be a task
