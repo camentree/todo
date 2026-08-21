@@ -24,6 +24,31 @@ function toggleWeekday(weekdays: number[], index: number): number[] {
 
 const CLOSE_MILLISECONDS = 850;
 const DRAG_TO_CLOSE = 110;
+const INDENT = "  ";
+
+type SheetSection = "timing" | "subtasks" | "note" | "comments";
+
+function sectionsHoldingSomething(
+  task: Task | undefined,
+): SheetSection[] {
+  if (!task) {
+    return [];
+  }
+  const sections: SheetSection[] = [];
+  if (task.dueDate || task.dueTime || task.recurringTaskId) {
+    sections.push("timing");
+  }
+  if ((task.subtasks ?? []).length > 0) {
+    sections.push("subtasks");
+  }
+  if (task.note) {
+    sections.push("note");
+  }
+  if (task.commentCount > 0) {
+    sections.push("comments");
+  }
+  return sections;
+}
 
 export function TaskSheet({
   taskId,
@@ -43,11 +68,12 @@ export function TaskSheet({
   const [pendingRepeats, setPendingRepeats] = useState<
     boolean | null
   >(null);
-  const [openSection, setOpenSection] = useState<
-    "none" | "subtasks" | "note" | "comments"
-  >("none");
+  const [chosenSections, setChosenSections] = useState<
+    SheetSection[] | null
+  >(null);
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const drag = useDragDown({
     scroller: bodyRef,
     onRelease: () => closeSlowly(),
@@ -66,10 +92,14 @@ export function TaskSheet({
     queryFn: () => api.recurringTask(task?.recurringTaskId ?? 0),
     enabled: Boolean(task?.recurringTaskId),
   });
+  const openSections =
+    chosenSections ?? sectionsHoldingSomething(task);
+  const commentsOpen = openSections.includes("comments");
+
   const { data: comments = [] } = useQuery({
     queryKey: ["comments", taskId],
     queryFn: () => api.comments(taskId),
-    enabled: openSection === "comments",
+    enabled: commentsOpen,
   });
   const { data: knownTags = [] } = useQuery({
     queryKey: ["tags", task?.list],
@@ -95,12 +125,21 @@ export function TaskSheet({
   const unseenComments = task?.unseenCommentCount ?? 0;
 
   useEffect(() => {
-    if (openSection === "comments" && unseenComments > 0) {
+    if (commentsOpen && unseenComments > 0) {
       api
         .markCommentsSeen(taskId)
         .then(() => queryClient.invalidateQueries());
     }
-  }, [openSection, unseenComments, taskId, queryClient]);
+  }, [commentsOpen, unseenComments, taskId, queryClient]);
+
+  useEffect(() => {
+    const textarea = noteRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight + 6}px`;
+  }, [note]);
 
   useLockedScroll();
 
@@ -195,6 +234,14 @@ export function TaskSheet({
     return () => window.removeEventListener("keydown", onKeyDown);
   });
 
+  function toggleSection(section: SheetSection): void {
+    setChosenSections(
+      openSections.includes(section)
+        ? openSections.filter((open) => open !== section)
+        : [...openSections, section],
+    );
+  }
+
   function closeSlowly(): void {
     drag.slideOut();
     if (task && title !== task.title) {
@@ -239,11 +286,11 @@ export function TaskSheet({
 
         <button
           type="button"
-          className="sheet-close"
-          aria-label="Close"
+          className="sheet-done"
+          aria-label="Done"
           onClick={closeSlowly}
         >
-          <CloseIcon />
+          <TickIcon />
         </button>
         <div className="sheet-body" ref={bodyRef}>
           <input
@@ -348,173 +395,176 @@ export function TaskSheet({
             </div>
           </div>
 
-          <label className="sheet-check">
-            <input
-              type="checkbox"
-              checked={repeats}
-              onChange={(event) => {
-                setPendingRepeats(event.target.checked);
-                if (event.target.checked) {
-                  startRepeating.mutate();
-                } else {
-                  stopRepeating.mutate();
-                }
-              }}
-            />
-            <span>Repeats</span>
-          </label>
-
-          <div
-            className="collapsible unhurried"
-            data-open={repeats && Boolean(schedule)}
+          <Section
+            label="Timing"
+            count={0}
+            open={openSections.includes("timing")}
+            onToggle={() => toggleSection("timing")}
           >
-            <div className="sheet-repeat">
-              {schedule && (
-                <>
-                  <div className="sheet-every">
-                    <label className="sheet-field">
-                      <span>Every</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="52"
-                        inputMode="numeric"
-                        value={
-                          everyDraft ?? String(schedule.repeatEvery)
-                        }
-                        onChange={(event) =>
-                          setEveryDraft(event.target.value)
-                        }
-                        onFocus={(event) => event.target.select()}
-                        onBlur={() => {
-                          const typed = Number.parseInt(
-                            everyDraft ?? "",
-                            10,
-                          );
-                          if (typed >= 1) {
-                            configureSchedule.mutate({
-                              repeatEvery: Math.min(52, typed),
-                            });
-                          }
-                          setEveryDraft(null);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.currentTarget.blur();
-                          }
-                        }}
-                      />
-                    </label>
-                    <label className="sheet-field">
-                      <span>Period</span>
-                      <select
-                        value={schedule.frequency}
-                        onChange={(event) =>
-                          configureSchedule.mutate({
-                            frequency: event.target
-                              .value as Frequency,
-                          })
-                        }
-                      >
-                        <option value="daily">
-                          {schedule.repeatEvery === 1
-                            ? "day"
-                            : "days"}
-                        </option>
-                        <option value="weekly">
-                          {schedule.repeatEvery === 1
-                            ? "week"
-                            : "weeks"}
-                        </option>
-                        <option value="monthly">
-                          {schedule.repeatEvery === 1
-                            ? "month"
-                            : "months"}
-                        </option>
-                      </select>
-                    </label>
-                  </div>
+            <label className="sheet-check">
+              <input
+                type="checkbox"
+                checked={repeats}
+                onChange={(event) => {
+                  setPendingRepeats(event.target.checked);
+                  if (event.target.checked) {
+                    startRepeating.mutate();
+                  } else {
+                    stopRepeating.mutate();
+                  }
+                }}
+              />
+              <span>Repeats</span>
+            </label>
 
-                  {schedule.frequency === "weekly" && (
-                    <div className="sheet-field">
-                      <span>On</span>
-                      <div className="weekdays">
-                        {WEEKDAYS.map((weekday, index) => (
-                          <button
-                            key={weekday}
-                            type="button"
-                            className="weekday"
-                            data-on={schedule.weekdays.includes(
-                              index,
-                            )}
-                            onClick={() =>
+            <div
+              className="collapsible unhurried"
+              data-open={repeats && Boolean(schedule)}
+            >
+              <div className="sheet-repeat">
+                {schedule && (
+                  <>
+                    <div className="sheet-every">
+                      <label className="sheet-field">
+                        <span>Every</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="52"
+                          inputMode="numeric"
+                          value={
+                            everyDraft ?? String(schedule.repeatEvery)
+                          }
+                          onChange={(event) =>
+                            setEveryDraft(event.target.value)
+                          }
+                          onFocus={(event) => event.target.select()}
+                          onBlur={() => {
+                            const typed = Number.parseInt(
+                              everyDraft ?? "",
+                              10,
+                            );
+                            if (typed >= 1) {
                               configureSchedule.mutate({
-                                weekdays: toggleWeekday(
-                                  schedule.weekdays,
-                                  index,
-                                ),
-                              })
+                                repeatEvery: Math.min(52, typed),
+                              });
                             }
-                          >
-                            {weekday}
-                          </button>
-                        ))}
-                      </div>
+                            setEveryDraft(null);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.currentTarget.blur();
+                            }
+                          }}
+                        />
+                      </label>
+                      <label className="sheet-field">
+                        <span>Period</span>
+                        <select
+                          value={schedule.frequency}
+                          onChange={(event) =>
+                            configureSchedule.mutate({
+                              frequency: event.target
+                                .value as Frequency,
+                            })
+                          }
+                        >
+                          <option value="daily">
+                            {schedule.repeatEvery === 1
+                              ? "day"
+                              : "days"}
+                          </option>
+                          <option value="weekly">
+                            {schedule.repeatEvery === 1
+                              ? "week"
+                              : "weeks"}
+                          </option>
+                          <option value="monthly">
+                            {schedule.repeatEvery === 1
+                              ? "month"
+                              : "months"}
+                          </option>
+                        </select>
+                      </label>
                     </div>
-                  )}
-                </>
-              )}
+
+                    {schedule.frequency === "weekly" && (
+                      <div className="sheet-field">
+                        <span>On</span>
+                        <div className="weekdays">
+                          {WEEKDAYS.map((weekday, index) => (
+                            <button
+                              key={weekday}
+                              type="button"
+                              className="weekday"
+                              data-on={schedule.weekdays.includes(
+                                index,
+                              )}
+                              onClick={() =>
+                                configureSchedule.mutate({
+                                  weekdays: toggleWeekday(
+                                    schedule.weekdays,
+                                    index,
+                                  ),
+                                })
+                              }
+                            >
+                              {weekday}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
 
-          <label className="sheet-field">
-            <span>{repeats ? "Starts" : "Date"}</span>
-            <input
-              type="date"
-              value={
-                repeats && schedule
-                  ? schedule.startsOn
-                  : (task.dueDate ?? "")
-              }
-              onChange={(event) =>
-                repeats && schedule
-                  ? configureSchedule.mutate({
-                      startsOn:
-                        event.target.value || schedule.startsOn,
-                    })
-                  : save.mutate({
-                      dueDate: event.target.value || null,
-                    })
-              }
-            />
-          </label>
+            <label className="sheet-field">
+              <span>{repeats ? "Starts" : "Date"}</span>
+              <input
+                type="date"
+                value={
+                  repeats && schedule
+                    ? schedule.startsOn
+                    : (task.dueDate ?? "")
+                }
+                onChange={(event) =>
+                  repeats && schedule
+                    ? configureSchedule.mutate({
+                        startsOn:
+                          event.target.value || schedule.startsOn,
+                      })
+                    : save.mutate({
+                        dueDate: event.target.value || null,
+                      })
+                }
+              />
+            </label>
 
-          <label className="sheet-field">
-            <span>Time</span>
-            <input
-              type="time"
-              value={task.dueTime?.slice(0, 5) ?? ""}
-              onChange={(event) =>
-                repeats && schedule
-                  ? configureSchedule.mutate({
-                      dueTime: event.target.value || null,
-                    })
-                  : save.mutate({
-                      dueTime: event.target.value || null,
-                    })
-              }
-            />
-          </label>
+            <label className="sheet-field">
+              <span>Time</span>
+              <input
+                type="time"
+                value={task.dueTime?.slice(0, 5) ?? ""}
+                onChange={(event) =>
+                  repeats && schedule
+                    ? configureSchedule.mutate({
+                        dueTime: event.target.value || null,
+                      })
+                    : save.mutate({
+                        dueTime: event.target.value || null,
+                      })
+                }
+              />
+            </label>
+          </Section>
 
           <Section
             label="Subtasks"
             count={subtasks.length}
-            open={openSection === "subtasks"}
-            onToggle={() =>
-              setOpenSection(
-                openSection === "subtasks" ? "none" : "subtasks",
-              )
-            }
+            open={openSections.includes("subtasks")}
+            onToggle={() => toggleSection("subtasks")}
           >
             <div className="sheet-subtasks">
               {subtasks.map((subtask) => (
@@ -556,16 +606,33 @@ export function TaskSheet({
           <Section
             label="Notes"
             count={task.note ? 1 : 0}
-            open={openSection === "note"}
-            onToggle={() =>
-              setOpenSection(openSection === "note" ? "none" : "note")
-            }
+            open={openSections.includes("note")}
+            onToggle={() => toggleSection("note")}
           >
             <textarea
-              rows={4}
+              ref={noteRef}
+              rows={2}
               value={note}
               placeholder="Anything worth remembering"
               onChange={(event) => setNote(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Tab") {
+                  return;
+                }
+                event.preventDefault();
+                const textarea = event.currentTarget;
+                const indented = withIndentation({
+                  textarea: textarea,
+                  removing: event.shiftKey,
+                });
+                setNote(indented.text);
+                requestAnimationFrame(() =>
+                  textarea.setSelectionRange(
+                    indented.selectionStart,
+                    indented.selectionEnd,
+                  ),
+                );
+              }}
               onBlur={() =>
                 note !== (task.note ?? "") &&
                 save.mutate({ note: note || null })
@@ -576,12 +643,8 @@ export function TaskSheet({
           <Section
             label="Comments"
             count={task.commentCount}
-            open={openSection === "comments"}
-            onToggle={() =>
-              setOpenSection(
-                openSection === "comments" ? "none" : "comments",
-              )
-            }
+            open={commentsOpen}
+            onToggle={() => toggleSection("comments")}
           >
             <div className="sheet-comments">
               {comments.map((entry) => (
@@ -752,7 +815,7 @@ function useDragDown({
   };
 }
 
-function CloseIcon() {
+function TickIcon() {
   return (
     <svg
       width="17"
@@ -762,11 +825,41 @@ function CloseIcon() {
       aria-hidden="true"
     >
       <path
-        d="M5 5l10 10M15 5L5 15"
+        d="M4.5 10.5l3.8 3.8L15.5 6.5"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
+}
+
+function withIndentation({
+  textarea,
+  removing,
+}: {
+  textarea: HTMLTextAreaElement;
+  removing: boolean;
+}): { text: string; selectionStart: number; selectionEnd: number } {
+  const { value, selectionStart, selectionEnd } = textarea;
+  const blockStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+  const lineBreak = value.indexOf("\n", selectionEnd);
+  const blockEnd = lineBreak === -1 ? value.length : lineBreak;
+  const shifted = value
+    .slice(blockStart, blockEnd)
+    .split("\n")
+    .map((line) =>
+      removing ? line.replace(/^ {1,2}/, "") : INDENT + line,
+    )
+    .join("\n");
+  const moved = shifted.length - (blockEnd - blockStart);
+  const wholeLines = selectionStart !== selectionEnd;
+  const caret = Math.max(blockStart, selectionStart + moved);
+  return {
+    text:
+      value.slice(0, blockStart) + shifted + value.slice(blockEnd),
+    selectionStart: wholeLines ? blockStart : caret,
+    selectionEnd: wholeLines ? blockEnd + moved : caret,
+  };
 }

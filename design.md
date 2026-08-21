@@ -249,8 +249,9 @@ The app is mobile-first and stays that way; a handful of behaviours change above
 768px, none of which alter the phone.
 
 - The task detail sheet is a **centred modal** rather than a sheet sliding up
-  from the bottom. Drag-to-dismiss goes with it, replaced by a close button, a
-  click on the backdrop, and Escape. Escape inside a text field blurs the field
+  from the bottom. Drag-to-dismiss goes with it, replaced by a tick button in
+  the corner, a click on the backdrop, and Escape. The tick rather than a cross,
+  because leaving the modal is how an edit is committed. Escape inside a text field blurs the field
   first, so backing out of an edit does not close the whole modal.
 - Rows highlight under the cursor, and the ⓘ that opens the detail modal
   **appears on hover** instead of only while renaming. It holds its slot at all

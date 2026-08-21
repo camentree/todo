@@ -104,6 +104,16 @@ the note, subtasks, and comments. Tags there are chips you tap to remove, plus a
 field that suggests the other tags already used in that same list and accepts new
 ones.
 
+**A section opens on its own when it holds something.** Timing — repetition, the
+date and the time — subtasks, notes and comments are each collapsible, and each
+starts open if the task already has one and collapsed if it does not. So a bare
+task is four headings, and a task with a date, a note and comments shows all
+three without a tap.
+
+The note grows to fit what is in it rather than scrolling inside a fixed box, and
+Tab indents the lines you have selected by two spaces, Shift-Tab takes them back
+out. Single-line fields ignore Tab as usual.
+
 **Closing the sheet** by dragging: pulling down on the grab handle at its top
 always closes it; pulling down anywhere else closes it once the sheet is scrolled
 to the top; dragging inside the note, the comments, or the subtasks scrolls those
