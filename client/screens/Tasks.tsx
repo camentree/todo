@@ -6,18 +6,25 @@ import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
 import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
+import type { MetaOmission } from "../components/TaskBoard.tsx";
 import { TaskSheet } from "../components/TaskSheet.tsx";
 import { buildGroups } from "../grouping.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
 
-export type Scope = "today" | "todo" | "archive" | "list";
+export type Scope =
+  | "today"
+  | "todo"
+  | "archive"
+  | "list"
+  | "tag"
+  | "who";
 
 export function Tasks({ scope }: { scope: Scope }) {
   const { name } = useParams();
-  const list =
-    scope === "list" ? decodeURIComponent(name ?? "") : undefined;
-  const key = scope === "list" ? `list:${list}` : scope;
+  const filter = name === undefined ? "" : decodeURIComponent(name);
+  const list = scope === "list" ? filter : undefined;
+  const key = filter ? `${scope}:${filter}` : scope;
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
@@ -33,10 +40,12 @@ export function Tasks({ scope }: { scope: Scope }) {
   });
 
   const { data: tasks = [], isPending } = useQuery({
-    queryKey: ["tasks", scope, list],
+    queryKey: ["tasks", scope, filter],
     queryFn: () => {
       if (scope === "today") return api.today();
       if (scope === "archive") return api.archive();
+      if (scope === "tag") return api.tasks({ tags: filter });
+      if (scope === "who") return api.tasks({ who: filter });
       return api.tasks(list ? { list: list } : {});
     },
   });
@@ -46,12 +55,13 @@ export function Tasks({ scope }: { scope: Scope }) {
     view: view,
     lists: lists,
     settling: actions.settling,
+    scoped: scopedTo({ scope: scope, filter: filter }),
   });
 
   return (
     <>
       <TopBar
-        title={titleFor({ scope: scope, list: list })}
+        title={titleFor({ scope: scope, filter: filter })}
         view={view}
         onViewChange={changeView}
       />
@@ -98,15 +108,30 @@ export function Tasks({ scope }: { scope: Scope }) {
 
 function titleFor({
   scope,
-  list,
+  filter,
 }: {
   scope: Scope;
-  list: string | undefined;
+  filter: string;
 }): string {
   if (scope === "today") return "Today";
   if (scope === "archive") return "Archive";
-  if (scope === "list") return list ?? "";
+  if (scope === "list") return filter;
+  if (scope === "tag") return `#${filter}`;
+  if (scope === "who") return `@${filter}`;
   return "To Do";
+}
+
+function scopedTo({
+  scope,
+  filter,
+}: {
+  scope: Scope;
+  filter: string;
+}): MetaOmission | null {
+  if (scope === "list" || scope === "tag" || scope === "who") {
+    return { field: scope, label: filter };
+  }
+  return null;
 }
 
 function emptyFor(scope: Scope): string {

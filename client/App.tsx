@@ -9,6 +9,8 @@ export function App() {
         <Route path="/" element={<Tasks scope="today" />} />
         <Route path="/todo" element={<Tasks scope="todo" />} />
         <Route path="/list/:name" element={<Tasks scope="list" />} />
+        <Route path="/tag/:name" element={<Tasks scope="tag" />} />
+        <Route path="/who/:name" element={<Tasks scope="who" />} />
         <Route path="/archive" element={<Tasks scope="archive" />} />
       </Routes>
     </div>

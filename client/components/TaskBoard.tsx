@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   formatDueDate,
@@ -18,12 +19,19 @@ import type {
 const SWIPE_FRACTION = 0.4;
 const LONG_PRESS_MILLISECONDS = 400;
 
+export type MetaField = BreakUpField | "recurring";
+
+export interface MetaOmission {
+  field: MetaField;
+  label: string;
+}
+
 export interface BoardGroup {
   key: string;
   label: string;
   stage?: TaskStage;
   list?: string;
-  omitFromMeta?: BreakUpField;
+  omitFromMeta: MetaOmission[];
   tasks: Task[];
 }
 
@@ -453,7 +461,11 @@ function Row({
               )}
             </div>
 
-            <Meta task={task} group={group} />
+            <Meta
+              task={task}
+              group={group}
+              travelled={gesture.travelled}
+            />
           </div>
         </div>
 
@@ -570,39 +582,90 @@ function InfoIcon() {
   );
 }
 
-function Meta({ task, group }: { task: Task; group: BoardGroup }) {
-  const omitted = group.omitFromMeta;
-  const archived = task.archivedAt !== null;
-  const due = isDueToday(task.dueDate)
-    ? null
-    : formatDueDate(task.dueDate);
-  const parts = [
-    task.stage && omitted !== "stage"
-      ? stageLabel(task.stage).toLowerCase()
-      : null,
-    omitted === "due_date" || archived ? null : due,
-    archived ? null : formatDueTime(task.dueTime),
-    omitted === "who" ? null : task.who,
-  ].filter((part): part is string => Boolean(part));
+interface MetaItem {
+  field: MetaField;
+  text: string;
+  to?: string;
+}
 
-  const tags = task.tags.filter(
-    (tag) => omitted !== "tag" || tag !== group.label,
+function Meta({
+  task,
+  group,
+  travelled,
+}: {
+  task: Task;
+  group: BoardGroup;
+  travelled: () => boolean;
+}) {
+  const navigate = useNavigate();
+  const archived = task.archivedAt !== null;
+  const due = archived ? null : formatDueDate(task.dueDate);
+  const time = archived ? null : formatDueTime(task.dueTime);
+
+  const items: (MetaItem | null)[] = [
+    ...task.tags.map(
+      (tag): MetaItem => ({
+        field: "tag",
+        text: tag,
+        to: `/tag/${encodeURIComponent(tag)}`,
+      }),
+    ),
+    {
+      field: "list",
+      text: task.list,
+      to: `/list/${encodeURIComponent(task.list)}`,
+    },
+    task.who
+      ? {
+          field: "who",
+          text: task.who,
+          to: `/who/${encodeURIComponent(task.who)}`,
+        }
+      : null,
+    due ? { field: "due_date", text: due } : null,
+    time ? { field: "due_date", text: time } : null,
+    task.recurringTaskId
+      ? { field: "recurring", text: "recurring" }
+      : null,
+    task.stage
+      ? { field: "stage", text: stageLabel(task.stage).toLowerCase() }
+      : null,
+  ];
+
+  const shown = items.filter(
+    (item): item is MetaItem =>
+      item !== null &&
+      !group.omitFromMeta.some(
+        (omission) =>
+          omission.field === item.field &&
+          omission.label.toLowerCase() === item.text.toLowerCase(),
+      ),
   );
 
-  if (parts.length === 0 && tags.length === 0) {
+  if (shown.length === 0) {
     return null;
   }
 
   return (
     <span className="task-meta">
-      {tags.map((tag) => (
-        <span className="tag" key={tag}>
-          {tag}
-        </span>
-      ))}
-      {parts.map((part) => (
-        <span key={part}>{part}</span>
-      ))}
+      {shown.map(({ field, text, to }) =>
+        to ? (
+          <button
+            type="button"
+            key={`${field}-${text}`}
+            className={field === "tag" ? "tag" : undefined}
+            onClick={() => {
+              if (!travelled()) {
+                navigate(to);
+              }
+            }}
+          >
+            {text}
+          </button>
+        ) : (
+          <span key={`${field}-${text}`}>{text}</span>
+        ),
+      )}
     </span>
   );
 }

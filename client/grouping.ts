@@ -1,6 +1,9 @@
 import { parseISO } from "date-fns";
 
-import type { BoardGroup } from "./components/TaskBoard.tsx";
+import type {
+  BoardGroup,
+  MetaOmission,
+} from "./components/TaskBoard.tsx";
 import { formatDueDate } from "./format.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
@@ -12,11 +15,13 @@ export function buildGroups({
   view,
   lists,
   settling,
+  scoped,
 }: {
   tasks: Task[];
   view: ViewPreference;
   lists: string[];
   settling?: Set<number>;
+  scoped?: MetaOmission | null;
 }): BoardGroup[] {
   const sorted = sortTasks({
     tasks: tasks,
@@ -24,8 +29,17 @@ export function buildGroups({
     settling: settling,
   });
 
+  const screenWide = scoped ? [scoped] : [];
+
   if (view.breakUpBy === "none") {
-    return [{ key: "all", label: "", tasks: sorted }];
+    return [
+      {
+        key: "all",
+        label: "",
+        omitFromMeta: screenWide,
+        tasks: sorted,
+      },
+    ];
   }
 
   if (view.breakUpBy === "list") {
@@ -34,6 +48,10 @@ export function buildGroups({
         key: `list-${list}`,
         label: list,
         list: list,
+        omitFromMeta: [
+          ...screenWide,
+          { field: "list" as const, label: list },
+        ],
         tasks: sorted.filter((task) => task.list === list),
       }))
       .filter((group) => group.tasks.length > 0);
@@ -44,7 +62,10 @@ export function buildGroups({
       key: `stage-${stage}`,
       label: stageLabel(stage),
       stage: stage,
-      omitFromMeta: "stage" as const,
+      omitFromMeta: [
+        ...screenWide,
+        { field: "stage" as const, label: stageLabel(stage) },
+      ],
       tasks: sorted.filter((task) => stageOf(task) === stage),
     })).filter((group) => group.tasks.length > 0);
   }
@@ -89,7 +110,10 @@ export function buildGroups({
   return entries.map(([label, grouped]) => ({
     key: `${view.breakUpBy}-${label}`,
     label: label,
-    omitFromMeta: view.breakUpBy,
+    omitFromMeta: [
+      ...screenWide,
+      { field: view.breakUpBy, label: label },
+    ],
     tasks: grouped,
   }));
 }
