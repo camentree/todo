@@ -9,8 +9,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { Chevron } from "./TaskBoard.tsx";
 import { api } from "../api.ts";
-import { formatWhen } from "../format.ts";
+import { asTitle, formatWhen } from "../format.ts";
 import { useTheme, type Theme } from "../theme.ts";
+import { canonicalName } from "@shared/names.ts";
 import type {
   BreakUpField,
   Density,
@@ -93,6 +94,18 @@ const SORT_OPTIONS: {
     field: "created_at",
     direction: "asc",
     label: "Added — oldest",
+  },
+  {
+    value: "resolved_at:desc",
+    field: "resolved_at",
+    direction: "desc",
+    label: "Finished — newest",
+  },
+  {
+    value: "resolved_at:asc",
+    field: "resolved_at",
+    direction: "asc",
+    label: "Finished — oldest",
   },
 ];
 
@@ -210,18 +223,23 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
     <div className="menu under-title">
       <MenuLink
         label="Today"
+        here={location.pathname === "/due_date/today"}
+        onGo={() => go("/due_date/today")}
+      />
+      <MenuLink
+        label="To Do"
         here={location.pathname === "/"}
         onGo={() => go("/")}
       />
       <MenuLink
-        label="To Do"
-        here={location.pathname === "/todo"}
-        onGo={() => go("/todo")}
+        label="Done"
+        here={location.pathname === "/state/complete"}
+        onGo={() => go("/state/complete")}
       />
       <MenuLink
         label="Archive"
-        here={location.pathname === "/archive"}
-        onGo={() => go("/archive")}
+        here={location.pathname === "/archived/true"}
+        onGo={() => go("/archived/true")}
       />
 
       {lists.length > 0 && (
@@ -230,11 +248,12 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
           {lists.map((list) => (
             <MenuLink
               key={list}
-              label={list}
+              label={asTitle(list)}
               small
               here={
-                location.pathname ===
-                `/list/${encodeURIComponent(list)}`
+                canonicalName(
+                  decodeURIComponent(location.pathname),
+                ) === `/list/${list}`
               }
               onGo={() => go(`/list/${encodeURIComponent(list)}`)}
             />
