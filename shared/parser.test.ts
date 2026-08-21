@@ -19,6 +19,11 @@ function titleOf(input: string): string {
   return parse({ input: input, today: thursday }).title;
 }
 
+function searchTokensOf(input: string): ParsedToken[] {
+  return parse({ input: input, today: thursday, search: true })
+    .tokens;
+}
+
 describe("parse", () => {
   test("pulls sigils out and leaves the title behind", () => {
     const result = parse({
@@ -142,13 +147,13 @@ describe("parse", () => {
   });
 
   test("reads the search-only flags and quoted phrases", () => {
-    expect(tokensOf("overdue")).toEqual([
+    expect(searchTokensOf("overdue")).toEqual([
       { kind: "overdue", text: "overdue" },
     ]);
-    expect(tokensOf("no date")).toEqual([
+    expect(searchTokensOf("no date")).toEqual([
       { kind: "noDueDate", text: "no date" },
     ]);
-    expect(tokensOf('"auth middleware" #parallax')).toEqual([
+    expect(searchTokensOf('"auth middleware" #parallax')).toEqual([
       {
         kind: "phrase",
         text: '"auth middleware"',
@@ -186,6 +191,105 @@ describe("parse", () => {
 
   test("every token is returned, so the caller takes the last of a kind", () => {
     expect(tokensOf("Standup daily every mon")).toHaveLength(2);
+  });
+
+  test("the search-only tokens stay in the title on capture", () => {
+    expect(titleOf("overdue invoice")).toBe("overdue invoice");
+    expect(titleOf("Tasks with no date go last")).toBe(
+      "Tasks with no date go last",
+    );
+  });
+
+  test("quoted text stays verbatim on capture", () => {
+    expect(titleOf('Reply "hi" to the recruiter')).toBe(
+      'Reply "hi" to the recruiter',
+    );
+    expect(tokensOf('Reply "hi" to the recruiter')).toEqual([]);
+    expect(titleOf('The word "today" is a date word')).toBe(
+      'The word "today" is a date word',
+    );
+  });
+
+  test("a backslash escapes the word after it and does not survive", () => {
+    expect(titleOf("Buy \\today groceries")).toBe(
+      "Buy today groceries",
+    );
+    expect(tokensOf("Buy \\today groceries")).toEqual([]);
+    expect(titleOf("Read up on \\#health")).toBe(
+      "Read up on #health",
+    );
+    expect(titleOf("Ship it \\!blocked")).toBe("Ship it !blocked");
+    expect(titleOf("Pay the deposit \\in 3 days")).toBe(
+      "Pay the deposit in 3 days",
+    );
+  });
+
+  test("a backslash on its own is ordinary text", () => {
+    expect(titleOf("Escape with \\ in a title")).toBe(
+      "Escape with \\ in a title",
+    );
+    expect(titleOf("Write \\\\today literally")).toBe(
+      "Write \\today literally",
+    );
+  });
+
+  test("punctuation around a date word does not hide it", () => {
+    expect(tokensOf("Do it tomorrow!")).toEqual([
+      { kind: "dueDate", text: "tomorrow!", value: "2026-08-14" },
+    ]);
+    expect(tokensOf("Do it today?")).toEqual([
+      { kind: "dueDate", text: "today?", value: "2026-08-13" },
+    ]);
+    expect(tokensOf("Call mom (monday)")).toEqual([
+      { kind: "dueDate", text: "(monday)", value: "2026-08-17" },
+    ]);
+    expect(tokensOf("Groceries (aug 20)")).toEqual([
+      { kind: "dueDate", text: "(aug 20)", value: "2026-08-20" },
+    ]);
+    expect(tokensOf("Groceries in 3 days.")).toEqual([
+      { kind: "dueDate", text: "in 3 days.", value: "2026-08-16" },
+    ]);
+    expect(tokensOf("Groceries 2026-09-01.")).toEqual([
+      { kind: "dueDate", text: "2026-09-01.", value: "2026-09-01" },
+    ]);
+    expect(tokensOf("Groceries at 3pm!")).toEqual([
+      { kind: "dueTime", text: "at 3pm!", value: "15:00" },
+    ]);
+  });
+
+  test("capitalisation does not hide a date or a schedule", () => {
+    expect(tokensOf("Call mom Tomorrow")).toEqual([
+      { kind: "dueDate", text: "Tomorrow", value: "2026-08-14" },
+    ]);
+    expect(tokensOf("Call mom TODAY")).toEqual([
+      { kind: "dueDate", text: "TODAY", value: "2026-08-13" },
+    ]);
+    expect(tokensOf("Stretch Every Day")).toHaveLength(1);
+  });
+
+  test("everyday means daily", () => {
+    expect(tokensOf("10 pushups everyday")).toEqual([
+      {
+        kind: "recurrence",
+        text: "everyday",
+        value: {
+          frequency: "daily",
+          repeatEvery: 1,
+          weekdays: [],
+          dayOfMonth: null,
+        },
+      },
+    ]);
+    expect(tokensOf("10 pushups everyday!")).toHaveLength(1);
+  });
+
+  test("a date word inside a longer word is not a date", () => {
+    expect(titleOf("Buy milk tomorrow's list")).toBe(
+      "Buy milk tomorrow's list",
+    );
+    expect(titleOf("Read the everydayfeminism piece")).toBe(
+      "Read the everydayfeminism piece",
+    );
   });
 
   test("leaves ordinary text entirely alone", () => {

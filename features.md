@@ -104,7 +104,13 @@ into the title.
 | `daily`, `every mon`, `every 2 weeks` | a repeating schedule |
 
 Sigils are exact and always applied. Dates are guesses, so they are always shown
-as chips you can reject. There is no escape syntax.
+as chips you can reject.
+
+**A backslash keeps a word literal, and does not itself show up.** Typing
+`\today` puts the word "today" in the title with no date attached; the same
+works in front of a sigil, so `\#health` stays as `#health`. Quoted text is left
+alone too — `"hi"` in a title stays `"hi"`, quotes and all, because quoted
+phrases only mean something in search.
 
 A task added from Today, where no list is implied, goes to the list you last
 added to.
