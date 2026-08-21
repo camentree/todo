@@ -242,6 +242,7 @@ function SearchField({
         onChange={(event) => onChange(event.target.value)}
         placeholder="Search"
         aria-label="Search"
+        data-search-field
         enterKeyHint="search"
         autoComplete="off"
         autoCapitalize="none"
