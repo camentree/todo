@@ -16,6 +16,7 @@ async function check(): Promise<void> {
   const page = await browser.newPage({
     viewport: { width: 390, height: 844 },
   });
+  page.setDefaultTimeout(5000);
   await page.goto(`${BASE_URL}/list/Habits`, {
     waitUntil: "networkidle",
   });

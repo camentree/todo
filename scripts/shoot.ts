@@ -20,19 +20,19 @@ interface Shot {
 const SHOTS: Shot[] = [
   {
     name: "today-dark",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
   },
   {
     name: "today-light",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "light",
   },
   {
     name: "today-expanded",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
@@ -44,7 +44,7 @@ const SHOTS: Shot[] = [
   },
   {
     name: "sheet",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
@@ -53,13 +53,13 @@ const SHOTS: Shot[] = [
   },
   {
     name: "todo",
-    path: "/todo",
+    path: "/",
     viewport: PHONE,
     colorScheme: "dark",
   },
   {
     name: "todo-collapsed",
-    path: "/todo",
+    path: "/",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
@@ -69,7 +69,7 @@ const SHOTS: Shot[] = [
   },
   {
     name: "changes-menu",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
@@ -81,7 +81,7 @@ const SHOTS: Shot[] = [
   },
   {
     name: "view-menu",
-    path: "/todo",
+    path: "/",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
@@ -91,7 +91,7 @@ const SHOTS: Shot[] = [
   },
   {
     name: "scope-menu",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
@@ -148,13 +148,13 @@ const SHOTS: Shot[] = [
   },
   {
     name: "archive",
-    path: "/archive",
+    path: "/archived/true",
     viewport: PHONE,
     colorScheme: "dark",
   },
   {
     name: "capture-open",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {
@@ -182,13 +182,13 @@ const SHOTS: Shot[] = [
   },
   {
     name: "multiline-title",
-    path: "/",
+    path: "/due_date/today",
     viewport: { width: 320, height: 844 },
     colorScheme: "dark",
   },
   {
     name: "renaming-in-place",
-    path: "/",
+    path: "/due_date/today",
     viewport: PHONE,
     colorScheme: "dark",
     act: async (page) => {

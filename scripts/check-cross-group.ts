@@ -65,6 +65,7 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 page.on("console", (message) => {
   if (message.type() === "error")

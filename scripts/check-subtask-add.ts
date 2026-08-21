@@ -19,6 +19,7 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 
 await page.goto(`${BASE_URL}/list/Habits`, {

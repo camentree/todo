@@ -53,7 +53,7 @@ function read({
     noDueDate: false,
   };
 
-  const parsed = parse({ input: input, today: today });
+  const parsed = parse({ input: input, today: today, search: true });
 
   for (const token of parsed.tokens) {
     if (token.kind === "tag") {
