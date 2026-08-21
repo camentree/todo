@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node --env-file=.env ./node_modules/.bin/concurrently -n server,client -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "tsx watch --env-file=.env server/main.ts",
-    "dev:client": "vite",
+    "dev:client": "vite --host",
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/main.ts",
     "test": "scripts/test",
