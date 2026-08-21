@@ -6,6 +6,12 @@ import {
   parseISO,
 } from "date-fns";
 
+export function asTitle(name: string): string {
+  return name.replace(/(^|\s)\p{Ll}/gu, (start) =>
+    start.toUpperCase(),
+  );
+}
+
 export function formatDueDate(dueDate: string | null): string | null {
   if (!dueDate) {
     return null;

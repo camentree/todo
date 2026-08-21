@@ -7,16 +7,20 @@ import { TopBar } from "../components/Chrome.tsx";
 import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import { TaskSheet } from "../components/TaskSheet.tsx";
+import { asTitle } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
+import { canonicalName } from "@shared/names.ts";
 
 export type Scope = "today" | "todo" | "archive" | "list";
 
 export function Tasks({ scope }: { scope: Scope }) {
   const { name } = useParams();
   const list =
-    scope === "list" ? decodeURIComponent(name ?? "") : undefined;
+    scope === "list"
+      ? canonicalName(decodeURIComponent(name ?? ""))
+      : undefined;
   const key = scope === "list" ? `list:${list}` : scope;
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
@@ -105,7 +109,7 @@ function titleFor({
 }): string {
   if (scope === "today") return "Today";
   if (scope === "archive") return "Archive";
-  if (scope === "list") return list ?? "";
+  if (scope === "list") return asTitle(list ?? "");
   return "To Do";
 }
 
