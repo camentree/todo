@@ -102,10 +102,18 @@ export function TopBar({
   title,
   view,
   onViewChange,
+  search,
+  onOpenSearch,
 }: {
   title: string;
   view?: ViewPreference;
   onViewChange?: (changes: Partial<ViewPreference>) => void;
+  search?: {
+    text: string;
+    onChange: (text: string) => void;
+    onClose: () => void;
+  };
+  onOpenSearch?: () => void;
 }) {
   const [menu, setMenu] = useState<OpenMenu>("none");
 
@@ -131,45 +139,70 @@ export function TopBar({
   return (
     <>
       <div className="topbar">
-        <button
-          type="button"
-          className="topbar-filter"
-          onClick={() => setMenu(menu === "scope" ? "none" : "scope")}
-        >
-          <span className="topbar-name">{title}</span>
-          <Chevron open={menu === "scope"} />
-        </button>
-
-        <div className="topbar-date">
-          {format(new Date(), "d MMM")}
-        </div>
-
-        <div className="topbar-actions">
-          {view && onViewChange && (
+        {search ? (
+          <SearchField
+            text={search.text}
+            onChange={search.onChange}
+            onClose={search.onClose}
+          />
+        ) : (
+          <>
             <button
               type="button"
-              className="icon-button"
-              aria-label="Arrange"
-              data-active={menu === "view"}
+              className="topbar-filter"
               onClick={() =>
-                setMenu(menu === "view" ? "none" : "view")
+                setMenu(menu === "scope" ? "none" : "scope")
               }
             >
-              <SlidersIcon />
+              <span className="topbar-name">{title}</span>
+              <Chevron open={menu === "scope"} />
             </button>
-          )}
 
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Notifications"
-            data-active={menu === "bell"}
-            onClick={() => setMenu(menu === "bell" ? "none" : "bell")}
-          >
-            <BellIcon />
-            {unseen.length > 0 && <span className="dot" />}
-          </button>
-        </div>
+            <div className="topbar-date">
+              {format(new Date(), "d MMM")}
+            </div>
+
+            <div className="topbar-actions">
+              {onOpenSearch && (
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="Search"
+                  onClick={onOpenSearch}
+                >
+                  <SearchIcon />
+                </button>
+              )}
+
+              {view && onViewChange && (
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="Arrange"
+                  data-active={menu === "view"}
+                  onClick={() =>
+                    setMenu(menu === "view" ? "none" : "view")
+                  }
+                >
+                  <SlidersIcon />
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Notifications"
+                data-active={menu === "bell"}
+                onClick={() =>
+                  setMenu(menu === "bell" ? "none" : "bell")
+                }
+              >
+                <BellIcon />
+                {unseen.length > 0 && <span className="dot" />}
+              </button>
+            </div>
+          </>
+        )}
 
         {menu === "scope" && (
           <ScopeMenu onClose={() => setMenu("none")} />
@@ -189,6 +222,42 @@ export function TopBar({
         />
       )}
     </>
+  );
+}
+
+function SearchField({
+  text,
+  onChange,
+  onClose,
+}: {
+  text: string;
+  onChange: (text: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="search-field">
+      <SearchIcon />
+      <input
+        value={text}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Search"
+        aria-label="Search"
+        enterKeyHint="search"
+        autoComplete="off"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        autoFocus
+      />
+      <button
+        type="button"
+        className="icon-button"
+        aria-label="Close search"
+        onClick={onClose}
+      >
+        <CrossIcon />
+      </button>
+    </div>
   );
 }
 
@@ -504,6 +573,51 @@ function EventRow({
         </div>
       </div>
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="8.75"
+        cy="8.75"
+        r="5.25"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="m12.75 12.75 3.75 3.75"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CrossIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5.5 5.5l9 9M14.5 5.5l-9 9"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

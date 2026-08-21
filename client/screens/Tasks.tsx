@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { api } from "../api.ts";
@@ -10,6 +10,7 @@ import { TaskSheet } from "../components/TaskSheet.tsx";
 import { buildGroups } from "../grouping.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
+import { searchTasks } from "@shared/search.ts";
 
 export type Scope = "today" | "todo" | "archive" | "list";
 
@@ -21,6 +22,7 @@ export function Tasks({ scope }: { scope: Scope }) {
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [searchText, setSearchText] = useState<string | null>(null);
   const [view, changeView] = useViewPreference(
     key,
     defaultView(scope),
@@ -41,8 +43,34 @@ export function Tasks({ scope }: { scope: Scope }) {
     },
   });
 
+  const { data: searchable = [] } = useQuery({
+    queryKey: ["tasks", "searchable"],
+    queryFn: () => api.tasks({ includeArchived: "true" }),
+    enabled: searchText !== null,
+  });
+
+  const results = useMemo(
+    () =>
+      searchTasks({
+        tasks: searchable,
+        input: searchText ?? "",
+        today: new Date(),
+      }),
+    [searchable, searchText],
+  );
+
+  const showing = searchText === null ? tasks : results;
+  const nothing =
+    searchText === null
+      ? isPending
+        ? null
+        : emptyFor(scope)
+      : searchText.trim().length === 0
+        ? null
+        : "No matches.";
+
   const groups = buildGroups({
-    tasks: tasks,
+    tasks: showing,
     view: view,
     lists: lists,
     settling: actions.settling,
@@ -54,10 +82,23 @@ export function Tasks({ scope }: { scope: Scope }) {
         title={titleFor({ scope: scope, list: list })}
         view={view}
         onViewChange={changeView}
+        onOpenSearch={() => {
+          setAdding(false);
+          setSearchText("");
+        }}
+        search={
+          searchText === null
+            ? undefined
+            : {
+                text: searchText,
+                onChange: setSearchText,
+                onClose: () => setSearchText(null),
+              }
+        }
       />
 
-      {isPending ? null : tasks.length === 0 && !adding ? (
-        <p className="empty">{emptyFor(scope)}</p>
+      {showing.length === 0 && !adding ? (
+        nothing && <p className="empty">{nothing}</p>
       ) : (
         <TaskBoard
           groups={groups}
@@ -82,7 +123,7 @@ export function Tasks({ scope }: { scope: Scope }) {
         />
       )}
 
-      {scope !== "archive" && !adding && (
+      {scope !== "archive" && !adding && searchText === null && (
         <AddButton onClick={() => setAdding(true)} />
       )}
 
