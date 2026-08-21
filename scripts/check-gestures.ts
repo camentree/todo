@@ -22,7 +22,7 @@ async function describe(title: string): Promise<string> {
     }
   }
   const archived = (await (
-    await fetch(`${BASE_URL}/api/archive`)
+    await fetch(`${BASE_URL}/api/tasks?attribute=archived&value=true`)
   ).json()) as { title: string }[];
   return archived.some((task) => task.title === title)
     ? "archived"
@@ -120,7 +120,7 @@ await step({
   title: "Fix the bike puncture",
   distance: LEFT,
   expect: "unarchived",
-  path: "/archive",
+  path: "/archived/true",
 });
 
 await browser.close();

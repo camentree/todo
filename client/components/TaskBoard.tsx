@@ -6,23 +6,17 @@ import {
   formatDueTime,
   isDueToday,
 } from "../format.ts";
+import type { Attribute } from "@shared/attributes.ts";
 import { stageLabel } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
-import type {
-  BreakUpField,
-  Density,
-  Layout,
-  Task,
-} from "@shared/types.ts";
+import type { Density, Layout, Task } from "@shared/types.ts";
 
 const SWIPE_FRACTION = 0.4;
 const LONG_PRESS_MILLISECONDS = 400;
 
-export type MetaField = BreakUpField | "recurring";
-
 export interface MetaOmission {
-  field: MetaField;
+  field: Attribute;
   label: string;
 }
 
@@ -465,6 +459,7 @@ function Row({
               task={task}
               group={group}
               travelled={gesture.travelled}
+              onOpen={() => actions.open(task)}
             />
           </div>
         </div>
@@ -583,7 +578,7 @@ function InfoIcon() {
 }
 
 interface MetaItem {
-  field: MetaField;
+  field: Attribute;
   text: string;
   to?: string;
 }
@@ -592,10 +587,12 @@ function Meta({
   task,
   group,
   travelled,
+  onOpen,
 }: {
   task: Task;
   group: BoardGroup;
   travelled: () => boolean;
+  onOpen: () => void;
 }) {
   const navigate = useNavigate();
   const archived = task.archivedAt !== null;
@@ -603,6 +600,11 @@ function Meta({
   const time = archived ? null : formatDueTime(task.dueTime);
 
   const items: (MetaItem | null)[] = [
+    {
+      field: "list",
+      text: task.list,
+      to: `/list/${encodeURIComponent(task.list)}`,
+    },
     ...task.tags.map(
       (tag): MetaItem => ({
         field: "tag",
@@ -610,11 +612,6 @@ function Meta({
         to: `/tag/${encodeURIComponent(tag)}`,
       }),
     ),
-    {
-      field: "list",
-      text: task.list,
-      to: `/list/${encodeURIComponent(task.list)}`,
-    },
     task.who
       ? {
           field: "who",
@@ -622,24 +619,45 @@ function Meta({
           to: `/who/${encodeURIComponent(task.who)}`,
         }
       : null,
-    due ? { field: "due_date", text: due } : null,
-    time ? { field: "due_date", text: time } : null,
+    due
+      ? {
+          field: "due_date",
+          text: due,
+          to: `/due_date/${encodeURIComponent(due)}`,
+        }
+      : null,
+    time && task.dueTime
+      ? {
+          field: "due_time",
+          text: time,
+          to: `/due_time/${task.dueTime.slice(0, 5)}`,
+        }
+      : null,
     task.recurringTaskId
-      ? { field: "recurring", text: "recurring" }
+      ? {
+          field: "recurring",
+          text: "recurring",
+          to: "/recurring/true",
+        }
       : null,
     task.stage
-      ? { field: "stage", text: stageLabel(task.stage).toLowerCase() }
+      ? {
+          field: "stage",
+          text: stageLabel(task.stage),
+          to: `/stage/${task.stage}`,
+        }
       : null,
   ];
 
   const shown = items.filter(
     (item): item is MetaItem =>
       item !== null &&
-      !group.omitFromMeta.some(
-        (omission) =>
-          omission.field === item.field &&
-          omission.label.toLowerCase() === item.text.toLowerCase(),
-      ),
+      (item.text.toLowerCase() === "today" ||
+        !group.omitFromMeta.some(
+          (omission) =>
+            omission.field === item.field &&
+            omission.label.toLowerCase() === item.text.toLowerCase(),
+        )),
   );
 
   if (shown.length === 0) {
@@ -648,24 +666,25 @@ function Meta({
 
   return (
     <span className="task-meta">
-      {shown.map(({ field, text, to }) =>
-        to ? (
-          <button
-            type="button"
-            key={`${field}-${text}`}
-            className={field === "tag" ? "tag" : undefined}
-            onClick={() => {
-              if (!travelled()) {
-                navigate(to);
-              }
-            }}
-          >
-            {text}
-          </button>
-        ) : (
-          <span key={`${field}-${text}`}>{text}</span>
-        ),
-      )}
+      {shown.map(({ field, text, to }) => (
+        <button
+          type="button"
+          key={`${field}-${text}`}
+          className={field === "tag" ? "tag" : undefined}
+          onClick={() => {
+            if (travelled()) {
+              return;
+            }
+            if (to) {
+              navigate(to);
+            } else {
+              onOpen();
+            }
+          }}
+        >
+          {text.toLowerCase()}
+        </button>
+      ))}
     </span>
   );
 }

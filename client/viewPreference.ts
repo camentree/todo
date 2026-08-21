@@ -35,8 +35,9 @@ const BY_DUE: ViewPreference = {
 };
 
 export function defaultView(scope: Scope): ViewPreference {
-  if (scope === "today") return BY_DUE;
-  if (scope === "todo") return BY_LIST;
+  if (scope.field === "due_date" && scope.value === "today")
+    return BY_DUE;
+  if (scope.field === null) return BY_LIST;
   return FLAT_MANUAL;
 }
 

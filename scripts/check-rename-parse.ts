@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { chromium, devices } from "playwright";
 
 import type { Task } from "@shared/types.ts";
@@ -29,7 +30,9 @@ async function renameFirstTo(text: string): Promise<void> {
 }
 
 const before = (await (
-  await fetch(`${BASE_URL}/api/today`)
+  await fetch(
+    `${BASE_URL}/api/tasks?attribute=due_date&value=${format(new Date(), "yyyy-MM-dd")}`,
+  )
 ).json()) as Task[];
 const original = before[0];
 console.log(

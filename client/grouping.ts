@@ -70,12 +70,13 @@ export function buildGroups({
     })).filter((group) => group.tasks.length > 0);
   }
 
+  const breakUpBy = view.breakUpBy;
   const buckets = new Map<string, Task[]>();
   const rank = new Map<string, string | null>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
-      breakUpBy: view.breakUpBy,
+      breakUpBy: breakUpBy,
     })) {
       const existing = buckets.get(label);
       if (existing) {
@@ -86,7 +87,7 @@ export function buildGroups({
           label,
           rankFor({
             task: task,
-            breakUpBy: view.breakUpBy,
+            breakUpBy: breakUpBy,
             label: label,
           }),
         );
@@ -95,7 +96,7 @@ export function buildGroups({
   }
 
   const backwards =
-    view.breakUpBy === "due_date" && view.sortDirection === "desc";
+    breakUpBy === "due_date" && view.sortDirection === "desc";
 
   const entries = [...buckets.entries()].sort(([left], [right]) => {
     const leftRank = rank.get(left) ?? null;
@@ -108,12 +109,9 @@ export function buildGroups({
   });
 
   return entries.map(([label, grouped]) => ({
-    key: `${view.breakUpBy}-${label}`,
+    key: `${breakUpBy}-${label}`,
     label: label,
-    omitFromMeta: [
-      ...screenWide,
-      { field: view.breakUpBy, label: label },
-    ],
+    omitFromMeta: [...screenWide, { field: breakUpBy, label: label }],
     tasks: grouped,
   }));
 }

@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { chromium, devices } from "playwright";
 
 import { openSheetFor } from "./openSheet.ts";
@@ -8,7 +9,9 @@ import type { Task } from "@shared/types.ts";
 const BASE_URL = process.env.APP_URL ?? "http://localhost:8790";
 
 async function today(): Promise<Task[]> {
-  const response = await fetch(`${BASE_URL}/api/today`);
+  const response = await fetch(
+    `${BASE_URL}/api/tasks?attribute=due_date&value=${format(new Date(), "yyyy-MM-dd")}`,
+  );
   return response.json() as Promise<Task[]>;
 }
 
