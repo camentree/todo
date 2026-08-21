@@ -3,18 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n server,client -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:server": "tsx watch server/main.ts",
-    "dev:client": "vite",
+    "dev": "node --env-file=.env ./node_modules/.bin/concurrently -n server,client -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "tsx watch --env-file=.env server/main.ts",
+    "dev:client": "vite --host",
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/main.ts",
-    "migrate": "tsx scripts/migrate.ts",
-    "seed": "tsx scripts/seed.ts",
-    "shoot": "tsx scripts/shoot.ts",
-    "test": "vitest run",
-    "check": "tsc --noEmit && vitest run",
-    "check:app": "tsx scripts/check-all.ts",
-    "check:all": "npm run check && npm run check:app && npm run shoot"
+    "test": "scripts/test",
+    "migrate": "tsx --env-file=.env scripts/migrate.ts",
+    "seed": "tsx --env-file=.env scripts/seed-database.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

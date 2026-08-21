@@ -249,7 +249,7 @@ All three flip in place, with a sunlight slider, at
 The app is mobile-first and stays that way; a handful of behaviours change above
 768px, none of which alter the phone.
 
-- The task detail sheet is a **centred modal** rather than a sheet sliding up
+- The task info modal is a **centred modal** rather than a sheet sliding up
   from the bottom. Drag-to-dismiss goes with it, replaced by a close button, a
   click on the backdrop, and Escape. Escape inside a text field blurs the field
   first, so backing out of an edit does not close the whole modal.
