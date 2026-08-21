@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "DATABASE_URL is not set"
+  exit 1
+fi
+
+port="${PORT:-8791}"
+
+if [ -f .server.pid ] && kill -0 "$(cat .server.pid)" 2>/dev/null; then
+  echo "already running as $(cat .server.pid) on $port"
+  exit 0
+fi
+
+npm run build
+PORT="$port" NODE_ENV=production npx tsx server/main.ts > server.log 2>&1 &
+echo $! > .server.pid
+
+for _ in $(seq 1 50); do
+  if curl -sf -X GET "http://localhost:$port/api/lists" > /dev/null; then
+    echo "http://localhost:$port  (log in server.log)"
+    exit 0
+  fi
+  sleep 0.2
+done
+
+echo "no answer on $port, see server.log"
+exit 1

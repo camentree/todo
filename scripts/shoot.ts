@@ -1,6 +1,15 @@
-import { chromium, type Page } from "playwright";
+import { chromium, type Locator, type Page } from "playwright";
 
-import { openFirstSheet, openSheetFor } from "./openSheet.ts";
+async function openSheetFor(page: Page, row: Locator): Promise<void> {
+  await row.locator(".task-title").first().click();
+  await page.waitForTimeout(450);
+  await page.locator('.task[data-editing="true"] .task-info').click();
+  await page.waitForTimeout(600);
+}
+
+async function openFirstSheet(page: Page): Promise<void> {
+  await openSheetFor(page, page.locator(".task").first());
+}
 
 const BASE_URL = process.env.APP_URL ?? "http://localhost:8790";
 const OUTPUT_DIRECTORY =
@@ -130,7 +139,9 @@ const SHOTS: Shot[] = [
         .first()
         .selectOption("stage");
       await page.waitForTimeout(600);
-      await page.locator(".scrim").click();
+      await page
+        .locator(".scrim")
+        .click({ position: { x: 10, y: 800 } });
       await page.waitForTimeout(500);
     },
   },
