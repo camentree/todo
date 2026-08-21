@@ -3,6 +3,8 @@ import { useCallback, useState } from "react";
 import type { Scope } from "./screens/Tasks.tsx";
 import type {
   BreakUpField,
+  Density,
+  Layout,
   SortDirection,
   SortField,
   ViewPreference,
@@ -12,23 +14,40 @@ const FLAT_MANUAL: ViewPreference = {
   breakUpBy: "none",
   sortBy: "manual",
   sortDirection: "asc",
+  density: "compact",
+  layout: "stacked",
 };
 
 const BY_LIST: ViewPreference = {
   breakUpBy: "list",
   sortBy: "manual",
   sortDirection: "asc",
+  density: "compact",
+  layout: "stacked",
 };
 
 const BY_DUE: ViewPreference = {
   breakUpBy: "none",
   sortBy: "due_date",
   sortDirection: "desc",
+  density: "airy",
+  layout: "stacked",
+};
+
+const BY_FINISHED: ViewPreference = {
+  breakUpBy: "none",
+  sortBy: "resolved_at",
+  sortDirection: "desc",
+  density: "compact",
+  layout: "stacked",
 };
 
 export function defaultView(scope: Scope): ViewPreference {
-  if (scope === "today") return BY_DUE;
-  if (scope === "todo") return BY_LIST;
+  if (scope.field === "due_date" && scope.value === "today")
+    return BY_DUE;
+  if (scope.field === "state" && scope.value === "complete")
+    return BY_FINISHED;
+  if (scope.field === null) return BY_LIST;
   return FLAT_MANUAL;
 }
 
@@ -41,6 +60,12 @@ export function useViewPreference(
   const [preference, setPreference] = useState<ViewPreference>(() =>
     read(storageKey, fallback),
   );
+  const [shown, setShown] = useState<string>(storageKey);
+
+  if (shown !== storageKey) {
+    setShown(storageKey);
+    setPreference(read(storageKey, fallback));
+  }
 
   const change = useCallback(
     (changes: Partial<ViewPreference>) => {
@@ -72,6 +97,8 @@ function read(
       sortBy: (parsed.sortBy ?? fallback.sortBy) as SortField,
       sortDirection: (parsed.sortDirection ??
         fallback.sortDirection) as SortDirection,
+      density: (parsed.density ?? fallback.density) as Density,
+      layout: (parsed.layout ?? fallback.layout) as Layout,
     };
   } catch {
     return fallback;

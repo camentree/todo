@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[ -d node_modules ] || npm ci --silent
+[ -d node_modules ] || npm ci --include=dev --silent
 [ -d dist/client ] || npm run build
 
 if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ] || ! git diff --quiet HEAD; then
@@ -16,7 +16,7 @@ target="$(git rev-parse origin/main)"
 [ "$previous" = "$target" ] && exit 0
 
 build_and_migrate() {
-  git diff --quiet "$previous" "$target" -- package-lock.json || npm ci --silent || return 1
+  git diff --quiet "$previous" "$target" -- package-lock.json || npm ci --include=dev --silent || return 1
   npm run build || return 1
   npm run migrate
 }

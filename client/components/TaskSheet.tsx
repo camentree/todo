@@ -9,6 +9,7 @@ import { Chevron } from "./TaskBoard.tsx";
 import { api, type RecurringTaskDetail } from "../api.ts";
 import { formatWhen } from "../format.ts";
 import { useLockedScroll } from "../useLockedScroll.ts";
+import { canonicalName } from "@shared/names.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import type { Frequency, Task } from "@shared/types.ts";
@@ -176,6 +177,25 @@ export function TaskSheet({
     onSuccess: refresh,
   });
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key !== "Escape") {
+        return;
+      }
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLElement &&
+        active.closest("input, textarea")
+      ) {
+        active.blur();
+        return;
+      }
+      closeSlowly();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
   function closeSlowly(): void {
     drag.slideOut();
     if (task && title !== task.title) {
@@ -217,6 +237,15 @@ export function TaskSheet({
         <div className="sheet-handle">
           <div className="sheet-grabber" />
         </div>
+
+        <button
+          type="button"
+          className="sheet-close"
+          aria-label="Close"
+          onClick={closeSlowly}
+        >
+          <CloseIcon />
+        </button>
         <div className="sheet-body" ref={bodyRef}>
           <input
             className="sheet-title"
@@ -234,7 +263,7 @@ export function TaskSheet({
               list="known-lists"
               defaultValue={task.list}
               onBlur={(event) => {
-                const next = event.target.value.trim();
+                const next = canonicalName(event.target.value);
                 if (next && next !== task.list) {
                   save.mutate({ list: next });
                 }
@@ -300,10 +329,7 @@ export function TaskSheet({
                     return;
                   }
                   event.preventDefault();
-                  const tag = newTag
-                    .trim()
-                    .replace(/^#/, "")
-                    .toLowerCase();
+                  const tag = canonicalName(newTag).replace(/^#/, "");
                   if (tag && !task.tags.includes(tag)) {
                     save.mutate({ tags: [...task.tags, tag] });
                   }
@@ -722,4 +748,23 @@ function useDragDown({
       }
     },
   };
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 5l10 10M15 5L5 15"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }

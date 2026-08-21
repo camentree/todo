@@ -13,8 +13,8 @@ Output for all three goes to `/tmp/app-deploy.stdout.log`.
 
 Everything in this repository goes out that way. What does not: the launchd
 definitions and the environment the server runs with — the database URL and the
-port — which are nix's to own. Those live in dotfiles, which self-deploys the
-same way, so a change there is also just a push.
+port — which are nix's to own. Those live in dotfiles, and a change there needs
+`nix-rebuild mac-intel-server` on the machine.
 
 To collect a push now rather than waiting for the schedule:
 

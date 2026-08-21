@@ -4,19 +4,39 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Chevron } from "./TaskBoard.tsx";
 import { api } from "../api.ts";
-import { formatWhen } from "../format.ts";
+import { asTitle, formatWhen } from "../format.ts";
+import { useTheme, type Theme } from "../theme.ts";
+import { canonicalName } from "@shared/names.ts";
 import type {
   BreakUpField,
+  Density,
+  Layout,
   Event as TaskEvent,
   SortDirection,
   SortField,
   ViewPreference,
 } from "@shared/types.ts";
+
+const DENSITY_OPTIONS: { value: Density; label: string }[] = [
+  { value: "airy", label: "Airy" },
+  { value: "compact", label: "Compact" },
+];
+
+const LAYOUT_OPTIONS: { value: Layout; label: string }[] = [
+  { value: "stacked", label: "Stacked" },
+  { value: "columns", label: "Columns" },
+];
+
+const THEME_OPTIONS: { value: Theme; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 const GROUP_OPTIONS: { field: BreakUpField; label: string }[] = [
   { field: "none", label: "Nothing" },
@@ -75,6 +95,18 @@ const SORT_OPTIONS: {
     direction: "asc",
     label: "Added — oldest",
   },
+  {
+    value: "resolved_at:desc",
+    field: "resolved_at",
+    direction: "desc",
+    label: "Finished — newest",
+  },
+  {
+    value: "resolved_at:asc",
+    field: "resolved_at",
+    direction: "asc",
+    label: "Finished — oldest",
+  },
 ];
 
 type OpenMenu = "none" | "scope" | "view" | "bell";
@@ -95,6 +127,19 @@ export function TopBar({
     queryFn: api.unseenEvents,
     refetchInterval: 60_000,
   });
+
+  useEffect(() => {
+    if (menu === "none") {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") {
+        setMenu("none");
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menu]);
 
   return (
     <>
@@ -178,18 +223,23 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
     <div className="menu under-title">
       <MenuLink
         label="Today"
+        here={location.pathname === "/due_date/today"}
+        onGo={() => go("/due_date/today")}
+      />
+      <MenuLink
+        label="To Do"
         here={location.pathname === "/"}
         onGo={() => go("/")}
       />
       <MenuLink
-        label="To Do"
-        here={location.pathname === "/todo"}
-        onGo={() => go("/todo")}
+        label="Done"
+        here={location.pathname === "/state/complete"}
+        onGo={() => go("/state/complete")}
       />
       <MenuLink
         label="Archive"
-        here={location.pathname === "/archive"}
-        onGo={() => go("/archive")}
+        here={location.pathname === "/archived/true"}
+        onGo={() => go("/archived/true")}
       />
 
       {lists.length > 0 && (
@@ -198,11 +248,12 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
           {lists.map((list) => (
             <MenuLink
               key={list}
-              label={list}
+              label={asTitle(list)}
               small
               here={
-                location.pathname ===
-                `/list/${encodeURIComponent(list)}`
+                canonicalName(
+                  decodeURIComponent(location.pathname),
+                ) === `/list/${list}`
               }
               onGo={() => go(`/list/${encodeURIComponent(list)}`)}
             />
@@ -220,6 +271,8 @@ function ViewMenu({
   view: ViewPreference;
   onViewChange: (changes: Partial<ViewPreference>) => void;
 }) {
+  const [theme, onThemeChange] = useTheme();
+
   const sortValue =
     view.sortBy === "manual"
       ? "manual"
@@ -268,6 +321,63 @@ function ViewMenu({
           ))}
         </select>
       </label>
+
+      <MenuToggle
+        label="Spacing"
+        value={view.density}
+        options={DENSITY_OPTIONS}
+        onChoose={(density) => onViewChange({ density: density })}
+      />
+
+      {view.breakUpBy !== "none" && (
+        <MenuToggle
+          label="Layout"
+          wideOnly
+          value={view.layout}
+          options={LAYOUT_OPTIONS}
+          onChoose={(layout) => onViewChange({ layout: layout })}
+        />
+      )}
+
+      <MenuToggle
+        label="Appearance"
+        value={theme}
+        options={THEME_OPTIONS}
+        onChoose={onThemeChange}
+      />
+    </div>
+  );
+}
+
+function MenuToggle<Value extends string>({
+  label,
+  value,
+  options,
+  wideOnly = false,
+  onChoose,
+}: {
+  label: string;
+  value: Value;
+  options: { value: Value; label: string }[];
+  wideOnly?: boolean;
+  onChoose: (next: Value) => void;
+}) {
+  return (
+    <div className="menu-field" data-wide-only={wideOnly}>
+      <span className="menu-label">{label}</span>
+      <div className="menu-toggle" role="group" aria-label={label}>
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className="menu-toggle-option"
+            aria-pressed={option.value === value}
+            onClick={() => onChoose(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,10 +1,30 @@
 {
   "name": "Todo",
   "short_name": "Todo",
-  "start_url": "/",
+  "start_url": "/due_date/today",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#1c1a1e",
-  "theme_color": "#1c1a1e",
-  "orientation": "portrait"
+  "background_color": "#f5f8f6",
+  "theme_color": "#f5f8f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }

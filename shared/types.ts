@@ -75,26 +75,19 @@ export type SortField =
   | "manual"
   | "due_date"
   | "title"
-  | "created_at";
+  | "created_at"
+  | "resolved_at";
 
 export type SortDirection = "asc" | "desc";
+
+export type Density = "airy" | "compact";
+
+export type Layout = "stacked" | "columns";
 
 export interface ViewPreference {
   breakUpBy: BreakUpField;
   sortBy: SortField;
   sortDirection: SortDirection;
-}
-
-export interface TaskQuery {
-  list?: string;
-  stage?: TaskStage;
-  states?: TaskState[];
-  dueOnOrBefore?: string;
-  includeArchived?: boolean;
-  recurringTaskId?: number;
-  search?: string;
-  tags?: string[];
-  who?: string;
-  hasNoDueDate?: boolean;
-  overdue?: boolean;
+  density: Density;
+  layout: Layout;
 }

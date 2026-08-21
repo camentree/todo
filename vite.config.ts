@@ -18,12 +18,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:8790",
+      "/api/": "http://localhost:8790",
     },
   },
   test: {
     globals: true,
     environment: "node",
-    include: ["../shared/**/*.test.ts", "../server/**/*.test.ts"],
+    include: [
+      "**/*.test.ts",
+      "../shared/**/*.test.ts",
+      "../server/**/*.test.ts",
+    ],
   },
 });
