@@ -6,7 +6,7 @@ export async function openSheetFor(
 ): Promise<void> {
   await row.locator(".task-title").first().click();
   await page.waitForTimeout(450);
-  await page.locator(".task-info").first().click();
+  await page.locator('.task[data-editing="true"] .task-info').click();
   await page.waitForTimeout(600);
 }
 

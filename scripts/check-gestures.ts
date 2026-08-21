@@ -22,7 +22,7 @@ async function describe(title: string): Promise<string> {
     }
   }
   const archived = (await (
-    await fetch(`${BASE_URL}/api/archive`)
+    await fetch(`${BASE_URL}/api/tasks?attribute=archived&value=true`)
   ).json()) as { title: string }[];
   return archived.some((task) => task.title === title)
     ? "archived"
@@ -65,6 +65,7 @@ const browser = await chromium.launch({ channel: "chrome" });
 const page = await browser.newPage({
   viewport: { width: 390, height: 900 },
 });
+page.setDefaultTimeout(5000);
 
 await page.goto(`${BASE_URL}/list/Personal`, {
   waitUntil: "networkidle",
@@ -120,7 +121,7 @@ await step({
   title: "Fix the bike puncture",
   distance: LEFT,
   expect: "unarchived",
-  path: "/archive",
+  path: "/archived/true",
 });
 
 await browser.close();

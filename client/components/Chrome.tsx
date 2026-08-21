@@ -95,6 +95,18 @@ const SORT_OPTIONS: {
     direction: "asc",
     label: "Added — oldest",
   },
+  {
+    value: "resolved_at:desc",
+    field: "resolved_at",
+    direction: "desc",
+    label: "Finished — newest",
+  },
+  {
+    value: "resolved_at:asc",
+    field: "resolved_at",
+    direction: "asc",
+    label: "Finished — oldest",
+  },
 ];
 
 type OpenMenu = "none" | "scope" | "view" | "bell";
@@ -211,18 +223,23 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
     <div className="menu under-title">
       <MenuLink
         label="Today"
+        here={location.pathname === "/due_date/today"}
+        onGo={() => go("/due_date/today")}
+      />
+      <MenuLink
+        label="To Do"
         here={location.pathname === "/"}
         onGo={() => go("/")}
       />
       <MenuLink
-        label="To Do"
-        here={location.pathname === "/todo"}
-        onGo={() => go("/todo")}
+        label="Done"
+        here={location.pathname === "/state/complete"}
+        onGo={() => go("/state/complete")}
       />
       <MenuLink
         label="Archive"
-        here={location.pathname === "/archive"}
-        onGo={() => go("/archive")}
+        here={location.pathname === "/archived/true"}
+        onGo={() => go("/archived/true")}
       />
 
       {lists.length > 0 && (

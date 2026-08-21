@@ -9,7 +9,9 @@ const BASE_URL = process.env.APP_URL ?? "http://localhost:8790";
 const TITLE = "Sweep the porch";
 
 async function matching(): Promise<Task[]> {
-  const response = await fetch(`${BASE_URL}/api/today`);
+  const response = await fetch(
+    `${BASE_URL}/api/tasks?attribute=due_date&value=${format(new Date(), "yyyy-MM-dd")}`,
+  );
   const tasks = (await response.json()) as Task[];
   return tasks.filter((task) => task.title === TITLE);
 }
@@ -33,6 +35,7 @@ const context = await browser.newContext({
   hasTouch: true,
   isMobile: true,
 });
+context.setDefaultTimeout(5000);
 const page = await context.newPage();
 
 await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });

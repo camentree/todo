@@ -5,7 +5,8 @@ import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
-import type { EventSource, Task, TaskQuery } from "@shared/types.ts";
+import type { Attribute } from "@shared/attributes.ts";
+import type { EventSource, Task } from "@shared/types.ts";
 
 const NOT_LONG_RESOLVED = sql`
   (state not in ('complete', 'skipped') or resolved_at::date = current_date)
@@ -32,70 +33,56 @@ const COLUMNS = sql`
   ) as last_comment_from_others
 `;
 
-export async function query(criteria: TaskQuery): Promise<Task[]> {
-  const parents = await sql<Task[]>`
-    select ${COLUMNS}
-    from todo.tasks
-    where parent_id is null
-      ${
-        criteria.states
-          ? sql`and state = any(${criteria.states})`
-          : sql`and ${NOT_LONG_RESOLVED}`
-      }
-      ${criteria.includeArchived ? sql`` : sql`and archived_at is null`}
-      ${criteria.list ? sql`and list = ${canonicalName(criteria.list)}` : sql``}
-      ${criteria.stage ? sql`and stage = ${criteria.stage}` : sql``}
-      ${
-        criteria.recurringTaskId
-          ? sql`and recurring_task_id = ${criteria.recurringTaskId}`
-          : sql``
-      }
-      ${
-        criteria.dueOnOrBefore
-          ? sql`and due_date is not null and due_date <= ${criteria.dueOnOrBefore}`
-          : sql``
-      }
-      ${criteria.overdue ? sql`and due_date < current_date` : sql``}
-      ${criteria.hasNoDueDate ? sql`and due_date is null` : sql``}
-      ${
-        criteria.tags?.length
-          ? sql`and tags @> ${criteria.tags.map(canonicalName)}`
-          : sql``
-      }
-      ${criteria.who ? sql`and who = ${canonicalName(criteria.who)}` : sql``}
-      ${
-        criteria.search
-          ? sql`and (title ilike ${"%" + criteria.search + "%"}
-                     or note ilike ${"%" + criteria.search + "%"})`
-          : sql``
-      }
-    order by sort_order asc, id asc
-  `;
-
-  return attachSubtasks(parents);
-}
-
-export async function today(): Promise<Task[]> {
-  const rows = await sql<Task[]>`
-    select ${COLUMNS}
-    from todo.tasks
-    where parent_id is null
-      and archived_at is null
-      and state <> 'missed'
-      and (
-        state not in ('complete', 'skipped')
-        or resolved_at::date = current_date
-      )
-      and (
+const FILTERS: Record<
+  Attribute,
+  (value: string) => ReturnType<typeof sql>
+> = {
+  list: (value) => sql`list = ${canonicalName(value)}`,
+  tag: (value) => sql`tags @> ${[canonicalName(value)]}`,
+  who: (value) => sql`who = ${canonicalName(value)}`,
+  stage: (value) => sql`stage = ${value}`,
+  state: (value) => sql`state = ${value}`,
+  due_time: (value) => sql`due_time = ${value}::time`,
+  recurring: (value) =>
+    value === "true"
+      ? sql`recurring_task_id is not null`
+      : sql`recurring_task_id is null`,
+  archived: (value) =>
+    value === "true"
+      ? sql`archived_at is not null`
+      : sql`archived_at is null`,
+  due_date: (value) => sql`
+    case when ${value}::date = current_date
+      then state <> 'missed' and (
         due_date <= current_date
         or exists (
           select 1 from todo.comments
           where task_id = todo.tasks.id and seen_at is null
         )
       )
-    order by due_date desc nulls last, sort_order asc, id asc
+      else due_date = ${value}::date
+    end
+  `,
+};
+
+export async function query({
+  attribute,
+  value,
+}: {
+  attribute: Attribute | null;
+  value: string;
+}): Promise<Task[]> {
+  const parents = await sql<Task[]>`
+    select ${COLUMNS}
+    from todo.tasks
+    where parent_id is null
+      ${attribute === "state" ? sql`` : sql`and ${NOT_LONG_RESOLVED}`}
+      ${attribute === "archived" ? sql`` : sql`and archived_at is null`}
+      ${attribute ? sql`and ${FILTERS[attribute](value)}` : sql``}
+    order by sort_order asc, id asc
   `;
-  return attachSubtasks(rows);
+
+  return attachSubtasks(parents);
 }
 
 async function attachSubtasks(parents: Task[]): Promise<Task[]> {
@@ -361,17 +348,6 @@ export async function reorder(orderedIds: number[]): Promise<void> {
       `;
     }
   });
-}
-
-export async function archived(): Promise<Task[]> {
-  const rows = await sql<Task[]>`
-    select ${COLUMNS}
-    from todo.tasks
-    where parent_id is null and archived_at is not null
-    order by archived_at desc
-    limit 200
-  `;
-  return attachSubtasks(rows);
 }
 
 function pruneUndefined<T extends object>(changes: T): Partial<T> {
