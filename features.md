@@ -109,6 +109,26 @@ always closes it; pulling down anywhere else closes it once the sheet is scrolle
 to the top; dragging inside the note, the comments, or the subtasks scrolls those
 as usual. Tapping outside also closes it.
 
+## Search
+
+The magnifier in the top bar replaces the title, the date and the other
+controls with a search field, and the results replace the list below. Rows
+behave exactly as they do anywhere else, and the field stays up while you tick,
+rename, swipe or open a sheet. Only its X closes it, which leaves you on the
+screen you started from.
+
+The capture parser reads the query, so the same syntax means the mirrored
+thing: `#tag`, `@who`, `/list` and `!stage` filter instead of assign, and a
+half-typed one narrows rather than matching nothing — `#par` finds everything
+tagged parallax. `overdue` and `no date` read the due date, a "quoted phrase"
+matches exactly, and every other word matches the title, note, list, tags or
+who. A word also matches when its letters appear in order in the title, so a
+dropped letter still finds the task. Date words are searched for rather than
+turned into a date filter.
+
+Search covers every open task plus the archive, and it filters what has already
+been fetched rather than asking the server.
+
 ## Grouping, sorting, ordering
 
 Tasks can be grouped by list, stage, tag, due date, or who they belong to, and
@@ -225,8 +245,6 @@ design on two grounds. A clean sans for task text, a mono for tags and metadata.
   subscriptions table. On the phone it only works once the app is on the home
   screen.
 - **Selecting several tasks** to archive or skip in one go.
-- **Search.** The parser that would drive it already exists and is tested; there
-  is no search field on any screen.
 - **A field for who a task belongs to.** Tags are editable in the sheet; the
   person is only settable by typing `@name` into a title.
 - **Editing a schedule's interval beyond the sheet's controls**, such as "the
