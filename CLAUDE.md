@@ -20,7 +20,7 @@ All TypeScript. React 19 with react-router and TanStack Query, Hono on the
 server, hand-written SQL over Postgres, no ORM.
 
 - `client/` — the app. `components/TaskBoard.tsx` is the one list component
-  every screen is a preset of; `components/TaskSheet.tsx` is the detail sheet,
+  every screen is a preset of; `components/TaskInfo.tsx` is the task info modal,
   `components/NewTask.tsx` the capture row, `components/Chrome.tsx` the top bar.
   `screens/Tasks.tsx` chooses the preset. One stylesheet, `styles.css`.
 - `server/` — `routes.ts` is thin HTTP over `operations/`, which owns every

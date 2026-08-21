@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { SubtaskRow } from "./SubtaskRow.tsx";
 import {
   formatDueDate,
   formatDueTime,
@@ -38,6 +39,7 @@ export interface RowActions {
   toggle: (task: Task) => void;
   open: (task: Task) => void;
   rename: (task: Task, title: string) => void;
+  remove: (task: Task) => void;
   swipeLeft: (task: Task) => void;
   swipeRight: (task: Task) => void;
 }
@@ -335,7 +337,6 @@ function Row({
       onLiftMove(task.id, pointerX, pointerY),
     onLiftEnd: onLiftEnd,
     enabled: !isTerminal(task.state),
-    allowRight: task.archivedAt === null,
   });
 
   const subtasks = task.subtasks ?? [];
@@ -361,11 +362,15 @@ function Row({
               <div className="swipe-action archive">
                 {leftSwipeLabel(task)}
               </div>
-              {task.archivedAt === null && (
-                <div className="swipe-action defer">
-                  {rightSwipeLabel(task)}
-                </div>
-              )}
+              <div
+                className={
+                  task.archivedAt
+                    ? "swipe-action remove"
+                    : "swipe-action defer"
+                }
+              >
+                {rightSwipeLabel(task)}
+              </div>
             </>
           )}
 
@@ -469,16 +474,13 @@ function Row({
             <div>
               <div className="subtasks">
                 {subtasks.map((subtask) => (
-                  <button
-                    type="button"
+                  <SubtaskRow
                     key={subtask.id}
-                    className="subtask"
-                    data-done={isTerminal(subtask.state)}
-                    onClick={() => actions.toggle(subtask)}
-                  >
-                    <span className="subtask-tick" />
-                    <span>{subtask.title}</span>
-                  </button>
+                    subtask={subtask}
+                    onToggle={() => actions.toggle(subtask)}
+                    onRename={(next) => actions.rename(subtask, next)}
+                    onDelete={() => actions.remove(subtask)}
+                  />
                 ))}
               </div>
             </div>
@@ -490,6 +492,9 @@ function Row({
 }
 
 export function rightSwipeLabel(task: Task): string {
+  if (task.archivedAt) {
+    return "Delete";
+  }
   if (task.state === "hidden") {
     return "Unhide";
   }
@@ -718,7 +723,6 @@ function useRowGesture({
   onLiftMove,
   onLiftEnd,
   enabled,
-  allowRight,
 }: {
   onLeft: () => void;
   onRight: () => void;
@@ -726,7 +730,6 @@ function useRowGesture({
   onLiftMove: (pointerX: number, pointerY: number) => void;
   onLiftEnd: () => void;
   enabled: boolean;
-  allowRight: boolean;
 }) {
   const [offset, setOffset] = useState(0);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -858,9 +861,8 @@ function useRowGesture({
           event.currentTarget.setPointerCapture(event.pointerId);
         }
       }
-      const travel = allowRight ? dx : Math.min(dx, 0);
-      sideways.current = travel;
-      setOffset(travel);
+      sideways.current = dx;
+      setOffset(dx);
     },
     up: () => endGesture(),
   };

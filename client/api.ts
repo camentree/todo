@@ -61,6 +61,8 @@ export const api = {
     send<Task>(`/tasks/${id}`, "PATCH", body),
   setState: (id: number, state: TaskState) =>
     send<Task>(`/tasks/${id}/state`, "POST", { state: state }),
+  deleteTask: (id: number) =>
+    request<{ ok: true }>(`/tasks/${id}`, { method: "DELETE" }),
 
   hideTask: (id: number) =>
     send<{ ok: true }>(`/tasks/${id}/hide`, "POST", {}),
