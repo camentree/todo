@@ -1,23 +1,61 @@
 import {
+  addDays,
+  differenceInCalendarDays,
   format,
-  isThisYear,
   isToday,
   isTomorrow,
+  isYesterday,
   parseISO,
 } from "date-fns";
+
+import type { Attribute } from "@shared/attributes.ts";
+import { asStage, stageLabel } from "@shared/stages.ts";
+
+const NAMED_WEEKDAY_DAYS = 7;
+
+export function asTitle(name: string): string {
+  return name.replace(/(^|\s)\p{Ll}/gu, (start) =>
+    start.toUpperCase(),
+  );
+}
 
 export function formatDueDate(dueDate: string | null): string | null {
   if (!dueDate) {
     return null;
   }
   const date = parseISO(dueDate);
+  if (isYesterday(date)) {
+    return "yesterday";
+  }
   if (isToday(date)) {
     return "today";
   }
   if (isTomorrow(date)) {
     return "tomorrow";
   }
-  return format(date, isThisYear(date) ? "EEE d MMM" : "d MMM yyyy");
+  const days = differenceInCalendarDays(date, new Date());
+  if (days > 1 && days <= NAMED_WEEKDAY_DAYS) {
+    return format(date, "EEEE").toLowerCase();
+  }
+  return format(date, "yyyy-MM-dd");
+}
+
+export function dueDateFromLabel(label: string): string | null {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(label)) {
+    return label;
+  }
+  const today = new Date();
+  for (
+    let offset = -1;
+    offset <= NAMED_WEEKDAY_DAYS;
+    offset = offset + 1
+  ) {
+    const date = addDays(today, offset);
+    if (formatDueDate(format(date, "yyyy-MM-dd")) === label) {
+      return format(date, "yyyy-MM-dd");
+    }
+  }
+  return null;
 }
 
 export function formatDueTime(dueTime: string | null): string | null {
@@ -31,6 +69,23 @@ export function formatDueTime(dueTime: string | null): string | null {
     Number.parseInt(minutes, 10),
   );
   return format(date, "h:mmaaa");
+}
+
+export function attributeText(
+  attribute: Attribute,
+  value: string,
+): string {
+  if (attribute === "due_time") {
+    return formatDueTime(value) ?? value;
+  }
+  if (attribute === "stage") {
+    const stage = asStage(value);
+    return stage ? stageLabel(stage) : value;
+  }
+  if (attribute === "recurring" || attribute === "archived") {
+    return value === "true" ? attribute : `not ${attribute}`;
+  }
+  return value;
 }
 
 export function formatWhen(timestamp: string): string {

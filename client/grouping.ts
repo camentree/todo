@@ -1,6 +1,9 @@
 import { parseISO } from "date-fns";
 
-import type { BoardGroup } from "./components/TaskBoard.tsx";
+import type {
+  BoardGroup,
+  MetaOmission,
+} from "./components/TaskBoard.tsx";
 import { formatDueDate } from "./format.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
@@ -12,11 +15,13 @@ export function buildGroups({
   view,
   lists,
   settling,
+  scoped,
 }: {
   tasks: Task[];
   view: ViewPreference;
   lists: string[];
   settling?: Set<number>;
+  scoped?: MetaOmission | null;
 }): BoardGroup[] {
   const sorted = sortTasks({
     tasks: tasks,
@@ -24,8 +29,17 @@ export function buildGroups({
     settling: settling,
   });
 
-  if (view.breakUpBy === "none" || sorted.length === 0) {
-    return [{ key: "all", label: "", tasks: sorted }];
+  const screenWide = scoped ? [scoped] : [];
+
+  if (view.breakUpBy === "none") {
+    return [
+      {
+        key: "all",
+        label: "",
+        omitFromMeta: screenWide,
+        tasks: sorted,
+      },
+    ];
   }
 
   if (view.breakUpBy === "list") {
@@ -35,6 +49,10 @@ export function buildGroups({
         label: list,
         list: list,
         prefill: `/${list}`,
+        omitFromMeta: [
+          ...screenWide,
+          { field: "list" as const, label: list },
+        ],
         tasks: sorted.filter((task) => task.list === list),
       }))
       .filter((group) => group.tasks.length > 0);
@@ -46,18 +64,22 @@ export function buildGroups({
       label: stageLabel(stage),
       stage: stage,
       prefill: `!${stage}`,
-      omitFromMeta: "stage" as const,
+      omitFromMeta: [
+        ...screenWide,
+        { field: "stage" as const, label: stageLabel(stage) },
+      ],
       tasks: sorted.filter((task) => stageOf(task) === stage),
     })).filter((group) => group.tasks.length > 0);
   }
 
+  const breakUpBy = view.breakUpBy;
   const buckets = new Map<string, Task[]>();
   const rank = new Map<string, string | null>();
   const prefill = new Map<string, string | undefined>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
-      breakUpBy: view.breakUpBy,
+      breakUpBy: breakUpBy,
     })) {
       const existing = buckets.get(label);
       if (existing) {
@@ -68,7 +90,7 @@ export function buildGroups({
           label,
           rankFor({
             task: task,
-            breakUpBy: view.breakUpBy,
+            breakUpBy: breakUpBy,
             label: label,
           }),
         );
@@ -85,7 +107,7 @@ export function buildGroups({
   }
 
   const backwards =
-    view.breakUpBy === "due_date" && view.sortDirection === "desc";
+    breakUpBy === "due_date" && view.sortDirection === "desc";
 
   const entries = [...buckets.entries()].sort(([left], [right]) => {
     const leftRank = rank.get(left) ?? null;
@@ -98,10 +120,10 @@ export function buildGroups({
   });
 
   return entries.map(([label, grouped]) => ({
-    key: `${view.breakUpBy}-${label}`,
+    key: `${breakUpBy}-${label}`,
     label: label,
     prefill: prefill.get(label),
-    omitFromMeta: view.breakUpBy,
+    omitFromMeta: [...screenWide, { field: breakUpBy, label: label }],
     tasks: grouped,
   }));
 }
@@ -175,6 +197,14 @@ function compare({
       parseISO(left.createdAt).getTime() -
       parseISO(right.createdAt).getTime()
     );
+  }
+  if (view.sortBy === "resolved_at") {
+    if (!left.resolvedAt && !right.resolvedAt) {
+      return left.sortOrder - right.sortOrder;
+    }
+    if (!left.resolvedAt) return 1;
+    if (!right.resolvedAt) return -1;
+    return left.resolvedAt.localeCompare(right.resolvedAt);
   }
   if (view.sortBy === "due_date") {
     if (!left.dueDate && !right.dueDate) {

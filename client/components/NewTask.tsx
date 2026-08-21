@@ -461,14 +461,9 @@ function resolveList({
   lists: string[];
 }): string | null {
   const named = listIn(tokens);
-  if (named) {
-    const existing = lists.find(
-      (candidate) => candidate.toLowerCase() === named.toLowerCase(),
-    );
-    return existing ?? named;
-  }
   const remembered = lastUsedList();
   return (
+    named ??
     (remembered && lists.includes(remembered) ? remembered : null) ??
     lists[0] ??
     null

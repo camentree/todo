@@ -1,4 +1,5 @@
 import { sql } from "../database.ts";
+import { canonicalName } from "@shared/names.ts";
 
 async function distinctValues(
   column: "list" | "stage" | "who",
@@ -38,7 +39,7 @@ export async function tagsOf(list: string | null): Promise<string[]> {
     select distinct unnest(tags) as tag
     from todo.tasks
     where archived_at is null
-      ${list ? sql`and list = ${list}` : sql``}
+      ${list ? sql`and list = ${canonicalName(list)}` : sql``}
     order by tag
   `;
   return rows.map((row) => row.tag);

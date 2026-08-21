@@ -51,8 +51,6 @@ export const api = {
       `/who${list ? `?list=${encodeURIComponent(list)}` : ""}`,
     ),
 
-  today: () => request<Task[]>("/today"),
-  archive: () => request<Task[]>("/archive"),
   tasks: (params: Record<string, string>) =>
     request<Task[]>(
       `/tasks?${new URLSearchParams(params).toString()}`,

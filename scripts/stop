@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [ ! -f .server.pid ]; then
+  echo "not running"
+  exit 0
+fi
+
+pid="$(cat .server.pid)"
+kill "$pid" 2>/dev/null || true
+rm -f .server.pid
+echo "stopped $pid"

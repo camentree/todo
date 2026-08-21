@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { NewTaskRow } from "./NewTask.tsx";
 import {
@@ -6,18 +7,19 @@ import {
   formatDueTime,
   isDueToday,
 } from "../format.ts";
+import type { Attribute } from "@shared/attributes.ts";
 import { stageLabel } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
-import type {
-  BreakUpField,
-  Density,
-  Layout,
-  Task,
-} from "@shared/types.ts";
+import type { Density, Layout, Task } from "@shared/types.ts";
 
 const SWIPE_FRACTION = 0.4;
 const LONG_PRESS_MILLISECONDS = 400;
+
+export interface MetaOmission {
+  field: Attribute;
+  label: string;
+}
 
 export interface BoardGroup {
   key: string;
@@ -25,7 +27,7 @@ export interface BoardGroup {
   stage?: TaskStage;
   list?: string;
   prefill?: string;
-  omitFromMeta?: BreakUpField;
+  omitFromMeta: MetaOmission[];
   tasks: Task[];
 }
 
@@ -467,7 +469,12 @@ function Row({
               )}
             </div>
 
-            <Meta task={task} group={group} />
+            <Meta
+              task={task}
+              group={group}
+              travelled={gesture.travelled}
+              onOpen={() => actions.open(task)}
+            />
           </div>
         </div>
 
@@ -584,38 +591,113 @@ function InfoIcon() {
   );
 }
 
-function Meta({ task, group }: { task: Task; group: BoardGroup }) {
-  const omitted = group.omitFromMeta;
-  const archived = task.archivedAt !== null;
-  const due = isDueToday(task.dueDate)
-    ? null
-    : formatDueDate(task.dueDate);
-  const parts = [
-    task.stage && omitted !== "stage"
-      ? stageLabel(task.stage).toLowerCase()
-      : null,
-    omitted === "due_date" || archived ? null : due,
-    archived ? null : formatDueTime(task.dueTime),
-    omitted === "who" ? null : task.who,
-  ].filter((part): part is string => Boolean(part));
+interface MetaItem {
+  field: Attribute;
+  text: string;
+  to?: string;
+}
 
-  const tags = task.tags.filter(
-    (tag) => omitted !== "tag" || tag !== group.label,
+function Meta({
+  task,
+  group,
+  travelled,
+  onOpen,
+}: {
+  task: Task;
+  group: BoardGroup;
+  travelled: () => boolean;
+  onOpen: () => void;
+}) {
+  const navigate = useNavigate();
+  const archived = task.archivedAt !== null;
+  const due = archived ? null : formatDueDate(task.dueDate);
+  const time = archived ? null : formatDueTime(task.dueTime);
+
+  const items: (MetaItem | null)[] = [
+    {
+      field: "list",
+      text: task.list,
+      to: `/list/${encodeURIComponent(task.list)}`,
+    },
+    ...task.tags.map(
+      (tag): MetaItem => ({
+        field: "tag",
+        text: tag,
+        to: `/tag/${encodeURIComponent(tag)}`,
+      }),
+    ),
+    task.who
+      ? {
+          field: "who",
+          text: task.who,
+          to: `/who/${encodeURIComponent(task.who)}`,
+        }
+      : null,
+    due
+      ? {
+          field: "due_date",
+          text: due,
+          to: `/due_date/${encodeURIComponent(due)}`,
+        }
+      : null,
+    time && task.dueTime
+      ? {
+          field: "due_time",
+          text: time,
+          to: `/due_time/${task.dueTime.slice(0, 5)}`,
+        }
+      : null,
+    task.recurringTaskId
+      ? {
+          field: "recurring",
+          text: "recurring",
+          to: "/recurring/true",
+        }
+      : null,
+    task.stage
+      ? {
+          field: "stage",
+          text: stageLabel(task.stage),
+          to: `/stage/${task.stage}`,
+        }
+      : null,
+  ];
+
+  const shown = items.filter(
+    (item): item is MetaItem =>
+      item !== null &&
+      (item.text.toLowerCase() === "today" ||
+        !group.omitFromMeta.some(
+          (omission) =>
+            omission.field === item.field &&
+            omission.label.toLowerCase() === item.text.toLowerCase(),
+        )),
   );
 
-  if (parts.length === 0 && tags.length === 0) {
+  if (shown.length === 0) {
     return null;
   }
 
   return (
     <span className="task-meta">
-      {tags.map((tag) => (
-        <span className="tag" key={tag}>
-          {tag}
-        </span>
-      ))}
-      {parts.map((part) => (
-        <span key={part}>{part}</span>
+      {shown.map(({ field, text, to }) => (
+        <button
+          type="button"
+          key={`${field}-${text}`}
+          className={field === "tag" ? "tag" : undefined}
+          onClick={() => {
+            if (travelled()) {
+              return;
+            }
+            if (to) {
+              navigate(to);
+            } else {
+              onOpen();
+            }
+          }}
+        >
+          {text.toLowerCase()}
+        </button>
       ))}
     </span>
   );

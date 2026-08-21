@@ -24,7 +24,7 @@ Cloudflare Access, running on the same machine and Postgres server as Parallax.
 
 ## Screens
 
-Four scopes, one screen component, chosen from a menu that drops out of the
+Seven scopes, one screen component, chosen from a menu that drops out of the
 title:
 
 | Scope | Shows |
@@ -32,7 +32,27 @@ title:
 | Today | anything due today or earlier, plus anything with an unread comment |
 | To Do | everything open, whatever its date |
 | A list | one list, everything open |
+| A tag | everything open carrying that tag |
+| A person | everything open belonging to that person |
+| Done | everything ticked off, newest first |
 | Archive | everything archived |
+
+The scope menu offers the lists; a tag or a person screen is reached by tapping
+that tag or that name under a row.
+
+A ticked-off task appears on Done straight away, and also stays where it was
+ticked off, struck through, until the next day. Ticking its circle again marks
+it To Do and it leaves Done. There is no add button on Done or on Archive.
+
+**Every screen remembers its own grouping, sorting, spacing and layout**, each
+list included. So Today can stay airy while To Do stays compact, and Errands
+can be grouped by who while Reading is grouped by nothing. Appearance is the
+exception: light or dark is one choice that holds everywhere.
+
+A screen nobody has arranged yet starts from a default that depends on what it
+shows. Today is airy and sorted by due date, To Do compact and grouped by list,
+Done compact and newest finished first, and everything else compact and in
+manual order.
 
 The title itself opens that menu. Beside it sit the date, a control for
 grouping and sorting, and a bell. Each of those three opens a small menu
@@ -47,6 +67,11 @@ stage, a note, subtasks, comments.
 exists because some task names it, and stops existing when none do. The same
 for tags and for who a task belongs to. Every field with known values offers
 them as you type.
+
+**Their case does not matter.** `/Programming` and `/programming` are the same
+list, and so are `#Health` and `#health`, `@Claude` and `@claude`. Names are
+stored lowercase; where one is read as prose — the title of a list screen, its
+entry in the scope menu — it is capitalised for display.
 
 **Subtasks are tasks** with a parent. A subtask cannot have subtasks of its
 own. Nothing else distinguishes them, so promoting a checklist line into a real
@@ -96,7 +121,13 @@ two.
 | `daily`, `every mon`, `every 2 weeks` | a repeating schedule |
 
 Sigils are exact and always applied. Dates are guesses, so they are always shown
-as chips you can reject. There is no escape syntax.
+as chips you can reject.
+
+**A backslash keeps a word literal, and does not itself show up.** Typing
+`\today` puts the word "today" in the title with no date attached; the same
+works in front of a sigil, so `\#health` stays as `#health`. Quoted text is left
+alone too — `"hi"` in a title stays `"hi"`, quotes and all, because quoted
+phrases only mean something in search.
 
 A task added from Today, where no list is implied, goes to the list you last
 added to.
@@ -130,9 +161,15 @@ closes it too, saving the title and note on the way out.
 ## Grouping, sorting, ordering
 
 Tasks can be grouped by list, stage, tag, due date, or who they belong to, and
-sorted by hand, due date, title, or creation date. **A group heading does not
-repeat itself in its rows** — group by stage and the rows stop showing their
-stage.
+sorted by hand, due date, title, creation date, or when they were finished.
+
+**A row carries every attribute its task has**, under the title: its tags, its
+list, who it belongs to, its date and time, whether it repeats, and its stage.
+Tapping the list, a tag, or the person goes to the screen for that one.
+
+**A heading does not repeat itself in its rows** — group by stage and the rows
+stop showing their stage, and the same goes for the screen's own filter, so a
+list screen's rows do not each name that list.
 
 Groups collapse by tapping their heading.
 
