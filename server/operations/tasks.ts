@@ -299,6 +299,10 @@ export async function unarchive(ids: number[]): Promise<void> {
   `;
 }
 
+export async function remove(id: number): Promise<void> {
+  await sql`delete from todo.tasks where id = ${id}`;
+}
+
 export async function hide(id: number): Promise<void> {
   await sql`
     update todo.tasks set state = 'hidden', updated_at = now() where id = ${id}
