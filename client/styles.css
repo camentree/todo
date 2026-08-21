@@ -1047,6 +1047,11 @@ a {
   gap: 1rem;
 }
 
+.sheet-subtask-track {
+  position: relative;
+  overflow: hidden;
+}
+
 .sheet-subtask {
   display: flex;
   gap: 0.85rem;
@@ -1054,6 +1059,11 @@ a {
   font-size: 1.02rem;
   color: var(--text);
   padding: 0.15rem 0;
+  background: var(--ground);
+}
+
+.sheet-subtask[data-swiping="false"] {
+  transition: transform var(--motion) var(--ease);
 }
 
 .sheet-subtask .subtask-tick {
@@ -1085,7 +1095,7 @@ a {
   border-color: var(--dim);
 }
 
-.sheet-subtask[data-done="true"] span:last-child {
+.sheet-subtask[data-done="true"] .subtask-title {
   text-decoration: line-through;
 }
 

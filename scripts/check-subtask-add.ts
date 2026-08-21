@@ -43,20 +43,20 @@ console.log(
   await page.locator(".sheet-subtask").count(),
 );
 
-await page.locator(".subtask-title").scrollIntoViewIfNeeded();
+await page.locator("input.subtask-title").scrollIntoViewIfNeeded();
 await page.waitForTimeout(400);
 await page.screenshot({
   path: "/tmp/parallax-shots/subtask-add.png",
 });
 
-await page.locator(".subtask-title").fill("cool down");
+await page.locator("input.subtask-title").fill("cool down");
 await page.keyboard.press("Enter");
 await page.waitForTimeout(1300);
 
 console.log("after: ", (await subtaskTitles()).join(" | "));
 console.log(
   "field cleared for the next one:",
-  (await page.locator(".subtask-title").inputValue()) === "",
+  (await page.locator("input.subtask-title").inputValue()) === "",
 );
 
 await browser.close();
