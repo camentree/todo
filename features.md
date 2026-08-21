@@ -20,7 +20,10 @@ Cloudflare Access, running on the same machine and Postgres server as Parallax.
 - **A finished task stays where it is** until the next day, struck through, so
   ticking something never makes the list jump under your finger.
 - **Empty states state a fact.** "Nothing today." No congratulation.
-- **Nothing is ever deleted.** Archive is the only removal.
+- **Archive is how things leave.** Deleting exists in exactly two places —
+  a subtask in the detail sheet, and a task already sitting in the Archive —
+  because a mistyped checklist line is worth removing rather than filing.
+  Nothing else deletes.
 
 ## Screens
 
@@ -99,6 +102,9 @@ tags add to what is already there rather than replacing them. Words like
 editing contain one and fixing a typo should not silently move a due date. Any
 field you do not mention keeps its value.
 
+**Subtasks edit the same way.** In the detail sheet, tapping a subtask's tick
+ticks it and tapping its title renames it in place; swiping it left deletes it.
+
 The detail sheet holds the list, the stage, tags, repetition, the date and time,
 the note, subtasks, and comments. Tags there are chips you tap to remove, plus a
 field that suggests the other tags already used in that same list and accepts new
@@ -151,7 +157,8 @@ one instance.
 | Gesture | Does |
 |---|---|
 | Swipe a row left | archive it, or unarchive if already archived |
-| Swipe a row right | skip it if it repeats or is due today, otherwise hide it |
+| Swipe a row right | skip it if it repeats or is due today, otherwise hide it; delete it if it is already archived |
+| Swipe a subtask left in the detail sheet | delete it |
 | Long-press and drag | reorder, including across groups |
 | Tap the circle | tick it off |
 | Tap the title | rename it |
@@ -161,8 +168,9 @@ coloured backing is exactly that wide, so where the colour ends is where the
 action fires. It fades as the row crosses the middle, making the commit point
 visible rather than guessed.
 
-**Archived tasks cannot be skipped** — only unarchived — and they show no due
-date, since the date of something already filed away is noise.
+**Archived tasks cannot be skipped** — swiping one right deletes it for good —
+and they show no due date, since the date of something already filed away is
+noise.
 
 ## Hiding
 

@@ -476,7 +476,8 @@ a {
   gap: 0.5rem;
   color: var(--dim);
   flex-shrink: 0;
-  padding: 0.3rem 0 0.3rem 0.5rem;
+  align-self: stretch;
+  padding-left: 0.5rem;
 }
 
 .subtask-count {
