@@ -455,6 +455,14 @@ a {
   flex-wrap: wrap;
 }
 
+.task-meta button {
+  transition: color var(--tap) linear;
+}
+
+.task-meta button:active {
+  color: var(--text);
+}
+
 .comment-dot {
   width: 0.4rem;
   height: 0.4rem;

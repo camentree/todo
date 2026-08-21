@@ -198,7 +198,22 @@ const SEEDS: Seed[] = [
   },
 ];
 
+const LIVE_DATABASE = "parallax";
+
+function refuseToSeedLiveData(): void {
+  const databaseName = new URL(
+    process.env.DATABASE_URL ?? "",
+  ).pathname.replace("/", "");
+  if (databaseName === LIVE_DATABASE) {
+    throw new Error(
+      `${LIVE_DATABASE} holds the real tasks and seeding truncates. Point DATABASE_URL somewhere else.`,
+    );
+  }
+}
+
 async function seed(): Promise<void> {
+  refuseToSeedLiveData();
+
   await sql`
     truncate todo.tasks, todo.recurring_tasks, todo.events, todo.comments
     restart identity cascade
