@@ -11,7 +11,7 @@ import { buildGroups } from "../grouping.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
 
-export type Scope = "today" | "todo" | "archive" | "list";
+export type Scope = "today" | "todo" | "done" | "archive" | "list";
 
 export function Tasks({ scope }: { scope: Scope }) {
   const { name } = useParams();
@@ -36,6 +36,7 @@ export function Tasks({ scope }: { scope: Scope }) {
     queryKey: ["tasks", scope, list],
     queryFn: () => {
       if (scope === "today") return api.today();
+      if (scope === "done") return api.done();
       if (scope === "archive") return api.archive();
       return api.tasks(list ? { list: list } : {});
     },
@@ -82,7 +83,7 @@ export function Tasks({ scope }: { scope: Scope }) {
         />
       )}
 
-      {scope !== "archive" && !adding && (
+      {scope !== "archive" && scope !== "done" && !adding && (
         <AddButton onClick={() => setAdding(true)} />
       )}
 
@@ -104,6 +105,7 @@ function titleFor({
   list: string | undefined;
 }): string {
   if (scope === "today") return "Today";
+  if (scope === "done") return "Done";
   if (scope === "archive") return "Archive";
   if (scope === "list") return list ?? "";
   return "To Do";
@@ -111,6 +113,7 @@ function titleFor({
 
 function emptyFor(scope: Scope): string {
   if (scope === "today") return "Nothing today.";
+  if (scope === "done") return "Nothing finished yet.";
   if (scope === "archive") return "Nothing archived.";
   return "Nothing here.";
 }

@@ -49,6 +49,7 @@ export const api = {
   knownWho: () => request<string[]>("/who"),
 
   today: () => request<Task[]>("/today"),
+  done: () => request<Task[]>("/done"),
   archive: () => request<Task[]>("/archive"),
   tasks: (params: Record<string, string>) =>
     request<Task[]>(

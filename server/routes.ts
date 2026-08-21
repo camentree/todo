@@ -73,6 +73,10 @@ api.get("/tasks", async (context) => {
   );
 });
 
+api.get("/done", async (context) => {
+  return context.json(await tasks.completed());
+});
+
 api.get("/archive", async (context) => {
   return context.json(await tasks.archived());
 });

@@ -24,7 +24,7 @@ Cloudflare Access, running on the same machine and Postgres server as Parallax.
 
 ## Screens
 
-Four scopes, one screen component, chosen from a menu that drops out of the
+Five scopes, one screen component, chosen from a menu that drops out of the
 title:
 
 | Scope | Shows |
@@ -32,7 +32,13 @@ title:
 | Today | anything due today or earlier, plus anything with an unread comment |
 | To Do | everything open, whatever its date |
 | A list | one list, everything open |
+| Done | everything ticked off on an earlier day |
 | Archive | everything archived |
+
+Done is where a finished task lands once the day it was finished is over. Until
+then it stays on the screen it was ticked off on, struck through. Ticking its
+circle again marks it To Do and it leaves Done. There is no add button on Done
+or on Archive.
 
 The title itself opens that menu. Beside it sit the date, a control for
 grouping and sorting, and a bell. Each of those three opens a small menu
@@ -112,7 +118,7 @@ as usual. Tapping outside also closes it.
 ## Grouping, sorting, ordering
 
 Tasks can be grouped by list, stage, tag, due date, or who they belong to, and
-sorted by hand, due date, title, or creation date. **A group heading does not
+sorted by hand, due date, title, creation date, or when they were finished. **A group heading does not
 repeat itself in its rows** — group by stage and the rows stop showing their
 stage.
 

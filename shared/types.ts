@@ -75,7 +75,8 @@ export type SortField =
   | "manual"
   | "due_date"
   | "title"
-  | "created_at";
+  | "created_at"
+  | "resolved_at";
 
 export type SortDirection = "asc" | "desc";
 

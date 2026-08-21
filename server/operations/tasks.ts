@@ -356,6 +356,20 @@ export async function archived(): Promise<Task[]> {
   return attachSubtasks(rows);
 }
 
+export async function completed(): Promise<Task[]> {
+  const rows = await sql<Task[]>`
+    select ${COLUMNS}
+    from todo.tasks
+    where parent_id is null
+      and archived_at is null
+      and state = 'complete'
+      and resolved_at::date < current_date
+    order by resolved_at desc
+    limit 200
+  `;
+  return attachSubtasks(rows);
+}
+
 function pruneUndefined<T extends object>(changes: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(changes).filter(

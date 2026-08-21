@@ -34,9 +34,18 @@ const BY_DUE: ViewPreference = {
   layout: "stacked",
 };
 
+const BY_FINISHED: ViewPreference = {
+  breakUpBy: "none",
+  sortBy: "resolved_at",
+  sortDirection: "desc",
+  density: "compact",
+  layout: "stacked",
+};
+
 export function defaultView(scope: Scope): ViewPreference {
   if (scope === "today") return BY_DUE;
   if (scope === "todo") return BY_LIST;
+  if (scope === "done") return BY_FINISHED;
   return FLAT_MANUAL;
 }
 
