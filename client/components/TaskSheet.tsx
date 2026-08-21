@@ -9,6 +9,7 @@ import { Chevron } from "./TaskBoard.tsx";
 import { api, type RecurringTaskDetail } from "../api.ts";
 import { formatWhen } from "../format.ts";
 import { useLockedScroll } from "../useLockedScroll.ts";
+import { canonicalName } from "@shared/names.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import type { Frequency, Task } from "@shared/types.ts";
@@ -342,7 +343,7 @@ export function TaskSheet({
               list="known-lists"
               defaultValue={task.list}
               onBlur={(event) => {
-                const next = event.target.value.trim();
+                const next = canonicalName(event.target.value);
                 if (next && next !== task.list) {
                   save.mutate({ list: next });
                 }
@@ -408,10 +409,7 @@ export function TaskSheet({
                     return;
                   }
                   event.preventDefault();
-                  const tag = newTag
-                    .trim()
-                    .replace(/^#/, "")
-                    .toLowerCase();
+                  const tag = canonicalName(newTag).replace(/^#/, "");
                   if (tag && !task.tags.includes(tag)) {
                     save.mutate({ tags: [...task.tags, tag] });
                   }
