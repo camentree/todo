@@ -42,7 +42,9 @@ api.get("/tags", async (context) => {
 });
 
 api.get("/who", async (context) => {
-  return context.json(await lists.knownWho());
+  return context.json(
+    await lists.knownWho(context.req.query("list") ?? null),
+  );
 });
 
 api.get("/today", async (context) => {

@@ -20,8 +20,17 @@ export async function stages(): Promise<string[]> {
   return distinctValues("stage");
 }
 
-export async function knownWho(): Promise<string[]> {
-  return distinctValues("who");
+export async function knownWho(
+  list: string | null = null,
+): Promise<string[]> {
+  const rows = await sql<{ who: string }[]>`
+    select distinct who
+    from todo.tasks
+    where who is not null and archived_at is null
+      ${list ? sql`and list = ${list}` : sql``}
+    order by who
+  `;
+  return rows.map((row) => row.who);
 }
 
 export async function tagsOf(list: string | null): Promise<string[]> {
