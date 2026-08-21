@@ -178,6 +178,11 @@ export function TaskSheet({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        closeSlowly();
+        return;
+      }
       if (event.key !== "Escape") {
         return;
       }
