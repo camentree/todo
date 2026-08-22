@@ -1,24 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 
 import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
 import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
+import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
-import { TaskSheet } from "../components/TaskSheet.tsx";
+import { TaskInfo } from "../components/TaskInfo.tsx";
 import {
   asTitle,
   attributeText,
   dueDateFromLabel,
 } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
+import { useShortcuts } from "../useShortcuts.ts";
 import { useTaskActions } from "../useTaskActions.ts";
 import { defaultView, useViewPreference } from "../viewPreference.ts";
 import { asAttribute } from "@shared/attributes.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { canonicalName } from "@shared/names.ts";
+import { searchTasks } from "@shared/search.ts";
 import type { Task } from "@shared/types.ts";
 
 export interface Scope {
@@ -43,6 +46,8 @@ export function Tasks() {
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [searchText, setSearchText] = useState<string | null>(null);
+  const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
     scope.field ? `${scope.field}:${scope.value}` : "all",
     defaultView(scope),
@@ -63,13 +68,70 @@ export function Tasks() {
     queryFn: () => fetchTasks(scope),
   });
 
-  const groups = buildGroups({
-    tasks: tasks,
-    view: view,
-    lists: lists,
-    settling: actions.settling,
-    scoped: scopedTo(scope),
+  const { data: searchable = [] } = useQuery({
+    queryKey: ["tasks", "everything"],
+    queryFn: () => api.tasks({ everything: "true" }),
+    enabled: searchText !== null,
   });
+
+  const results = useMemo(
+    () =>
+      searchTasks({
+        tasks: searchable,
+        input: searchText ?? "",
+        today: new Date(),
+      }),
+    [searchable, searchText],
+  );
+
+  const showing = searchText === null ? tasks : results;
+  const nothing =
+    searchText === null
+      ? isPending
+        ? null
+        : emptyFor(scope)
+      : searchText.trim().length === 0
+        ? null
+        : "No matches.";
+
+  useShortcuts((event) => {
+    if (event.key === "Escape" && searchText !== null) {
+      event.preventDefault();
+      setSearchText(null);
+      return;
+    }
+    if (event.key === "c" && !archived && !finished) {
+      event.preventDefault();
+      setAdding(true);
+    }
+    if (event.key === "f") {
+      event.preventDefault();
+      setAdding(false);
+      setSearchText("");
+    }
+    if (event.key === "?") {
+      event.preventDefault();
+      setHelping(true);
+    }
+  });
+
+  const groups =
+    searchText === null
+      ? buildGroups({
+          tasks: tasks,
+          view: view,
+          lists: lists,
+          settling: actions.settling,
+          scoped: scopedTo(scope),
+        })
+      : [
+          {
+            key: "results",
+            label: "",
+            omitFromMeta: [],
+            tasks: results,
+          },
+        ];
 
   return (
     <>
@@ -77,12 +139,26 @@ export function Tasks() {
         title={titleFor(scope)}
         view={view}
         onViewChange={changeView}
+        onOpenSearch={() => {
+          setAdding(false);
+          setSearchText("");
+        }}
+        search={
+          searchText === null
+            ? undefined
+            : {
+                text: searchText,
+                onChange: setSearchText,
+                onClose: () => setSearchText(null),
+              }
+        }
       />
 
-      {isPending ? null : tasks.length === 0 && !adding ? (
-        <p className="empty">{emptyFor(scope)}</p>
+      {showing.length === 0 && !adding ? (
+        nothing && <p className="empty">{nothing}</p>
       ) : (
         <TaskBoard
+          key={pathname}
           groups={groups}
           density={view.density}
           layout={view.layout}
@@ -90,6 +166,7 @@ export function Tasks() {
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),
             rename: actions.rename,
+            remove: actions.remove,
             swipeLeft: actions.swipeLeft,
             swipeRight: actions.swipeRight,
           }}
@@ -105,16 +182,18 @@ export function Tasks() {
         />
       )}
 
-      {!archived && !finished && !adding && (
+      {!archived && !finished && !adding && searchText === null && (
         <AddButton onClick={() => setAdding(true)} />
       )}
 
       {openTaskId !== null && (
-        <TaskSheet
+        <TaskInfo
           taskId={openTaskId}
           onClose={() => setOpenTaskId(null)}
         />
       )}
+
+      {helping && <Shortcuts onClose={() => setHelping(false)} />}
     </>
   );
 }
