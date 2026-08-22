@@ -552,7 +552,7 @@ function CaptureRow({
   onCreated?: (taskId: number) => void;
   onDismiss?: () => void;
 }) {
-  const titleRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   const blank: Task = { ...BLANK_TASK, ...seed };
 
   useEffect(() => {

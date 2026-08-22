@@ -476,6 +476,8 @@ a {
   color: inherit;
   font: inherit;
   caret-color: var(--accent);
+  resize: none;
+  overflow: hidden;
 }
 
 .task-info {
@@ -590,6 +592,16 @@ a {
 
 .task-meta button:active {
   color: var(--text);
+}
+
+.task-meta button[data-clickable="true"] {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .task-meta button[data-clickable="true"]:hover {
+    color: var(--text);
+  }
 }
 
 .subtask-toggle {
@@ -1191,10 +1203,15 @@ a {
 .info-title {
   font-size: 1.3rem;
   font-weight: 600;
+  line-height: 1.35;
   background: none;
   border: 0;
   border-radius: 0;
   padding: 0.2rem 0;
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .info-attributes {

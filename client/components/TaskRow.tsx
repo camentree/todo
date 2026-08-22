@@ -59,7 +59,7 @@ export function TaskRow({
   showAttributes: boolean;
   parseAttributes?: boolean;
   omitAttributes?: AttributeOmission[];
-  inputRef?: RefObject<HTMLInputElement | null>;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
   subtasks?: ReactNode;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
@@ -68,7 +68,7 @@ export function TaskRow({
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [hasFocus, setHasFocus] = useState(false);
   const [caretAt, setCaretAt] = useState<number | null>(null);
-  const ownRef = useRef<HTMLInputElement>(null);
+  const ownRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = inputRef ?? ownRef;
   const unsaved = task.id === null;
 
@@ -384,7 +384,7 @@ function TitleField({
   value: string;
   onChange: (next: string) => void;
   list: string;
-  inputRef: RefObject<HTMLInputElement | null>;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
   suggest: boolean;
   caretAt: number | null;
   takeFocus: boolean;
@@ -409,6 +409,7 @@ function TitleField({
       list={list}
       at="row"
       suggest={suggest}
+      multiline
       onDone={onEnter}
       onCancel={onEscape}
       input={{
@@ -458,6 +459,7 @@ function Attributes({
           type="button"
           key={`${field}-${text}`}
           className={field === "tag" ? "tag" : undefined}
+          data-clickable={Boolean(to)}
           onClick={() => {
             if (travelled() || !to) {
               return;

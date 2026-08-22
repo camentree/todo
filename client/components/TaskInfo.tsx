@@ -81,7 +81,6 @@ export function TaskInfo({
   const [note, setNote] = useState("");
   const [newTag, setNewTag] = useState("");
   const [titleFocused, setTitleFocused] = useState(false);
-  const titleRef = useRef<HTMLInputElement>(null);
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -93,6 +92,7 @@ export function TaskInfo({
   const started = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   const drag = useDragDown({
     scroller: bodyRef,
     onRelease: () => closeSlowly(),
@@ -332,7 +332,8 @@ export function TaskInfo({
             inputRef={titleRef}
             list={uncommittedTask.list ?? ""}
             at="sheet"
-            onDone={(event: ReactKeyboardEvent<HTMLInputElement>) =>
+            multiline
+            onDone={(event: ReactKeyboardEvent<HTMLElement>) =>
               event.currentTarget.blur()
             }
             input={{
