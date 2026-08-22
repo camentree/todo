@@ -84,6 +84,9 @@ export function TaskInfo({
   const [editingSubtaskId, setEditingSubtaskId] = useState<
     number | null
   >(null);
+  const [expandedSubtasks, setExpandedSubtasks] = useState<
+    Set<number>
+  >(new Set());
   const [titleFocused, setTitleFocused] = useState(false);
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
@@ -296,6 +299,18 @@ export function TaskInfo({
       isEditing={editingSubtaskId === subtask.id}
       onEditingChange={(editing) =>
         setEditingSubtaskId(editing ? subtask.id : null)
+      }
+      expanded={expandedSubtasks.has(subtask.id)}
+      onExpandedChange={(open) =>
+        setExpandedSubtasks((current) => {
+          const next = new Set(current);
+          if (open) {
+            next.add(subtask.id);
+          } else {
+            next.delete(subtask.id);
+          }
+          return next;
+        })
       }
       onCommit={(changes) =>
         "state" in changes

@@ -28,6 +28,7 @@ export function ParseableTitle({
   multiline = false,
   onDone,
   onCancel,
+  onTab,
   input,
 }: {
   value: string;
@@ -39,6 +40,7 @@ export function ParseableTitle({
   multiline?: boolean;
   onDone?: () => void;
   onCancel?: (event: KeyboardEvent<TitleElement>) => void;
+  onTab?: (backwards: boolean) => void;
   input: InputHTMLAttributes<TitleElement> &
     Partial<Record<`data-${string}`, boolean>>;
 }) {
@@ -148,6 +150,12 @@ export function ParseableTitle({
         setSuppressed(true);
         return;
       }
+    }
+    if (event.key === "Tab" && onTab) {
+      event.preventDefault();
+      event.stopPropagation();
+      onTab(event.shiftKey);
+      return;
     }
     if (event.key === "Enter") {
       event.preventDefault();

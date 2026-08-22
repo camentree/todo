@@ -178,6 +178,8 @@ export function Tasks() {
           remove: actions.remove,
           swipeLeft: actions.swipeLeft,
           swipeRight: actions.swipeRight,
+          undo: actions.undo,
+          redo: actions.redo,
         }}
         onMove={actions.move}
       />

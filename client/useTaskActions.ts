@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 
 import { api } from "./api.ts";
 import { recordFailure } from "./failures.ts";
+import { useHistory, type HistoryEntry } from "./useHistory.ts";
 import { isDueToday } from "./format.ts";
 import type { Landing } from "./components/TaskBoard.tsx";
 import { reassignSlots } from "@shared/ordering.ts";
@@ -35,6 +36,66 @@ function rememberList(list: string): void {
 
 function lastUsedList(): string | null {
   return window.localStorage.getItem(LAST_LIST_KEY);
+}
+
+type SwipeRightOutcome =
+  "deleted" | "unhidden" | "deferred" | "hidden";
+
+function fieldsOf(task: CreatedTask): Partial<Task> & {
+  list: string;
+  title: string;
+} {
+  return {
+    list: task.list,
+    title: task.title,
+    note: task.note,
+    parentId: task.parentId,
+    stage: task.stage,
+    tags: task.tags,
+    who: task.who,
+    dueDate: task.dueDate,
+    dueTime: task.dueTime,
+  };
+}
+
+function deletionOf(task: CreatedTask): HistoryEntry {
+  let living = task;
+  return {
+    undo: async () => {
+      living = await api.createTask(fieldsOf(living));
+    },
+    redo: async () => {
+      await api.deleteTask(living.id);
+    },
+  };
+}
+
+function swipeRightReversal(
+  task: CreatedTask,
+  outcome: SwipeRightOutcome,
+): HistoryEntry {
+  if (outcome === "deleted") {
+    return deletionOf(task);
+  }
+  if (outcome === "unhidden") {
+    return {
+      undo: async () => void (await api.hideTask(task.id)),
+      redo: async () => void (await api.unhideTask(task.id)),
+    };
+  }
+  if (outcome === "deferred") {
+    return {
+      undo: async () =>
+        void (await api.updateTask(task.id, {
+          dueDate: task.dueDate,
+        })),
+      redo: async () => void (await api.deferTask(task.id)),
+    };
+  }
+  return {
+    undo: async () => void (await api.unhideTask(task.id)),
+    redo: async () => void (await api.hideTask(task.id)),
+  };
 }
 
 interface QueuedMove {
@@ -130,6 +191,7 @@ export function useTaskActions(
   onManualOrder?: (changes: Partial<ViewPreference>) => void,
 ) {
   const queryClient = useQueryClient();
+  const history = useHistory();
   const [justToggled, setJustToggled] = useState<
     Map<number, TaskState>
   >(new Map());
@@ -205,6 +267,12 @@ export function useTaskActions(
           });
           if (updated) {
             patchEverywhere(updated.id, updated);
+            history.record({
+              undo: async () =>
+                void (await api.setState(task.id, task.state)),
+              redo: async () =>
+                void (await api.setState(task.id, next)),
+            });
             return;
           }
           report("tick that off")(error);
@@ -256,7 +324,10 @@ export function useTaskActions(
 
   const remove = useMutation({
     mutationFn: (task: CreatedTask) => api.deleteTask(task.id),
-    onSuccess: ({ removed }) => takeBack(removed),
+    onSuccess: ({ removed }, task: CreatedTask) => {
+      takeBack(removed);
+      history.record(deletionOf(task));
+    },
     onError: report("delete that task"),
   });
 
@@ -265,26 +336,54 @@ export function useTaskActions(
       task.archivedAt
         ? api.unarchiveTasks([task.id])
         : api.archiveTasks([task.id]),
-    onSuccess: landed,
+    onSuccess: (written: CreatedTask[], task: CreatedTask) => {
+      landed(written);
+      const away = () => api.archiveTasks([task.id]);
+      const back = () => api.unarchiveTasks([task.id]);
+      const [undo, redo] = task.archivedAt
+        ? [away, back]
+        : [back, away];
+      history.record({
+        undo: async () => void (await undo()),
+        redo: async () => void (await redo()),
+      });
+    },
     onError: report("archive that task"),
   });
 
   const swipeRight = useMutation({
-    mutationFn: (task: CreatedTask) => {
+    mutationFn: async (
+      task: CreatedTask,
+    ): Promise<{
+      outcome: SwipeRightOutcome;
+      written: CreatedTask[];
+    }> => {
       if (task.archivedAt) {
-        return api.deleteTask(task.id).then(({ removed }) => {
-          takeBack(removed);
-          return [];
-        });
+        const { removed } = await api.deleteTask(task.id);
+        takeBack(removed);
+        return { outcome: "deleted", written: [] };
       }
       if (task.state === "hidden") {
-        return api.unhideTask(task.id);
+        return {
+          outcome: "unhidden",
+          written: await api.unhideTask(task.id),
+        };
       }
-      return task.recurringTaskId || isDueToday(task.dueDate)
-        ? api.deferTask(task.id)
-        : api.hideTask(task.id);
+      if (task.recurringTaskId || isDueToday(task.dueDate)) {
+        return {
+          outcome: "deferred",
+          written: await api.deferTask(task.id),
+        };
+      }
+      return {
+        outcome: "hidden",
+        written: await api.hideTask(task.id),
+      };
     },
-    onSuccess: landed,
+    onSuccess: ({ outcome, written }, task: CreatedTask) => {
+      landed(written);
+      history.record(swipeRightReversal(task, outcome));
+    },
     onError: report("put that task away"),
   });
 
@@ -378,6 +477,16 @@ export function useTaskActions(
 
   return {
     justToggled: justToggled,
+    undo: async () => {
+      if (await history.undo()) {
+        void queryClient.invalidateQueries();
+      }
+    },
+    redo: async () => {
+      if (await history.redo()) {
+        void queryClient.invalidateQueries();
+      }
+    },
     toggleTask: toggleState,
     rename: (task: CreatedTask, changes: Partial<Task>) =>
       rename.mutate({ task: task, changes: changes }),
