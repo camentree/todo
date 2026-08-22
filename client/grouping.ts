@@ -1,5 +1,6 @@
 import { parseISO } from "date-fns";
 
+import { HIDDEN_GROUP } from "./components/TaskBoard.tsx";
 import type {
   BoardGroup,
   MetaOmission,
@@ -30,7 +31,46 @@ export function buildGroups({
   });
 
   const screenWide = scoped ? [scoped] : [];
+  const held = settling ?? new Set<number>();
+  const hidden = sorted.filter((task) => putAway(task, held));
 
+  const groups = groupsOf({
+    sorted: sorted.filter((task) => !putAway(task, held)),
+    view: view,
+    lists: lists,
+    screenWide: screenWide,
+  });
+
+  if (hidden.length === 0) {
+    return groups;
+  }
+
+  return [
+    ...groups,
+    {
+      key: HIDDEN_GROUP,
+      label: "Hidden",
+      omitFromMeta: screenWide,
+      tasks: hidden,
+    },
+  ];
+}
+
+function putAway(task: Task, settling: Set<number>): boolean {
+  return task.state === "hidden" && !settling.has(task.id);
+}
+
+function groupsOf({
+  sorted,
+  view,
+  lists,
+  screenWide,
+}: {
+  sorted: Task[];
+  view: ViewPreference;
+  lists: string[];
+  screenWide: MetaOmission[];
+}): BoardGroup[] {
   if (view.breakUpBy === "none") {
     return [
       {

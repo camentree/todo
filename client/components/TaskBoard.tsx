@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { NewTaskRow } from "./NewTask.tsx";
+import { SubtaskRow } from "./SubtaskRow.tsx";
 import {
   formatDueDate,
   formatDueTime,
   isDueToday,
 } from "../format.ts";
+import { useShortcuts } from "../useShortcuts.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { stageLabel } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
@@ -15,6 +17,9 @@ import type { Density, Layout, Task } from "@shared/types.ts";
 
 const SWIPE_FRACTION = 0.4;
 const LONG_PRESS_MILLISECONDS = 400;
+const FLICK_MILLISECONDS = 500;
+
+export const HIDDEN_GROUP = "hidden";
 
 export interface MetaOmission {
   field: Attribute;
@@ -40,6 +45,7 @@ export interface RowActions {
   toggle: (task: Task) => void;
   open: (task: Task) => void;
   rename: (task: Task, title: string) => void;
+  remove: (task: Task) => void;
   swipeLeft: (task: Task) => void;
   swipeRight: (task: Task) => void;
 }
@@ -64,6 +70,11 @@ interface Lift {
   index: number;
 }
 
+interface Flick {
+  taskId: number;
+  direction: "left" | "right";
+}
+
 export function TaskBoard({
   groups,
   actions,
@@ -74,8 +85,102 @@ export function TaskBoard({
 }: TaskBoardProps) {
   const [lift, setLift] = useState<Lift | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [focusedId, setFocusedId] = useState<number | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    new Set([HIDDEN_GROUP]),
+  );
+  const [flick, setFlick] = useState<Flick | null>(null);
+  const flicking = useRef<{
+    timer: ReturnType<typeof setTimeout>;
+    act: () => void;
+  } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  const shown = groups
+    .filter((group) => !collapsed.has(group.key))
+    .flatMap((group) => group.tasks);
+  const focusedIndex = shown.findIndex(
+    (task) => task.id === focusedId,
+  );
+
+  function focusAt(index: number): void {
+    const task =
+      shown[Math.min(Math.max(index, 0), shown.length - 1)];
+    if (!task) {
+      return;
+    }
+    setFocusedId(task.id);
+    boardRef.current
+      ?.querySelector(`[data-task="${task.id}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }
+
+  function settleFlick(): void {
+    const current = flicking.current;
+    if (!current) {
+      return;
+    }
+    clearTimeout(current.timer);
+    flicking.current = null;
+    setFlick(null);
+    current.act();
+  }
+
+  function flickAway(task: Task, direction: "left" | "right"): void {
+    settleFlick();
+    setFlick({ taskId: task.id, direction: direction });
+    flicking.current = {
+      timer: setTimeout(settleFlick, FLICK_MILLISECONDS),
+      act: () =>
+        direction === "left"
+          ? actions.swipeLeft(task)
+          : actions.swipeRight(task),
+    };
+  }
+
+  useShortcuts((event) => {
+    if (event.key === "Escape") {
+      setFocusedId(null);
+      return;
+    }
+    const step = movement(event);
+    if (step !== 0) {
+      event.preventDefault();
+      focusAt(focusedIndex + step);
+      return;
+    }
+
+    const task = shown[focusedIndex];
+    if (!task) {
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      setEditingId(task.id);
+      return;
+    }
+    if (event.key === " ") {
+      event.preventDefault();
+      actions.toggle(task);
+      return;
+    }
+    if (event.key === "i") {
+      event.preventDefault();
+      actions.open(task);
+      return;
+    }
+    if (isTerminal(task.state)) {
+      return;
+    }
+    if (event.key === "a") {
+      focusAt(focusedIndex + 1);
+      flickAway(task, "left");
+    }
+    if (event.key === "h" && task.archivedAt === null) {
+      focusAt(focusedIndex + 1);
+      flickAway(task, "right");
+    }
+  });
 
   function placeAt(
     pointerX: number,
@@ -185,6 +290,8 @@ export function TaskBoard({
           capturePrefix={capturePrefix}
           editingId={editingId}
           onEditingIdChange={setEditingId}
+          focusedId={focusedId}
+          onFocusedIdChange={setFocusedId}
           collapsed={collapsed.has(group.key)}
           onToggleCollapsed={() =>
             setCollapsed((current) => {
@@ -198,6 +305,7 @@ export function TaskBoard({
             })
           }
           lift={lift}
+          flick={flick}
           onLiftStart={(taskId, pointerX, pointerY) =>
             setLift(placeAt(pointerX, pointerY, taskId, group.key))
           }
@@ -218,6 +326,25 @@ export function TaskBoard({
   );
 }
 
+function movement(event: KeyboardEvent): number {
+  if (event.ctrlKey) {
+    if (event.key === "n") {
+      return 1;
+    }
+    if (event.key === "p") {
+      return -1;
+    }
+    return 0;
+  }
+  if (event.key === "ArrowDown" || event.key === "j") {
+    return 1;
+  }
+  if (event.key === "ArrowUp" || event.key === "k") {
+    return -1;
+  }
+  return 0;
+}
+
 function Group({
   group,
   actions,
@@ -225,8 +352,11 @@ function Group({
   collapsed,
   onToggleCollapsed,
   lift,
+  flick,
   editingId,
   onEditingIdChange,
+  focusedId,
+  onFocusedIdChange,
   onLiftStart,
   onLiftMove,
   onLiftEnd,
@@ -237,8 +367,11 @@ function Group({
   collapsed: boolean;
   onToggleCollapsed: () => void;
   lift: Lift | null;
+  flick: Flick | null;
   editingId: number | null;
   onEditingIdChange: (taskId: number | null) => void;
+  focusedId: number | null;
+  onFocusedIdChange: (taskId: number | null) => void;
   onLiftStart: (
     taskId: number,
     pointerX: number,
@@ -282,9 +415,13 @@ function Group({
                 group={group}
                 actions={actions}
                 lift={lift}
+                flick={flick}
                 editing={editingId === task.id}
                 onEditStart={() => onEditingIdChange(task.id)}
                 onEditEnd={() => onEditingIdChange(null)}
+                focused={focusedId === task.id}
+                onFocus={() => onFocusedIdChange(task.id)}
+                onLeave={() => onFocusedIdChange(null)}
                 onLiftStart={onLiftStart}
                 onLiftMove={onLiftMove}
                 onLiftEnd={onLiftEnd}
@@ -310,9 +447,13 @@ function Row({
   group,
   actions,
   lift,
+  flick,
   editing,
   onEditStart,
   onEditEnd,
+  focused,
+  onFocus,
+  onLeave,
   onLiftStart,
   onLiftMove,
   onLiftEnd,
@@ -322,9 +463,13 @@ function Row({
   group: BoardGroup;
   actions: RowActions;
   lift: Lift | null;
+  flick: Flick | null;
   editing: boolean;
   onEditStart: () => void;
   onEditEnd: () => void;
+  focused: boolean;
+  onFocus: () => void;
+  onLeave: () => void;
   onLiftStart: (
     taskId: number,
     pointerX: number,
@@ -339,6 +484,8 @@ function Row({
 }) {
   const [showSubtasks, setShowSubtasks] = useState(false);
   const lifting = lift?.taskId === task.id;
+  const flickingTo =
+    flick?.taskId === task.id ? flick.direction : null;
 
   const gesture = useRowGesture({
     onLeft: () => actions.swipeLeft(task),
@@ -349,13 +496,19 @@ function Row({
       onLiftMove(task.id, pointerX, pointerY),
     onLiftEnd: onLiftEnd,
     enabled: !isTerminal(task.state),
-    allowRight: task.archivedAt === null,
   });
 
   const subtasks = task.subtasks ?? [];
   const finished = subtasks.filter((subtask) =>
     isTerminal(subtask.state),
   ).length;
+
+  const flickTravel =
+    flickingTo === "left"
+      ? -SWIPE_FRACTION * 100
+      : SWIPE_FRACTION * 100;
+  const shift =
+    flickingTo === null ? `${gesture.offset}px` : `${flickTravel}%`;
 
   return (
     <>
@@ -365,21 +518,26 @@ function Row({
       <div
         className="task-shell"
         data-row="true"
+        data-task={task.id}
         data-group={group.key}
         data-index={index}
         data-lifting={lifting}
       >
         <div className="swipe-track">
-          {gesture.swiping && (
+          {(gesture.swiping || flickingTo !== null) && (
             <>
               <div className="swipe-action archive">
                 {leftSwipeLabel(task)}
               </div>
-              {task.archivedAt === null && (
-                <div className="swipe-action defer">
-                  {rightSwipeLabel(task)}
-                </div>
-              )}
+              <div
+                className={
+                  task.archivedAt
+                    ? "swipe-action remove"
+                    : "swipe-action defer"
+                }
+              >
+                {rightSwipeLabel(task)}
+              </div>
             </>
           )}
 
@@ -388,8 +546,15 @@ function Row({
             ref={gesture.ref}
             data-done={isTerminal(task.state)}
             data-editing={editing}
+            data-focused={focused}
             data-swiping={gesture.swiping}
-            style={{ transform: `translateX(${gesture.offset}px)` }}
+            style={{ transform: `translateX(${shift})` }}
+            onMouseEnter={onFocus}
+            onMouseLeave={() => {
+              if (focused) {
+                onLeave();
+              }
+            }}
             onPointerDown={gesture.down}
             onPointerMove={gesture.move}
             onPointerUp={gesture.up}
@@ -483,16 +648,13 @@ function Row({
             <div>
               <div className="subtasks">
                 {subtasks.map((subtask) => (
-                  <button
-                    type="button"
+                  <SubtaskRow
                     key={subtask.id}
-                    className="subtask"
-                    data-done={isTerminal(subtask.state)}
-                    onClick={() => actions.toggle(subtask)}
-                  >
-                    <span className="subtask-tick" />
-                    <span>{subtask.title}</span>
-                  </button>
+                    subtask={subtask}
+                    onToggle={() => actions.toggle(subtask)}
+                    onRename={(next) => actions.rename(subtask, next)}
+                    onDelete={() => actions.remove(subtask)}
+                  />
                 ))}
               </div>
             </div>
@@ -504,6 +666,9 @@ function Row({
 }
 
 export function rightSwipeLabel(task: Task): string {
+  if (task.archivedAt) {
+    return "Delete";
+  }
   if (task.state === "hidden") {
     return "Unhide";
   }
@@ -732,7 +897,6 @@ function useRowGesture({
   onLiftMove,
   onLiftEnd,
   enabled,
-  allowRight,
 }: {
   onLeft: () => void;
   onRight: () => void;
@@ -740,7 +904,6 @@ function useRowGesture({
   onLiftMove: (pointerX: number, pointerY: number) => void;
   onLiftEnd: () => void;
   enabled: boolean;
-  allowRight: boolean;
 }) {
   const [offset, setOffset] = useState(0);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -872,9 +1035,8 @@ function useRowGesture({
           event.currentTarget.setPointerCapture(event.pointerId);
         }
       }
-      const travel = allowRight ? dx : Math.min(dx, 0);
-      sideways.current = travel;
-      setOffset(travel);
+      sideways.current = dx;
+      setOffset(dx);
     },
     up: () => endGesture(),
   };

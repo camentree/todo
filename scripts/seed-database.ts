@@ -1,5 +1,6 @@
 import { addDays, format } from "date-fns";
 
+import { migrate } from "./migrate.ts";
 import { sql } from "../server/database.ts";
 import * as recurring from "../server/operations/recurring.ts";
 import * as tasks from "../server/operations/tasks.ts";
@@ -213,6 +214,8 @@ function refuseToSeedLiveData(): void {
 
 async function seed(): Promise<void> {
   refuseToSeedLiveData();
+
+  await migrate();
 
   await sql`
     truncate todo.tasks, todo.recurring_tasks, todo.events, todo.comments
