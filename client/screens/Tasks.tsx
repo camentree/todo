@@ -4,7 +4,10 @@ import { useLocation, useParams } from "react-router-dom";
 
 import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
-import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
+import {
+  AddButton,
+  focusLastCaptureRow,
+} from "../components/NewTask.tsx";
 import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
@@ -38,14 +41,12 @@ export function Tasks() {
       ? canonicalName(decodeURIComponent(parameters.value))
       : "",
   };
-  const list = scope.field === "list" ? scope.value : undefined;
   const archived =
     scope.field === "archived" && scope.value === "true";
   const finished =
     scope.field === "state" && scope.value === "complete";
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
-  const [adding, setAdding] = useState(false);
   const [searchText, setSearchText] = useState<string | null>(null);
   const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
@@ -84,16 +85,6 @@ export function Tasks() {
     [searchable, searchText],
   );
 
-  const showing = searchText === null ? tasks : results;
-  const nothing =
-    searchText === null
-      ? isPending
-        ? null
-        : emptyFor(scope)
-      : searchText.trim().length === 0
-        ? null
-        : "No matches.";
-
   useShortcuts((event) => {
     if (event.key === "Escape" && searchText !== null) {
       event.preventDefault();
@@ -102,11 +93,10 @@ export function Tasks() {
     }
     if (event.key === "c" && !archived && !finished) {
       event.preventDefault();
-      setAdding(true);
+      focusLastCaptureRow();
     }
     if (event.key === "f") {
       event.preventDefault();
-      setAdding(false);
       setSearchText("");
     }
     if (event.key === "?") {
@@ -133,16 +123,30 @@ export function Tasks() {
           },
         ];
 
+  const capturePrefix =
+    searchText !== null || archived || finished
+      ? null
+      : scope.field && scope.field !== view.breakUpBy
+        ? captureToken({ field: scope.field, value: scope.value })
+        : "";
+
+  const message = messageFor({
+    searchText: searchText,
+    isPending: isPending,
+    tasks: tasks,
+    results: results,
+    scope: scope,
+  });
+  const boardHidden =
+    searchText === null ? isPending : results.length === 0;
+
   return (
     <>
       <TopBar
         title={titleFor(scope)}
         view={view}
         onViewChange={changeView}
-        onOpenSearch={() => {
-          setAdding(false);
-          setSearchText("");
-        }}
+        onOpenSearch={() => setSearchText("")}
         search={
           searchText === null
             ? undefined
@@ -154,14 +158,15 @@ export function Tasks() {
         }
       />
 
-      {showing.length === 0 && !adding ? (
-        nothing && <p className="empty">{nothing}</p>
-      ) : (
+      {message && <p className="empty">{message}</p>}
+
+      {!boardHidden && (
         <TaskBoard
           key={pathname}
           groups={groups}
           density={view.density}
           layout={view.layout}
+          capturePrefix={capturePrefix}
           actions={{
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),
@@ -174,16 +179,8 @@ export function Tasks() {
         />
       )}
 
-      {adding && (
-        <NewTaskRow
-          list={list}
-          density={view.density}
-          onClose={() => setAdding(false)}
-        />
-      )}
-
-      {!archived && !finished && !adding && searchText === null && (
-        <AddButton onClick={() => setAdding(true)} />
+      {!archived && !finished && searchText === null && (
+        <AddButton onClick={focusLastCaptureRow} />
       )}
 
       {openTaskId !== null && (
@@ -196,6 +193,27 @@ export function Tasks() {
       {helping && <Shortcuts onClose={() => setHelping(false)} />}
     </>
   );
+}
+
+function messageFor({
+  searchText,
+  isPending,
+  tasks,
+  results,
+  scope,
+}: {
+  searchText: string | null;
+  isPending: boolean;
+  tasks: Task[];
+  results: Task[];
+  scope: Scope;
+}): string | null {
+  if (searchText === null) {
+    return !isPending && tasks.length === 0 ? emptyFor(scope) : null;
+  }
+  return searchText.trim().length > 0 && results.length === 0
+    ? "No matches."
+    : null;
 }
 
 function fetchTasks(scope: Scope): Promise<Task[]> {
@@ -233,6 +251,31 @@ function scopedTo(scope: Scope): MetaOmission | null {
         label: attributeText(scope.field, scope.value),
       }
     : null;
+}
+
+function captureToken({
+  field,
+  value,
+}: {
+  field: Attribute;
+  value: string;
+}): string {
+  if (field === "list") {
+    return `/${value}`;
+  }
+  if (field === "tag") {
+    return `#${value}`;
+  }
+  if (field === "who") {
+    return `@${value}`;
+  }
+  if (field === "stage") {
+    return `!${value}`;
+  }
+  if (field === "due_date") {
+    return value;
+  }
+  return "";
 }
 
 function emptyFor(scope: Scope): string {

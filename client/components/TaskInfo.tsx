@@ -208,7 +208,8 @@ export function TaskInfo({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === "Enter" && event.metaKey) {
+      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
         const active = document.activeElement;
         if (active instanceof HTMLElement) {
           active.blur();

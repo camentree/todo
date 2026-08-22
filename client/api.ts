@@ -36,7 +36,10 @@ export const api = {
     request<string[]>(
       `/tags${list ? `?list=${encodeURIComponent(list)}` : ""}`,
     ),
-  knownWho: () => request<string[]>("/who"),
+  knownWho: (list?: string) =>
+    request<string[]>(
+      `/who${list ? `?list=${encodeURIComponent(list)}` : ""}`,
+    ),
 
   tasks: (params: Record<string, string>) =>
     request<Task[]>(

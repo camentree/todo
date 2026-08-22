@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { NewTaskRow } from "./NewTask.tsx";
 import { SubtaskRow } from "./SubtaskRow.tsx";
 import {
   AttributeChips,
@@ -32,6 +33,7 @@ export interface BoardGroup {
   label: string;
   stage?: TaskStage;
   list?: string;
+  prefill?: string;
   omitFromMeta: MetaOmission[];
   tasks: Task[];
 }
@@ -55,6 +57,7 @@ export interface TaskBoardProps {
   actions: RowActions;
   density: Density;
   layout: Layout;
+  capturePrefix: string | null;
   onMove: (
     taskId: number,
     landing: Landing,
@@ -79,6 +82,7 @@ export function TaskBoard({
   actions,
   density,
   layout,
+  capturePrefix,
   onMove,
 }: TaskBoardProps) {
   const [lift, setLift] = useState<Lift | null>(null);
@@ -285,6 +289,7 @@ export function TaskBoard({
           key={group.key}
           group={group}
           actions={actions}
+          capturePrefix={capturePrefix}
           editingId={editingId}
           onEditingIdChange={setEditingId}
           focusedId={focusedId}
@@ -345,6 +350,7 @@ function movement(event: KeyboardEvent): number {
 function Group({
   group,
   actions,
+  capturePrefix,
   collapsed,
   onToggleCollapsed,
   lift,
@@ -359,6 +365,7 @@ function Group({
 }: {
   group: BoardGroup;
   actions: RowActions;
+  capturePrefix: string | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   lift: Lift | null;
@@ -379,6 +386,10 @@ function Group({
   ) => void;
   onLiftEnd: () => void;
 }) {
+  const prefill = [capturePrefix, group.prefill]
+    .filter((part) => part)
+    .join(" ");
+
   return (
     <div className="group" data-group-key={group.key}>
       {group.label && (
@@ -422,6 +433,9 @@ function Group({
               lift.index >= group.tasks.length && (
                 <div className="drop-line" />
               )}
+            {capturePrefix !== null && (
+              <NewTaskRow prefill={prefill ? `${prefill} ` : ""} />
+            )}
           </div>
         </div>
       </div>

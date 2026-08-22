@@ -88,6 +88,7 @@ function groupsOf({
         key: `list-${list}`,
         label: list,
         list: list,
+        prefill: `/${list}`,
         omitFromMeta: [
           ...screenWide,
           { field: "list" as const, label: list },
@@ -102,6 +103,7 @@ function groupsOf({
       key: `stage-${stage}`,
       label: stageLabel(stage),
       stage: stage,
+      prefill: `!${stage}`,
       omitFromMeta: [
         ...screenWide,
         { field: "stage" as const, label: stageLabel(stage) },
@@ -113,6 +115,7 @@ function groupsOf({
   const breakUpBy = view.breakUpBy;
   const buckets = new Map<string, Task[]>();
   const rank = new Map<string, string | null>();
+  const prefill = new Map<string, string | undefined>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
@@ -128,6 +131,14 @@ function groupsOf({
           rankFor({
             task: task,
             breakUpBy: breakUpBy,
+            label: label,
+          }),
+        );
+        prefill.set(
+          label,
+          prefillFor({
+            task: task,
+            breakUpBy: view.breakUpBy,
             label: label,
           }),
         );
@@ -151,9 +162,28 @@ function groupsOf({
   return entries.map(([label, grouped]) => ({
     key: `${breakUpBy}-${label}`,
     label: label,
+    prefill: prefill.get(label),
     omitFromMeta: [...screenWide, { field: breakUpBy, label: label }],
     tasks: grouped,
   }));
+}
+
+function prefillFor({
+  task,
+  breakUpBy,
+  label,
+}: {
+  task: Task;
+  breakUpBy: ViewPreference["breakUpBy"];
+  label: string;
+}): string | undefined {
+  if (breakUpBy === "due_date") {
+    return task.dueDate ?? undefined;
+  }
+  if (breakUpBy === "who") {
+    return task.who ? `@${task.who}` : undefined;
+  }
+  return task.tags.includes(label) ? `#${label}` : undefined;
 }
 
 function stageOf(task: Task): TaskStage {
