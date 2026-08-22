@@ -58,16 +58,6 @@
   --group-gap: 0.4rem;
 }
 
-[data-density="airy"] {
-  --row-pad: 0.78rem;
-  --row-title: 1.08rem;
-  --row-leading: 1.42;
-  --tick: 1.45rem;
-  --tick-gap: 0.95rem;
-  --group-top: 1.1rem;
-  --group-bottom: 0.6rem;
-  --group-gap: 1rem;
-}
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -278,6 +268,15 @@ a {
   color: var(--dim);
 }
 
+.capture-space {
+  height: 1.6rem;
+  width: 100%;
+}
+
+.board-capture {
+  margin-top: var(--group-gap);
+}
+
 .group-name {
   font-size: 0.76rem;
   font-weight: 600;
@@ -355,6 +354,11 @@ a {
 .swipe-track {
   position: relative;
   overflow: hidden;
+}
+
+.swipe-track:has(.capture-suggestions) {
+  overflow: visible;
+  z-index: 40;
 }
 
 .swipe-action {
@@ -457,6 +461,8 @@ a {
 .task-title.editing {
   background: none;
   border: none;
+  border-radius: 0;
+  height: auto;
   padding: 0;
   color: inherit;
   font: inherit;
@@ -476,8 +482,57 @@ a {
   display: grid;
 }
 
-.new-task .task-tick {
+.task[data-unsaved="true"] .task-tick {
   opacity: 0.45;
+}
+
+.capture-note {
+  margin-left: calc(var(--tick) + var(--tick-gap));
+  width: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  resize: none;
+  color: var(--dim);
+  line-height: 1.45;
+  caret-color: var(--accent);
+  field-sizing: content;
+}
+
+.capture-suggestions {
+  position: absolute;
+  top: calc(100% - 0.3rem);
+  left: calc(var(--tick) + var(--tick-gap));
+  z-index: 40;
+  min-width: 9rem;
+  max-width: min(18rem, 80vw);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.25rem;
+  box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.05rem;
+  animation: drop-in var(--motion-menu) var(--ease);
+  transform-origin: top;
+}
+
+.capture-suggestion {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-align: left;
+  padding: 0.42rem 0.5rem;
+  border-radius: 7px;
+  color: var(--dim);
+}
+
+.capture-suggestion[data-on="true"] {
+  background: var(--chip-bg);
+  color: var(--chip-text);
 }
 
 .drop-line {
@@ -563,6 +618,10 @@ a {
   overflow: hidden;
 }
 
+.collapsible[data-open="true"]:has(.capture-suggestions) > div {
+  overflow: visible;
+}
+
 .info-repeat {
   display: flex;
   flex-direction: column;
@@ -575,62 +634,9 @@ a {
   padding: 0 0 0.5rem calc(var(--tick) + var(--tick-gap) + 0.25rem);
 }
 
-.subtask-track {
-  position: relative;
-  overflow: hidden;
-}
-
-.subtask {
-  display: flex;
-  gap: var(--tick-gap);
-  align-items: center;
-  padding: calc(var(--row-pad) + 0.5rem) 0.25rem;
-  font-size: var(--row-title);
-  line-height: var(--row-leading);
-  color: var(--text);
-  background: var(--ground);
-  touch-action: pan-y;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.subtask[data-swiping="false"] {
-  transition: transform var(--motion) var(--ease);
-}
-
-.subtask-tick {
-  width: var(--tick);
-  height: var(--tick);
-  border-radius: 50%;
-  border: 1.5px solid var(--faint);
-  flex-shrink: 0;
-}
-
-.subtask-title {
-  background: none;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  height: auto;
-  color: inherit;
-  font: inherit;
-  font-size: max(16px, 1em);
-  caret-color: var(--accent);
-  flex: 1;
-  min-width: 0;
-}
-
-.subtask[data-done="true"] {
-  color: var(--dim);
-}
-
-.subtask[data-done="true"] .subtask-tick {
-  background: var(--dim);
-  border-color: var(--dim);
-}
-
-.subtask[data-done="true"] .subtask-title {
-  text-decoration: line-through;
+.subtasks .task,
+.info-subtasks .task {
+  padding: calc(var(--row-pad) + 0.35rem) 0.25rem;
 }
 
 .empty {
@@ -815,6 +821,41 @@ a {
 
 .menu-field .menu-label {
   padding: 0;
+}
+
+.menu-field.row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 0.62rem;
+}
+
+.switch {
+  width: 2.6rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--hairline);
+  padding: 0.15rem;
+  flex-shrink: 0;
+  transition: background var(--motion) var(--ease);
+}
+
+.switch[aria-checked="true"] {
+  background: var(--accent);
+}
+
+.switch-knob {
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: var(--ground);
+  transition: transform var(--motion) var(--ease);
+}
+
+.switch[aria-checked="true"] .switch-knob {
+  transform: translateX(1.1rem);
 }
 
 .menu-toggle {
@@ -1431,7 +1472,7 @@ a {
 }
 
 @media (hover: hover) {
-  .task[data-focused="true"] {
+  .task-shell[data-focused="true"] > .swipe-track > .task {
     background: var(--hover);
     border-radius: 9px;
   }
@@ -1441,7 +1482,7 @@ a {
     visibility: hidden;
   }
 
-  .task[data-focused="true"] .task-info,
+  .task-shell[data-focused="true"] > .swipe-track > .task .task-info,
   .task[data-editing="true"] .task-info {
     visibility: visible;
   }

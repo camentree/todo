@@ -4,15 +4,15 @@ import { useLocation, useParams } from "react-router-dom";
 
 import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
-import { AddButton, NewTaskRow } from "../components/NewTask.tsx";
 import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
+import { AddButton } from "../components/TaskRow.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
 import { TaskInfo } from "../components/TaskInfo.tsx";
 import {
   asTitle,
   attributeText,
-  dueDateFromLabel,
+  todayAsDateString,
 } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
 import { useShortcuts } from "../useShortcuts.ts";
@@ -27,35 +27,44 @@ import type { Task } from "@shared/types.ts";
 export interface Scope {
   field: Attribute | null;
   value: string;
+  today: boolean;
 }
 
 export function Tasks() {
   const parameters = useParams();
   const { pathname } = useLocation();
-  const scope: Scope = {
-    field: asAttribute(parameters.field),
-    value: parameters.value
-      ? canonicalName(decodeURIComponent(parameters.value))
-      : "",
-  };
-  const list = scope.field === "list" ? scope.value : undefined;
+  const scope: Scope =
+    pathname === "/today"
+      ? {
+          field: "due_date",
+          value: todayAsDateString(),
+          today: true,
+        }
+      : {
+          field: asAttribute(parameters.field),
+          value: parameters.value
+            ? canonicalName(decodeURIComponent(parameters.value))
+            : "",
+          today: false,
+        };
   const archived =
     scope.field === "archived" && scope.value === "true";
   const finished =
     scope.field === "state" && scope.value === "complete";
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
-  const [adding, setAdding] = useState(false);
   const [searchText, setSearchText] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
   const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
-    scope.field ? `${scope.field}:${scope.value}` : "all",
+    viewKeyFor(scope),
     defaultView(scope),
   );
   const actions = useTaskActions(changeView);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
+    setCapturing(false);
   }, [pathname]);
 
   const { data: lists = [] } = useQuery({
@@ -64,7 +73,9 @@ export function Tasks() {
   });
 
   const { data: tasks = [], isPending } = useQuery({
-    queryKey: ["tasks", scope.field, scope.value],
+    queryKey: scope.today
+      ? ["tasks", "today"]
+      : ["tasks", scope.field, scope.value],
     queryFn: () => fetchTasks(scope),
   });
 
@@ -84,16 +95,6 @@ export function Tasks() {
     [searchable, searchText],
   );
 
-  const showing = searchText === null ? tasks : results;
-  const nothing =
-    searchText === null
-      ? isPending
-        ? null
-        : emptyFor(scope)
-      : searchText.trim().length === 0
-        ? null
-        : "No matches.";
-
   useShortcuts((event) => {
     if (event.key === "Escape" && searchText !== null) {
       event.preventDefault();
@@ -102,11 +103,10 @@ export function Tasks() {
     }
     if (event.key === "c" && !archived && !finished) {
       event.preventDefault();
-      setAdding(true);
+      setCapturing(true);
     }
     if (event.key === "f") {
       event.preventDefault();
-      setAdding(false);
       setSearchText("");
     }
     if (event.key === "?") {
@@ -133,16 +133,30 @@ export function Tasks() {
           },
         ];
 
+  const capturePrefix =
+    searchText !== null || archived || finished
+      ? null
+      : scope.field && scope.field !== view.breakUpBy
+        ? captureToken({ field: scope.field, value: scope.value })
+        : "";
+
+  const message = messageFor({
+    searchText: searchText,
+    isPending: isPending,
+    tasks: tasks,
+    results: results,
+    scope: scope,
+  });
+  const boardHidden =
+    searchText === null ? isPending : results.length === 0;
+
   return (
     <>
       <TopBar
         title={titleFor(scope)}
         view={view}
         onViewChange={changeView}
-        onOpenSearch={() => {
-          setAdding(false);
-          setSearchText("");
-        }}
+        onOpenSearch={() => setSearchText("")}
         search={
           searchText === null
             ? undefined
@@ -154,18 +168,21 @@ export function Tasks() {
         }
       />
 
-      {showing.length === 0 && !adding ? (
-        nothing && <p className="empty">{nothing}</p>
-      ) : (
+      {message && <p className="empty">{message}</p>}
+
+      {!boardHidden && (
         <TaskBoard
           key={pathname}
           groups={groups}
-          density={view.density}
           layout={view.layout}
+          capturePrefix={capturePrefix}
+          capturing={capturing}
+          onCapturingChange={setCapturing}
           actions={{
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),
             rename: actions.rename,
+            create: actions.create,
             remove: actions.remove,
             swipeLeft: actions.swipeLeft,
             swipeRight: actions.swipeRight,
@@ -174,16 +191,8 @@ export function Tasks() {
         />
       )}
 
-      {adding && (
-        <NewTaskRow
-          list={list}
-          density={view.density}
-          onClose={() => setAdding(false)}
-        />
-      )}
-
-      {!archived && !finished && !adding && searchText === null && (
-        <AddButton onClick={() => setAdding(true)} />
+      {!archived && !finished && searchText === null && (
+        <AddButton onClick={() => setCapturing(true)} />
       )}
 
       {openTaskId !== null && (
@@ -198,23 +207,59 @@ export function Tasks() {
   );
 }
 
+function messageFor({
+  searchText,
+  isPending,
+  tasks,
+  results,
+  scope,
+}: {
+  searchText: string | null;
+  isPending: boolean;
+  tasks: Task[];
+  results: Task[];
+  scope: Scope;
+}): string | null {
+  if (searchText === null) {
+    return !isPending && tasks.length === 0 ? emptyFor(scope) : null;
+  }
+  return searchText.trim().length > 0 && results.length === 0
+    ? "No matches."
+    : null;
+}
+
 function fetchTasks(scope: Scope): Promise<Task[]> {
+  if (scope.today) {
+    return api.tasks({ today: "true" });
+  }
   if (!scope.field) {
     return api.tasks({});
   }
-  const value =
-    scope.field === "due_date"
-      ? (dueDateFromLabel(scope.value) ?? scope.value)
-      : scope.value;
-  return api.tasks({ attribute: scope.field, value: value });
+  return api.tasks({ attribute: scope.field, value: scope.value });
+}
+
+function viewKeyFor(scope: Scope): string {
+  if (scope.today) {
+    return "today";
+  }
+  if (scope.field === "due_date") {
+    return "due_date";
+  }
+  return scope.field ? `${scope.field}:${scope.value}` : "all";
 }
 
 function titleFor(scope: Scope): string {
+  if (scope.today) {
+    return "Today";
+  }
   if (!scope.field) {
     return "To Do";
   }
   if (scope.field === "state" && scope.value === "complete") {
     return "Done";
+  }
+  if (scope.field === "due_date") {
+    return scope.value;
   }
   const text = attributeText(scope.field, scope.value);
   if (scope.field === "tag") {
@@ -235,8 +280,33 @@ function scopedTo(scope: Scope): MetaOmission | null {
     : null;
 }
 
+function captureToken({
+  field,
+  value,
+}: {
+  field: Attribute;
+  value: string;
+}): string {
+  if (field === "list") {
+    return `/${value}`;
+  }
+  if (field === "tag") {
+    return `#${value}`;
+  }
+  if (field === "who") {
+    return `@${value}`;
+  }
+  if (field === "stage") {
+    return `!${value}`;
+  }
+  if (field === "due_date") {
+    return value;
+  }
+  return "";
+}
+
 function emptyFor(scope: Scope): string {
-  if (scope.field === "due_date" && scope.value === "today") {
+  if (scope.today) {
     return "Nothing today.";
   }
   if (scope.field === "archived" && scope.value === "true") {

@@ -21,6 +21,15 @@ import type { Task, ViewPreference } from "@shared/types.ts";
 
 const SETTLE_MILLISECONDS = 600;
 const FLUSH_MILLISECONDS = 500;
+const LAST_LIST_KEY = "todo.lastList";
+
+function rememberList(list: string): void {
+  window.localStorage.setItem(LAST_LIST_KEY, list);
+}
+
+function lastUsedList(): string | null {
+  return window.localStorage.getItem(LAST_LIST_KEY);
+}
 
 interface QueuedMove {
   taskId: number;
@@ -160,6 +169,28 @@ export function useTaskActions(
     onSettled: refresh,
   });
 
+  function someList(): string {
+    const known =
+      queryClient.getQueryData<string[]>(["lists"]) ?? [];
+    const remembered = lastUsedList();
+    return remembered && known.includes(remembered)
+      ? remembered
+      : (known[0] ?? "");
+  }
+
+  const create = useMutation({
+    mutationFn: (changes: Partial<Task>) =>
+      api.createTask({
+        ...changes,
+        title: changes.title ?? "",
+        list: changes.list || someList(),
+      }),
+    onSuccess: (task: Task) => {
+      rememberList(task.list);
+      refresh();
+    },
+  });
+
   const rename = useMutation({
     mutationFn: ({
       task,
@@ -292,6 +323,7 @@ export function useTaskActions(
     toggleTask: (task: Task) => setState.mutate(task),
     rename: (task: Task, changes: Partial<Task>) =>
       rename.mutate({ task: task, changes: changes }),
+    create: (changes: Partial<Task>) => create.mutateAsync(changes),
     remove: (task: Task) => remove.mutate(task),
     swipeLeft: (task: Task) => swipeLeft.mutate(task),
     swipeRight: (task: Task) => swipeRight.mutate(task),

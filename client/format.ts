@@ -1,5 +1,4 @@
 import {
-  addDays,
   differenceInCalendarDays,
   format,
   isToday,
@@ -10,6 +9,7 @@ import {
 
 import type { Attribute } from "@shared/attributes.ts";
 import { asStage, stageLabel } from "@shared/stages.ts";
+import type { Schedule } from "@shared/types.ts";
 
 const NAMED_WEEKDAY_DAYS = 7;
 
@@ -40,22 +40,33 @@ export function formatDueDate(dueDate: string | null): string | null {
   return format(date, "yyyy-MM-dd");
 }
 
-export function dueDateFromLabel(label: string): string | null {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(label)) {
-    return label;
+const TIMES_A_WEEK: Record<number, string> = {
+  2: "twice weekly",
+  3: "three times weekly",
+  4: "four times weekly",
+  5: "five times weekly",
+  6: "six times weekly",
+  7: "daily",
+};
+
+export function cadenceOf(schedule: Schedule): string {
+  const every = schedule.repeatEvery;
+
+  if (schedule.frequency === "daily") {
+    return every === 1 ? "daily" : `every ${every} days`;
   }
-  const today = new Date();
-  for (
-    let offset = -1;
-    offset <= NAMED_WEEKDAY_DAYS;
-    offset = offset + 1
-  ) {
-    const date = addDays(today, offset);
-    if (formatDueDate(format(date, "yyyy-MM-dd")) === label) {
-      return format(date, "yyyy-MM-dd");
+
+  if (schedule.frequency === "weekly") {
+    if (every === 2) {
+      return "bi-weekly";
     }
+    if (every > 2) {
+      return `every ${every} weeks`;
+    }
+    return TIMES_A_WEEK[schedule.weekdays.length] ?? "weekly";
   }
-  return null;
+
+  return every === 1 ? "monthly" : `every ${every} months`;
 }
 
 export function formatDueTime(dueTime: string | null): string | null {
@@ -77,6 +88,9 @@ export function attributeText(
 ): string {
   if (attribute === "due_time") {
     return formatDueTime(value) ?? value;
+  }
+  if (attribute === "due_date") {
+    return formatDueDate(value) ?? value;
   }
   if (attribute === "stage") {
     const stage = asStage(value);

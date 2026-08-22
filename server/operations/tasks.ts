@@ -64,28 +64,29 @@ const FILTERS: Record<
     value === "true"
       ? sql`archived_at is not null`
       : sql`archived_at is null`,
-  due_date: (value) => sql`
-    case when ${value}::date = current_date
-      then state <> 'missed' and (
-        due_date <= current_date
-        or exists (
-          select 1 from todo.comments
-          where task_id = todo.tasks.id and seen_at is null
-        )
-      )
-      else due_date = ${value}::date
-    end
-  `,
+  due_date: (value) => sql`due_date = ${value}::date`,
 };
+
+const DUE_TODAY = sql`
+  state <> 'missed' and (
+    due_date <= current_date
+    or exists (
+      select 1 from todo.comments
+      where task_id = todo.tasks.id and seen_at is null
+    )
+  )
+`;
 
 export async function query({
   attribute,
   value,
   everything = false,
+  dueToday = false,
 }: {
   attribute: Attribute | null;
   value: string;
   everything?: boolean;
+  dueToday?: boolean;
 }): Promise<Task[]> {
   const parents = await sql<Task[]>`
     select ${COLUMNS}
@@ -101,6 +102,7 @@ export async function query({
           ? sql``
           : sql`and archived_at is null`
       }
+      ${dueToday ? sql`and ${DUE_TODAY}` : sql``}
       ${attribute ? sql`and ${FILTERS[attribute](value)}` : sql``}
     order by sort_order asc, id asc
   `;
