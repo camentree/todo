@@ -306,6 +306,10 @@ function SearchField({
         }
         onKeyDown={(event) => {
           if (matches.length === 0) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              fieldRef.current?.blur();
+            }
             return;
           }
           const step = suggestionStep(event);
