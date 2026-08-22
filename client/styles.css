@@ -639,6 +639,15 @@ a {
   padding: 0 0 0.5rem calc(var(--tick) + var(--tick-gap) + 0.25rem);
 }
 
+.task-note {
+  padding: 0.15rem 0.25rem 0.6rem
+    calc(var(--tick) + var(--tick-gap) + 0.25rem);
+  color: var(--dim);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .subtasks .task,
 .info-subtasks .task {
   padding: calc(var(--row-pad) + 0.35rem) 0.25rem;

@@ -43,8 +43,8 @@ export function TaskRow({
   omitAttributes = [],
   inputRef,
   subtasks,
-  showSubtasks = false,
-  onShowSubtasksChange,
+  expanded = false,
+  onExpandedChange,
 }: {
   task: Task;
   isEditing: boolean;
@@ -59,8 +59,8 @@ export function TaskRow({
   omitAttributes?: AttributeOmission[];
   inputRef?: RefObject<HTMLInputElement | null>;
   subtasks?: ReactNode;
-  showSubtasks?: boolean;
-  onShowSubtasksChange?: (open: boolean) => void;
+  expanded?: boolean;
+  onExpandedChange?: (open: boolean) => void;
 }) {
   const [draft, setDraft] = useState(task.title);
   const [edits, setEdits] = useState<Partial<Task>>({});
@@ -93,6 +93,8 @@ export function TaskRow({
   const finished = children.filter((child) =>
     isTerminal(child.state),
   ).length;
+  const note = (task.note ?? "").trim();
+  const expandable = children.length > 0 || note.length > 0;
 
   const flickTravel =
     flickingTo === "left"
@@ -217,20 +219,22 @@ export function TaskRow({
             </button>
           )}
 
-          {children.length > 0 && (
+          {expandable && (
             <button
               type="button"
               className="subtask-toggle"
-              aria-label="Show subtasks"
+              aria-label="Expand"
               onClick={(event) => {
                 event.stopPropagation();
-                onShowSubtasksChange?.(!showSubtasks);
+                onExpandedChange?.(!expanded);
               }}
             >
-              <span className="subtask-count">
-                {finished}/{children.length}
-              </span>
-              <Chevron open={showSubtasks} />
+              {children.length > 0 && (
+                <span className="subtask-count">
+                  {finished}/{children.length}
+                </span>
+              )}
+              <Chevron open={expanded} />
             </button>
           )}
         </div>
@@ -259,10 +263,15 @@ export function TaskRow({
         )}
       </div>
 
-      {subtasks && children.length > 0 && (
-        <div className="collapsible" data-open={showSubtasks}>
+      {expandable && (
+        <div className="collapsible" data-open={expanded}>
           <div>
-            <div className="subtasks">{subtasks}</div>
+            {note.length > 0 && (
+              <div className="task-note">{note}</div>
+            )}
+            {subtasks && children.length > 0 && (
+              <div className="subtasks">{subtasks}</div>
+            )}
           </div>
         </div>
       )}

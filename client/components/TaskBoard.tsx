@@ -421,8 +421,8 @@ function Group({
                     }
                     showAttributes={true}
                     omitAttributes={group.omitAttributes}
-                    showSubtasks={expanded.has(task.id)}
-                    onShowSubtasksChange={(open) =>
+                    expanded={expanded.has(task.id)}
+                    onExpandedChange={(open) =>
                       onExpandedChange(task.id, open)
                     }
                     subtasks={(task.subtasks ?? []).map((subtask) => (
