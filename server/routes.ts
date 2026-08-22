@@ -58,6 +58,7 @@ api.get("/tasks", async (context) => {
     await tasks.query({
       attribute: attribute,
       value: query.value ?? "",
+      everything: query.everything === "true",
     }),
   );
 });
@@ -95,6 +96,11 @@ api.patch("/tasks/:id", async (context) => {
   return context.json(
     await tasks.update(numberParam(context.req.param("id")), body),
   );
+});
+
+api.delete("/tasks/:id", async (context) => {
+  await tasks.remove(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
 });
 
 api.post("/tasks/:id/state", async (context) => {

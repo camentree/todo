@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { SubtaskRow } from "./SubtaskRow.tsx";
 import { Chevron } from "./TaskBoard.tsx";
 import { api, type RecurringTaskDetail } from "../api.ts";
 import { formatWhen } from "../format.ts";
@@ -29,7 +30,7 @@ const CLOSE_MILLISECONDS = 850;
 const DRAG_TO_CLOSE = 110;
 const INDENT = "  ";
 
-type SheetSection = "timing" | "subtasks" | "note" | "comments";
+type InfoSection = "timing" | "subtasks" | "note" | "comments";
 
 type DateGuess = Extract<
   ParsedToken,
@@ -45,11 +46,11 @@ function dateGuessesIn(title: string): DateGuess[] {
 
 function sectionsHoldingSomething(
   task: Task | undefined,
-): SheetSection[] {
+): InfoSection[] {
   if (!task) {
     return [];
   }
-  const sections: SheetSection[] = [];
+  const sections: InfoSection[] = [];
   if (task.dueDate || task.dueTime || task.recurringTaskId) {
     sections.push("timing");
   }
@@ -65,7 +66,7 @@ function sectionsHoldingSomething(
   return sections;
 }
 
-export function TaskSheet({
+export function TaskInfo({
   taskId,
   onClose,
 }: {
@@ -76,6 +77,7 @@ export function TaskSheet({
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [newSubtask, setNewSubtask] = useState("");
+  const [newTag, setNewTag] = useState("");
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [closing, setClosing] = useState(false);
@@ -83,7 +85,7 @@ export function TaskSheet({
     boolean | null
   >(null);
   const [chosenSections, setChosenSections] = useState<
-    SheetSection[] | null
+    InfoSection[] | null
   >(null);
 
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -114,6 +116,11 @@ export function TaskSheet({
     queryKey: ["comments", taskId],
     queryFn: () => api.comments(taskId),
     enabled: commentsOpen,
+  });
+  const { data: knownTags = [] } = useQuery({
+    queryKey: ["tags", task?.list],
+    queryFn: () => api.tags(task?.list),
+    enabled: Boolean(task?.list),
   });
   const dateGuesses = useMemo(() => dateGuessesIn(title), [title]);
 
@@ -180,6 +187,20 @@ export function TaskSheet({
       ),
     onSuccess: refresh,
   });
+  const renameSubtask = useMutation({
+    mutationFn: ({
+      subtask,
+      title,
+    }: {
+      subtask: Task;
+      title: string;
+    }) => api.updateTask(subtask.id, { title: title }),
+    onSuccess: refresh,
+  });
+  const deleteSubtask = useMutation({
+    mutationFn: (subtask: Task) => api.deleteTask(subtask.id),
+    onSuccess: refresh,
+  });
   const comment = useMutation({
     mutationFn: () => api.addComment(taskId, newComment),
     onSuccess: () => {
@@ -227,6 +248,14 @@ export function TaskSheet({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Enter" && event.metaKey) {
+        const active = document.activeElement;
+        if (active instanceof HTMLElement) {
+          active.blur();
+        }
+        closeSlowly();
+        return;
+      }
       if (event.key !== "Escape") {
         return;
       }
@@ -244,7 +273,7 @@ export function TaskSheet({
     return () => window.removeEventListener("keydown", onKeyDown);
   });
 
-  function toggleSection(section: SheetSection): void {
+  function toggleSection(section: InfoSection): void {
     setChosenSections(
       openSections.includes(section)
         ? openSections.filter((open) => open !== section)
@@ -291,7 +320,7 @@ export function TaskSheet({
         onClick={closeSlowly}
       />
       <div
-        className="sheet"
+        className="info"
         data-closing={closing}
         data-dragging={drag.dragging}
         role="dialog"
@@ -302,21 +331,21 @@ export function TaskSheet({
         onPointerUp={drag.end}
         onPointerCancel={drag.end}
       >
-        <div className="sheet-handle">
-          <div className="sheet-grabber" />
+        <div className="info-handle">
+          <div className="info-grabber" />
         </div>
 
         <button
           type="button"
-          className="sheet-done"
+          className="info-done"
           aria-label="Done"
           onClick={closeSlowly}
         >
           <TickIcon />
         </button>
-        <div className="sheet-body" ref={bodyRef}>
+        <div className="info-body" ref={bodyRef}>
           <input
-            className="sheet-title"
+            className="info-title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             onBlur={() => title !== task.title && commitTitle([])}
@@ -324,7 +353,7 @@ export function TaskSheet({
           />
 
           {dateGuesses.length > 0 && (
-            <div className="sheet-guesses">
+            <div className="info-guesses">
               {dateGuesses.map((guess) => (
                 <button
                   type="button"
@@ -342,7 +371,7 @@ export function TaskSheet({
             </div>
           )}
 
-          <label className="sheet-field">
+          <label className="info-field">
             <span>List</span>
             <input
               list="known-lists"
@@ -361,7 +390,7 @@ export function TaskSheet({
             </datalist>
           </label>
 
-          <label className="sheet-field">
+          <label className="info-field">
             <span>Stage</span>
             <select
               value={task.stage ?? ""}
@@ -380,31 +409,56 @@ export function TaskSheet({
             </select>
           </label>
 
-          {task.tags.length > 0 && (
-            <div className="sheet-field">
-              <span>Tags</span>
-              <div className="sheet-tags">
-                {task.tags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    className="tag-chip"
-                    aria-label={`Remove ${tag}`}
-                    onClick={() =>
-                      save.mutate({
-                        tags: task.tags.filter(
-                          (existing) => existing !== tag,
-                        ),
-                      })
-                    }
-                  >
-                    {tag}
-                    <span className="tag-remove">×</span>
-                  </button>
-                ))}
-              </div>
+          <div className="info-field">
+            <span>Tags</span>
+            <div className="info-tags">
+              {task.tags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className="tag-chip"
+                  aria-label={`Remove ${tag}`}
+                  onClick={() =>
+                    save.mutate({
+                      tags: task.tags.filter(
+                        (existing) => existing !== tag,
+                      ),
+                    })
+                  }
+                >
+                  {tag}
+                  <span className="tag-remove">×</span>
+                </button>
+              ))}
+              <input
+                className="tag-input"
+                list="known-tags"
+                value={newTag}
+                placeholder="Add a tag"
+                aria-label="Add a tag"
+                enterKeyHint="done"
+                onChange={(event) => setNewTag(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") {
+                    return;
+                  }
+                  event.preventDefault();
+                  const tag = canonicalName(newTag).replace(/^#/, "");
+                  if (tag && !task.tags.includes(tag)) {
+                    save.mutate({ tags: [...task.tags, tag] });
+                  }
+                  setNewTag("");
+                }}
+              />
+              <datalist id="known-tags">
+                {knownTags
+                  .filter((tag) => !task.tags.includes(tag))
+                  .map((tag) => (
+                    <option key={tag} value={tag} />
+                  ))}
+              </datalist>
             </div>
-          )}
+          </div>
 
           <Section
             label="Timing"
@@ -412,7 +466,7 @@ export function TaskSheet({
             open={openSections.includes("timing")}
             onToggle={() => toggleSection("timing")}
           >
-            <label className="sheet-check">
+            <label className="info-check">
               <input
                 type="checkbox"
                 checked={repeats}
@@ -432,11 +486,11 @@ export function TaskSheet({
               className="collapsible unhurried"
               data-open={repeats && Boolean(schedule)}
             >
-              <div className="sheet-repeat">
+              <div className="info-repeat">
                 {schedule && (
                   <>
-                    <div className="sheet-every">
-                      <label className="sheet-field">
+                    <div className="info-every">
+                      <label className="info-field">
                         <span>Every</span>
                         <input
                           type="number"
@@ -469,7 +523,7 @@ export function TaskSheet({
                           }}
                         />
                       </label>
-                      <label className="sheet-field">
+                      <label className="info-field">
                         <span>Period</span>
                         <select
                           value={schedule.frequency}
@@ -500,7 +554,7 @@ export function TaskSheet({
                     </div>
 
                     {schedule.frequency === "weekly" && (
-                      <div className="sheet-field">
+                      <div className="info-field">
                         <span>On</span>
                         <div className="weekdays">
                           {WEEKDAYS.map((weekday, index) => (
@@ -531,43 +585,71 @@ export function TaskSheet({
               </div>
             </div>
 
-            <label className="sheet-field">
+            <label className="info-field">
               <span>{repeats ? "Starts" : "Date"}</span>
-              <input
-                type="date"
-                value={
-                  repeats && schedule
-                    ? schedule.startsOn
-                    : (task.dueDate ?? "")
-                }
-                onChange={(event) =>
-                  repeats && schedule
-                    ? configureSchedule.mutate({
-                        startsOn:
-                          event.target.value || schedule.startsOn,
-                      })
-                    : save.mutate({
-                        dueDate: event.target.value || null,
-                      })
-                }
-              />
+              <div className="info-input">
+                <input
+                  type="date"
+                  value={
+                    repeats && schedule
+                      ? schedule.startsOn
+                      : (task.dueDate ?? "")
+                  }
+                  onChange={(event) =>
+                    repeats && schedule
+                      ? configureSchedule.mutate({
+                          startsOn:
+                            event.target.value || schedule.startsOn,
+                        })
+                      : save.mutate({
+                          dueDate: event.target.value || null,
+                        })
+                  }
+                />
+                {!repeats && task.dueDate && (
+                  <button
+                    type="button"
+                    className="info-clear"
+                    aria-label="Clear date"
+                    onClick={() => save.mutate({ dueDate: null })}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </label>
 
-            <label className="sheet-field">
+            <label className="info-field">
               <span>Time</span>
-              <input
-                type="time"
-                value={task.dueTime?.slice(0, 5) ?? ""}
-                onChange={(event) =>
-                  repeats && schedule
-                    ? configureSchedule.mutate({
-                        dueTime: event.target.value || null,
-                      })
-                    : save.mutate({
-                        dueTime: event.target.value || null,
-                      })
-                }
-              />
+              <div className="info-input">
+                <input
+                  type="time"
+                  value={task.dueTime?.slice(0, 5) ?? ""}
+                  onChange={(event) =>
+                    repeats && schedule
+                      ? configureSchedule.mutate({
+                          dueTime: event.target.value || null,
+                        })
+                      : save.mutate({
+                          dueTime: event.target.value || null,
+                        })
+                  }
+                />
+                {task.dueTime && (
+                  <button
+                    type="button"
+                    className="info-clear"
+                    aria-label="Clear time"
+                    onClick={() =>
+                      repeats && schedule
+                        ? configureSchedule.mutate({ dueTime: null })
+                        : save.mutate({ dueTime: null })
+                    }
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </label>
           </Section>
 
@@ -577,21 +659,23 @@ export function TaskSheet({
             open={openSections.includes("subtasks")}
             onToggle={() => toggleSection("subtasks")}
           >
-            <div className="sheet-subtasks">
+            <div className="info-subtasks">
               {subtasks.map((subtask) => (
-                <button
-                  type="button"
+                <SubtaskRow
                   key={subtask.id}
-                  className="sheet-subtask"
-                  data-done={subtask.state === "complete"}
-                  onClick={() => toggleSubtask.mutate(subtask)}
-                >
-                  <span className="subtask-tick" />
-                  <span>{subtask.title}</span>
-                </button>
+                  subtask={subtask}
+                  onToggle={() => toggleSubtask.mutate(subtask)}
+                  onRename={(next) =>
+                    renameSubtask.mutate({
+                      subtask: subtask,
+                      title: next,
+                    })
+                  }
+                  onDelete={() => deleteSubtask.mutate(subtask)}
+                />
               ))}
               <form
-                className="sheet-subtask"
+                className="subtask"
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (newSubtask.trim()) {
@@ -657,7 +741,7 @@ export function TaskSheet({
             open={commentsOpen}
             onToggle={() => toggleSection("comments")}
           >
-            <div className="sheet-comments">
+            <div className="info-comments">
               {comments.map((entry) => (
                 <div className="comment" key={entry.id}>
                   <div className="comment-who">
@@ -667,7 +751,7 @@ export function TaskSheet({
                 </div>
               ))}
               <form
-                className="sheet-add"
+                className="info-add"
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (newComment.trim()) {
@@ -684,7 +768,7 @@ export function TaskSheet({
                 />
                 <button
                   type="submit"
-                  className="sheet-plus"
+                  className="info-plus"
                   aria-label="Add"
                 >
                   +
@@ -712,19 +796,19 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="sheet-section">
+    <div className="info-section">
       <button
         type="button"
-        className="sheet-section-head"
+        className="info-section-head"
         onClick={onToggle}
       >
         <span>{label}</span>
-        {count > 0 && <span className="sheet-count">{count}</span>}
+        {count > 0 && <span className="info-count">{count}</span>}
         <Chevron open={open} />
       </button>
       <div className="collapsible" data-open={open}>
         <div>
-          <div className="sheet-section-body">{children}</div>
+          <div className="info-section-body">{children}</div>
         </div>
       </div>
     </div>
@@ -734,14 +818,15 @@ function Section({
 function fromTheHandle(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
-    target.closest(".sheet-handle") !== null
+    target.closest(".info-handle") !== null
   );
 }
 
 function handlesItsOwnScrolling(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
-    target.closest("textarea, .sheet-comments, .subtasks") !== null
+    target.closest("textarea, .info-comments, .info-subtasks") !==
+      null
   );
 }
 

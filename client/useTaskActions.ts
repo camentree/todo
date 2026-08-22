@@ -190,6 +190,11 @@ export function useTaskActions(
     onSettled: refresh,
   });
 
+  const remove = useMutation({
+    mutationFn: (task: Task) => api.deleteTask(task.id),
+    onSuccess: refresh,
+  });
+
   const swipeLeft = useMutation({
     mutationFn: (task: Task) =>
       task.archivedAt
@@ -200,6 +205,9 @@ export function useTaskActions(
 
   const swipeRight = useMutation({
     mutationFn: (task: Task) => {
+      if (task.archivedAt) {
+        return api.deleteTask(task.id);
+      }
       if (task.state === "hidden") {
         return api.unhideTask(task.id);
       }
@@ -300,6 +308,7 @@ export function useTaskActions(
     toggleTask: (task: Task) => setState.mutate(task),
     rename: (task: Task, title: string) =>
       rename.mutate({ task: task, title: title }),
+    remove: (task: Task) => remove.mutate(task),
     swipeLeft: (task: Task) => swipeLeft.mutate(task),
     swipeRight: (task: Task) => swipeRight.mutate(task),
     move: (
