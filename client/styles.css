@@ -58,7 +58,6 @@
   --group-gap: 0.4rem;
 }
 
-
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --ground: #1c1a1e;
@@ -319,6 +318,7 @@ a {
 }
 
 .search-field {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -504,6 +504,26 @@ a {
   position: absolute;
   top: calc(100% - 0.3rem);
   left: calc(var(--tick) + var(--tick-gap));
+  z-index: 40;
+  min-width: 9rem;
+  max-width: min(18rem, 80vw);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.25rem;
+  box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.05rem;
+  animation: drop-in var(--motion-menu) var(--ease);
+  transform-origin: top;
+}
+
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 0.9rem;
   z-index: 40;
   min-width: 9rem;
   max-width: min(18rem, 80vw);

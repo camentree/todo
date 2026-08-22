@@ -10,7 +10,7 @@ const MATCHING = {
   useExtendedSearch: true,
 };
 
-interface SearchCriteria {
+interface Filters {
   tags: string[];
   who: string[];
   lists: string[];
@@ -19,6 +19,11 @@ interface SearchCriteria {
   terms: string[];
   overdue: boolean;
   noDueDate: boolean;
+}
+
+interface SearchCriteria {
+  wanted: Filters;
+  unwanted: Filters;
 }
 
 export function searchTasks({
@@ -31,27 +36,57 @@ export function searchTasks({
   today: Date;
 }): Task[] {
   const criteria = read({ input: input, today: today });
-  if (isBlank(criteria)) {
+  if (isBlank(criteria.wanted) && isBlank(criteria.unwanted)) {
     return [];
   }
 
   const todayText = format(today, "yyyy-MM-dd");
-  const narrowed = tasks.filter((task) =>
-    fits({ task: task, criteria: criteria, today: todayText }),
+  const narrowed = tasks.filter(
+    (task) =>
+      fits({
+        task: task,
+        filters: criteria.wanted,
+        today: todayText,
+      }) &&
+      !hits({
+        task: task,
+        filters: criteria.unwanted,
+        today: todayText,
+      }),
   );
 
-  const typed = criteria.terms.join(" ");
+  const ranked = rankedFor({
+    tasks: narrowed,
+    terms: criteria.wanted.terms,
+  });
+  const rejected = new Set(
+    rankedFor({ tasks: narrowed, terms: criteria.unwanted.terms }),
+  );
+
+  return criteria.unwanted.terms.length === 0
+    ? ranked
+    : ranked.filter((task) => !rejected.has(task));
+}
+
+function rankedFor({
+  tasks,
+  terms,
+}: {
+  tasks: Task[];
+  terms: string[];
+}): Task[] {
+  const typed = terms.join(" ");
   if (typed.length === 0) {
-    return narrowed;
+    return tasks;
   }
 
   const byTitle = rankedOn({
-    tasks: narrowed,
+    tasks: tasks,
     typed: typed,
     field: "title",
   });
   const byNote = rankedOn({
-    tasks: narrowed,
+    tasks: tasks,
     typed: typed,
     field: "note",
   }).filter((task) => !byTitle.includes(task));
@@ -73,6 +108,10 @@ function rankedOn({
     .map((result) => result.item);
 }
 
+function segmentsIn(input: string): string[] {
+  return input.match(/-?"[^"]*"?|\S+/g) ?? [];
+}
+
 function read({
   input,
   today,
@@ -80,7 +119,31 @@ function read({
   input: string;
   today: Date;
 }): SearchCriteria {
-  const criteria: SearchCriteria = {
+  const kept: string[] = [];
+  const dropped: string[] = [];
+
+  for (const segment of segmentsIn(input)) {
+    if (segment.startsWith("-") && segment.length > 1) {
+      dropped.push(segment.slice(1));
+    } else {
+      kept.push(segment);
+    }
+  }
+
+  return {
+    wanted: filtersIn({ input: kept.join(" "), today: today }),
+    unwanted: filtersIn({ input: dropped.join(" "), today: today }),
+  };
+}
+
+function filtersIn({
+  input,
+  today,
+}: {
+  input: string;
+  today: Date;
+}): Filters {
+  const filters: Filters = {
     tags: [],
     who: [],
     lists: [],
@@ -91,6 +154,10 @@ function read({
     noDueDate: false,
   };
 
+  if (input.trim().length === 0) {
+    return filters;
+  }
+
   const parsed = parse({ input: input, today: today, search: true });
 
   for (const token of parsed.tokens) {
@@ -98,21 +165,21 @@ function read({
       continue;
     }
     if (token.kind === "tag") {
-      criteria.tags.push(token.value.toLowerCase());
+      filters.tags.push(token.value.toLowerCase());
     } else if (token.kind === "who") {
-      criteria.who.push(token.value.toLowerCase());
+      filters.who.push(token.value.toLowerCase());
     } else if (token.kind === "list") {
-      criteria.lists.push(token.value.toLowerCase());
+      filters.lists.push(token.value.toLowerCase());
     } else if (token.kind === "stage") {
-      criteria.stages.push(token.value);
+      filters.stages.push(token.value);
     } else if (token.kind === "phrase") {
-      criteria.phrases.push(token.value.toLowerCase());
+      filters.phrases.push(token.value.toLowerCase());
     } else if (token.kind === "overdue") {
-      criteria.overdue = true;
+      filters.overdue = true;
     } else if (token.kind === "noDueDate") {
-      criteria.noDueDate = true;
+      filters.noDueDate = true;
     } else {
-      criteria.terms.push(token.text.toLowerCase());
+      filters.terms.push(token.text.toLowerCase());
     }
   }
 
@@ -121,79 +188,128 @@ function read({
       continue;
     }
     if (word.startsWith("!") && word.length > 1) {
-      criteria.stages.push(word.slice(1).toLowerCase());
+      filters.stages.push(word.slice(1).toLowerCase());
     } else {
-      criteria.terms.push(word.toLowerCase());
+      filters.terms.push(word.toLowerCase());
     }
   }
 
-  return criteria;
+  return filters;
 }
 
-function isBlank(criteria: SearchCriteria): boolean {
+function isBlank(filters: Filters): boolean {
   return (
-    !criteria.overdue &&
-    !criteria.noDueDate &&
-    criteria.tags.length === 0 &&
-    criteria.who.length === 0 &&
-    criteria.lists.length === 0 &&
-    criteria.stages.length === 0 &&
-    criteria.phrases.length === 0 &&
-    criteria.terms.length === 0
+    !filters.overdue &&
+    !filters.noDueDate &&
+    filters.tags.length === 0 &&
+    filters.who.length === 0 &&
+    filters.lists.length === 0 &&
+    filters.stages.length === 0 &&
+    filters.phrases.length === 0 &&
+    filters.terms.length === 0
+  );
+}
+
+function isOverdue(task: Task, today: string): boolean {
+  return task.dueDate !== null && task.dueDate < today;
+}
+
+function tagsOf(task: Task): string[] {
+  return task.tags.map((tag) => tag.toLowerCase());
+}
+
+function writtenIn(task: Task): string {
+  return `${task.title} ${task.note ?? ""}`.toLowerCase();
+}
+
+function anyContains(values: string[], wanted: string[]): boolean {
+  return wanted.some((needle) =>
+    values.some((value) => value.includes(needle)),
   );
 }
 
 function fits({
   task,
-  criteria,
+  filters,
   today,
 }: {
   task: Task;
-  criteria: SearchCriteria;
+  filters: Filters;
   today: string;
 }): boolean {
+  if (filters.overdue && !isOverdue(task, today)) {
+    return false;
+  }
+  if (filters.noDueDate && task.dueDate !== null) {
+    return false;
+  }
   if (
-    criteria.overdue &&
-    !(task.dueDate !== null && task.dueDate < today)
+    filters.tags.length > 0 &&
+    !anyContains(tagsOf(task), filters.tags)
   ) {
     return false;
   }
-  if (criteria.noDueDate && task.dueDate !== null) {
+  if (
+    filters.who.length > 0 &&
+    !anyContains([(task.who ?? "").toLowerCase()], filters.who)
+  ) {
     return false;
   }
+  if (
+    filters.lists.length > 0 &&
+    !anyContains([task.list.toLowerCase()], filters.lists)
+  ) {
+    return false;
+  }
+  if (
+    filters.stages.length > 0 &&
+    !anyContains(
+      [spaced(task.stage ?? "")],
+      filters.stages.map(spaced),
+    )
+  ) {
+    return false;
+  }
+  return filters.phrases.every((phrase) =>
+    writtenIn(task).includes(phrase),
+  );
+}
 
-  const tags = task.tags.map((tag) => tag.toLowerCase());
-  if (
-    !criteria.tags.every((wanted) =>
-      tags.some((tag) => tag.includes(wanted)),
-    )
-  ) {
-    return false;
+function hits({
+  task,
+  filters,
+  today,
+}: {
+  task: Task;
+  filters: Filters;
+  today: string;
+}): boolean {
+  if (filters.overdue && isOverdue(task, today)) {
+    return true;
+  }
+  if (filters.noDueDate && task.dueDate === null) {
+    return true;
+  }
+  if (anyContains(tagsOf(task), filters.tags)) {
+    return true;
+  }
+  if (anyContains([(task.who ?? "").toLowerCase()], filters.who)) {
+    return true;
+  }
+  if (anyContains([task.list.toLowerCase()], filters.lists)) {
+    return true;
   }
   if (
-    !criteria.who.every((wanted) =>
-      (task.who ?? "").toLowerCase().includes(wanted),
+    anyContains(
+      [spaced(task.stage ?? "")],
+      filters.stages.map(spaced),
     )
   ) {
-    return false;
+    return true;
   }
-  if (
-    !criteria.lists.every((wanted) =>
-      task.list.toLowerCase().includes(wanted),
-    )
-  ) {
-    return false;
-  }
-  if (
-    !criteria.stages.every((wanted) =>
-      spaced(task.stage ?? "").includes(spaced(wanted)),
-    )
-  ) {
-    return false;
-  }
-
-  const written = `${task.title} ${task.note ?? ""}`.toLowerCase();
-  return criteria.phrases.every((phrase) => written.includes(phrase));
+  return filters.phrases.some((phrase) =>
+    writtenIn(task).includes(phrase),
+  );
 }
 
 function spaced(value: string): string {

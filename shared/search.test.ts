@@ -162,6 +162,95 @@ describe("searchTasks", () => {
     expect(titlesFor("no date", tasks)).toEqual(["Someday"]);
   });
 
+  test("the same sigil twice widens instead of narrowing", () => {
+    const tasks = [
+      task({ id: 1, title: "Ship it", tags: ["parallax"] }),
+      task({ id: 2, title: "Read up", tags: ["reading"] }),
+      task({ id: 3, title: "Water the plants", tags: ["home"] }),
+    ];
+
+    expect(titlesFor("#parallax #reading", tasks)).toEqual([
+      "Ship it",
+      "Read up",
+    ]);
+  });
+
+  test("different sigils still narrow together", () => {
+    const tasks = [
+      task({
+        id: 1,
+        title: "Ship it",
+        tags: ["parallax"],
+        who: "me",
+      }),
+      task({
+        id: 2,
+        title: "Rest",
+        tags: ["parallax"],
+        who: "claude",
+      }),
+    ];
+
+    expect(titlesFor("#parallax @claude", tasks)).toEqual(["Rest"]);
+  });
+
+  test("a minus drops what the sigil would have found", () => {
+    const tasks = [
+      task({ id: 1, title: "Ship it", tags: ["parallax"] }),
+      task({ id: 2, title: "Read up", tags: ["reading"] }),
+    ];
+
+    expect(titlesFor("-#parallax", tasks)).toEqual(["Read up"]);
+    expect(titlesFor("-@claude", tasks)).toEqual([
+      "Ship it",
+      "Read up",
+    ]);
+  });
+
+  test("a minus drops a word as well as a sigil", () => {
+    const tasks = [
+      task({ id: 1, title: "Book flights to Lisbon" }),
+      task({ id: 2, title: "Book a table" }),
+    ];
+
+    expect(titlesFor("book -lisbon", tasks)).toEqual([
+      "Book a table",
+    ]);
+  });
+
+  test("a minus narrows what a sigil widened", () => {
+    const tasks = [
+      task({ id: 1, title: "Ship it", tags: ["parallax"] }),
+      task({ id: 2, title: "Read up", tags: ["reading"] }),
+      task({ id: 3, title: "Water the plants", tags: ["home"] }),
+    ];
+
+    expect(titlesFor("#parallax #reading -up", tasks)).toEqual([
+      "Ship it",
+    ]);
+  });
+
+  test("a minus drops a quoted phrase", () => {
+    const tasks = [
+      task({ id: 1, title: "Book flights to Lisbon" }),
+      task({ id: 2, title: "Book a table" }),
+    ];
+
+    expect(titlesFor('book -"flights to"', tasks)).toEqual([
+      "Book a table",
+    ]);
+  });
+
+  test("a minus drops the date flags too", () => {
+    const tasks = [
+      task({ id: 1, title: "Late", dueDate: "2026-08-12" }),
+      task({ id: 2, title: "Someday" }),
+    ];
+
+    expect(titlesFor("-overdue", tasks)).toEqual(["Someday"]);
+    expect(titlesFor("-no date", tasks)).toEqual(["Late"]);
+  });
+
   test("date words are searched for, not turned into filters", () => {
     const tasks = [
       task({

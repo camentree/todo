@@ -10,6 +10,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Chevron } from "./TaskBoard.tsx";
 import { api } from "../api.ts";
 import { asTitle, formatWhen } from "../format.ts";
+import {
+  sigilBefore,
+  suggestionStep,
+  suggestionsFor,
+} from "../suggestions.ts";
 import { useTheme, type Theme } from "../theme.ts";
 import { canonicalName } from "@shared/names.ts";
 import type {
@@ -229,12 +234,98 @@ function SearchField({
   onChange: (text: string) => void;
   onClose: () => void;
 }) {
+  const [caret, setCaret] = useState(text.length);
+  const [highlighted, setHighlighted] = useState(0);
+  const [suppressed, setSuppressed] = useState(false);
+  const [pendingCaret, setPendingCaret] = useState<number | null>(
+    null,
+  );
+  const fieldRef = useRef<HTMLInputElement>(null);
+
+  const { data: lists = [] } = useQuery({
+    queryKey: ["lists"],
+    queryFn: api.lists,
+  });
+  const { data: knownTags = [] } = useQuery({
+    queryKey: ["tags", ""],
+    queryFn: () => api.tags(),
+  });
+  const { data: knownWho = [] } = useQuery({
+    queryKey: ["who", ""],
+    queryFn: () => api.knownWho(),
+  });
+  const { data: stages = [] } = useQuery({
+    queryKey: ["stages"],
+    queryFn: api.stages,
+  });
+
+  const opening = suppressed
+    ? null
+    : sigilBefore({ input: text, caret: caret });
+  const matches = suggestionsFor({
+    opening: opening,
+    lists: lists,
+    knownTags: knownTags,
+    knownWho: knownWho,
+    stages: stages,
+  });
+
+  useEffect(() => {
+    if (pendingCaret === null) {
+      return;
+    }
+    fieldRef.current?.setSelectionRange(pendingCaret, pendingCaret);
+    setPendingCaret(null);
+  }, [pendingCaret]);
+
+  function pick(candidate: string): void {
+    if (!opening) {
+      return;
+    }
+    const head = `${text.slice(0, opening.start)}${opening.sigil}${candidate} `;
+    onChange(`${head}${text.slice(caret)}`);
+    setCaret(head.length);
+    setPendingCaret(head.length);
+    setHighlighted(0);
+  }
+
   return (
     <div className="search-field">
       <SearchIcon />
       <input
+        ref={fieldRef}
         value={text}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setCaret(event.target.selectionStart ?? 0);
+          setSuppressed(false);
+          setHighlighted(0);
+        }}
+        onSelect={(event) =>
+          setCaret(event.currentTarget.selectionStart ?? 0)
+        }
+        onKeyDown={(event) => {
+          if (matches.length === 0) {
+            return;
+          }
+          const step = suggestionStep(event);
+          if (step !== 0) {
+            event.preventDefault();
+            setHighlighted(
+              (highlighted + step + matches.length) % matches.length,
+            );
+            return;
+          }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            pick(matches[highlighted] ?? "");
+            return;
+          }
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            setSuppressed(true);
+          }
+        }}
         placeholder="Search"
         aria-label="Search"
         data-search-field
@@ -253,6 +344,25 @@ function SearchField({
       >
         <CrossIcon />
       </button>
+
+      {matches.length > 0 && (
+        <div className="search-suggestions">
+          {matches.map((candidate, index) => (
+            <button
+              type="button"
+              key={candidate}
+              tabIndex={-1}
+              className="capture-suggestion"
+              data-on={index === highlighted}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => pick(candidate)}
+            >
+              {opening?.sigil}
+              {candidate}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

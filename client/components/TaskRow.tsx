@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, ReactNode, RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -9,6 +9,11 @@ import {
   withoutAttribute,
 } from "./TaskAttributes.tsx";
 import { api } from "../api.ts";
+import {
+  sigilBefore,
+  suggestionStep,
+  suggestionsFor,
+} from "../suggestions.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
@@ -16,7 +21,6 @@ import type { Task } from "@shared/types.ts";
 
 const LONG_PRESS_MILLISECONDS = 400;
 const SWIPE_FRACTION = 0.4;
-const MOST_SUGGESTIONS = 5;
 const SCROLL_BREATHING_ROOM = 96;
 const SCROLL_MILLISECONDS = 900;
 
@@ -557,91 +561,6 @@ function dismissKeyboard(): void {
   if (focused instanceof HTMLElement) {
     focused.blur();
   }
-}
-
-function suggestionStep(
-  event: KeyboardEvent<HTMLInputElement>,
-): number {
-  if (event.ctrlKey) {
-    if (event.key === "n") {
-      return 1;
-    }
-    if (event.key === "p") {
-      return -1;
-    }
-    return 0;
-  }
-  if (event.key === "ArrowDown") {
-    return 1;
-  }
-  if (event.key === "ArrowUp") {
-    return -1;
-  }
-  if (event.key === "Tab") {
-    return event.shiftKey ? -1 : 1;
-  }
-  return 0;
-}
-
-interface Opening {
-  sigil: string;
-  typed: string;
-  start: number;
-}
-
-function sigilBefore({
-  input,
-  caret,
-}: {
-  input: string;
-  caret: number;
-}): Opening | null {
-  const before = input.slice(0, caret);
-  const found = before.match(/(?:^|\s)([#@/!])(\S*)$/);
-  const sigil = found?.[1];
-  const typed = found?.[2];
-  if (!sigil || typed === undefined) {
-    return null;
-  }
-  return {
-    sigil: sigil,
-    typed: typed.toLowerCase(),
-    start: before.length - typed.length - 1,
-  };
-}
-
-function suggestionsFor({
-  opening,
-  lists,
-  knownTags,
-  knownWho,
-  stages,
-}: {
-  opening: Opening | null;
-  lists: string[];
-  knownTags: string[];
-  knownWho: string[];
-  stages: string[];
-}): string[] {
-  if (!opening) {
-    return [];
-  }
-  const candidates =
-    opening.sigil === "/"
-      ? lists
-      : opening.sigil === "#"
-        ? knownTags
-        : opening.sigil === "!"
-          ? stages
-          : knownWho;
-
-  return candidates
-    .filter(
-      (candidate) =>
-        candidate.toLowerCase().startsWith(opening.typed) &&
-        candidate.toLowerCase() !== opening.typed,
-    )
-    .slice(0, MOST_SUGGESTIONS);
 }
 
 function useRowGesture({
