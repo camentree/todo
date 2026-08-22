@@ -77,8 +77,8 @@ export const api = {
     send<Comment>(`/tasks/${taskId}/comments`, "POST", {
       body: body,
     }),
-  markCommentsSeen: (taskId: number) =>
-    send<{ ok: true }>(`/tasks/${taskId}/comments/seen`, "POST", {}),
+  markCommentSeen: (commentId: number) =>
+    send<{ ok: true }>(`/comments/${commentId}/seen`, "POST", {}),
   archiveTasks: (ids: number[]) =>
     send<CreatedTask[]>("/tasks/archive", "POST", { ids: ids }),
   unarchiveTasks: (ids: number[]) =>

@@ -21,6 +21,14 @@ export async function markSeen(taskId: number): Promise<void> {
   `;
 }
 
+export async function markOneSeen(commentId: number): Promise<void> {
+  await sql`
+    update todo.comments
+    set seen_at = now()
+    where id = ${commentId} and seen_at is null
+  `;
+}
+
 export async function add({
   taskId,
   body,

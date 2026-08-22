@@ -1397,10 +1397,57 @@ a {
 }
 
 .comment-who {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-family: var(--mono);
   font-size: 0.63rem;
   color: var(--dim);
   margin-bottom: 0.25rem;
+}
+
+.comment-seen {
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-left: auto;
+  border-radius: 50%;
+  color: var(--dim);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.comment-seen:hover {
+  background: var(--chip-bg);
+  color: var(--accent);
+}
+
+.comment-entry {
+  position: relative;
+  margin-top: 0.3rem;
+}
+
+.comment-entry textarea {
+  width: 100%;
+  padding-right: 2.6rem;
+  resize: none;
+}
+
+.comment-send {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.55rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--chip-bg);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+
+.comment-send:disabled {
+  opacity: 0.35;
 }
 
 .event-track {

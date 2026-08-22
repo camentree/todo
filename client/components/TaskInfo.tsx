@@ -6,7 +6,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import { Chevron, TickIcon } from "./icons.tsx";
+import { Chevron, SendIcon, TickIcon } from "./icons.tsx";
 import { ParseableTitle } from "./ParseableTitle.tsx";
 import {
   AttributeChips,
@@ -134,16 +134,6 @@ export function TaskInfo({
     }
   }, [task]);
 
-  const unseenComments = task?.unseenCommentCount ?? 0;
-
-  useEffect(() => {
-    if (commentsOpen && unseenComments > 0) {
-      api
-        .markCommentsSeen(taskId)
-        .then(() => queryClient.invalidateQueries());
-    }
-  }, [commentsOpen, unseenComments, taskId, queryClient]);
-
   useEffect(() => {
     const textarea = noteRef.current;
     if (!textarea) {
@@ -199,6 +189,10 @@ export function TaskInfo({
       setNewComment("");
       refresh();
     },
+  });
+  const seeComment = useMutation({
+    mutationFn: (commentId: number) => api.markCommentSeen(commentId),
+    onSuccess: refresh,
   });
 
   useEffect(() => {
@@ -760,12 +754,22 @@ export function TaskInfo({
                 <div className="comment" key={entry.id}>
                   <div className="comment-who">
                     {entry.author} · {formatWhen(entry.createdAt)}
+                    {entry.seenAt === null && (
+                      <button
+                        type="button"
+                        className="comment-seen"
+                        aria-label="Mark as seen"
+                        onClick={() => seeComment.mutate(entry.id)}
+                      >
+                        <TickIcon />
+                      </button>
+                    )}
                   </div>
                   <div>{entry.body}</div>
                 </div>
               ))}
               <form
-                className="info-add"
+                className="comment-entry"
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (newComment.trim()) {
@@ -773,19 +777,33 @@ export function TaskInfo({
                   }
                 }}
               >
-                <input
+                <textarea
                   value={newComment}
+                  rows={2}
                   onChange={(event) =>
                     setNewComment(event.target.value)
                   }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      (event.metaKey || event.ctrlKey)
+                    ) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (newComment.trim()) {
+                        comment.mutate();
+                      }
+                    }
+                  }}
                   placeholder="Add a comment"
                 />
                 <button
                   type="submit"
-                  className="info-plus"
+                  className="comment-send"
                   aria-label="Add"
+                  disabled={newComment.trim().length === 0}
                 >
-                  +
+                  <SendIcon />
                 </button>
               </form>
             </div>

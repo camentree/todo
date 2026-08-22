@@ -146,6 +146,11 @@ api.post("/tasks/:id/comments/seen", async (context) => {
   return context.json({ ok: true });
 });
 
+api.post("/comments/:id/seen", async (context) => {
+  await comments.markOneSeen(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});
+
 api.post("/tasks/archive", async (context) => {
   const body = await context.req.json();
   return context.json(await tasks.archive(body.ids));
