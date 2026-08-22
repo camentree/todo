@@ -75,6 +75,8 @@ export function TaskInfo({
   const [titleFocused, setTitleFocused] = useState(false);
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
+  const [dateDraft, setDateDraft] = useState<string | null>(null);
+  const [timeDraft, setTimeDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [closing, setClosing] = useState(false);
   const [chosenSections, setChosenSections] = useState<
@@ -237,6 +239,28 @@ export function TaskInfo({
     );
   }
 
+  function commitDate(): void {
+    const typed = dateDraft;
+    setDateDraft(null);
+    if (!typed || typed === shownDate) {
+      return;
+    }
+    if (repeats && schedule) {
+      changeSchedule({ startsOn: typed });
+      return;
+    }
+    setEdits({ ...edits, dueDate: typed });
+  }
+
+  function commitTime(): void {
+    const typed = timeDraft;
+    setTimeDraft(null);
+    if (!typed || typed === shownTime) {
+      return;
+    }
+    setEdits({ ...edits, dueTime: typed });
+  }
+
   function closeSlowly(): void {
     const changes = {
       ...edits,
@@ -278,6 +302,12 @@ export function TaskInfo({
     setTitle(changes.title ?? title);
     setEdits({ ...edits, ...changes });
   };
+
+  const shownDate =
+    repeats && schedule
+      ? schedule.startsOn
+      : (uncommittedTask.dueDate ?? "");
+  const shownTime = uncommittedTask.dueTime?.slice(0, 5) ?? "";
 
   return (
     <>
@@ -591,70 +621,73 @@ export function TaskInfo({
               </div>
             </div>
 
-            <label className="info-field">
+            <div className="info-field">
               <span>{repeats ? "Starts" : "Date"}</span>
               <div className="info-input">
                 <input
                   type="date"
-                  value={
-                    repeats && schedule
-                      ? schedule.startsOn
-                      : (uncommittedTask.dueDate ?? "")
-                  }
+                  aria-label={repeats ? "Starts on" : "Date"}
+                  data-empty={(dateDraft ?? shownDate) === ""}
+                  value={dateDraft ?? shownDate}
                   onChange={(event) =>
-                    repeats && schedule
-                      ? changeSchedule({
-                          startsOn:
-                            event.target.value || schedule.startsOn,
-                        })
-                      : setEdits({
-                          ...edits,
-                          dueDate: event.target.value || null,
-                        })
+                    setDateDraft(event.target.value)
                   }
+                  onBlur={commitDate}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
                 />
-                {!repeats && uncommittedTask.dueDate && (
+                {shownDate && !repeats && (
                   <button
                     type="button"
                     className="info-clear"
-                    aria-label="Clear date"
-                    onClick={() =>
-                      setEdits({ ...edits, dueDate: null })
-                    }
+                    aria-label="Clear the date"
+                    onClick={() => {
+                      setDateDraft(null);
+                      setEdits({ ...edits, dueDate: null });
+                    }}
                   >
                     ×
                   </button>
                 )}
               </div>
-            </label>
+            </div>
 
-            <label className="info-field">
+            <div className="info-field">
               <span>Time</span>
               <div className="info-input">
                 <input
                   type="time"
-                  value={uncommittedTask.dueTime?.slice(0, 5) ?? ""}
+                  aria-label="Time"
+                  data-empty={(timeDraft ?? shownTime) === ""}
+                  value={timeDraft ?? shownTime}
                   onChange={(event) =>
-                    setEdits({
-                      ...edits,
-                      dueTime: event.target.value || null,
-                    })
+                    setTimeDraft(event.target.value)
                   }
+                  onBlur={commitTime}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
                 />
-                {uncommittedTask.dueTime && (
+                {shownTime && (
                   <button
                     type="button"
                     className="info-clear"
-                    aria-label="Clear time"
-                    onClick={() =>
-                      setEdits({ ...edits, dueTime: null })
-                    }
+                    aria-label="Clear the time"
+                    onClick={() => {
+                      setTimeDraft(null);
+                      setEdits({ ...edits, dueTime: null });
+                    }}
                   >
                     ×
                   </button>
                 )}
               </div>
-            </label>
+            </div>
           </Section>
 
           <Section

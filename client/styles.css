@@ -1103,6 +1103,10 @@ a {
   text-align: left;
 }
 
+.info-input input[data-empty="true"]::-webkit-datetime-edit {
+  color: var(--faint);
+}
+
 .info-field > span {
   font-family: var(--mono);
   font-size: 0.63rem;
