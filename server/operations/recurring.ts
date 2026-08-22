@@ -14,7 +14,7 @@ interface RecurringRow extends RecurringTask {
 
 const COLUMNS = sql`
   id, list, title, note, tags, who, subtask_titles, frequency, repeat_every,
-  weekdays, day_of_month, due_time, starts_on, paused, generated_through,
+  weekdays, day_of_month, due_time, starts_on, ended_at, generated_through,
   created_at::date as created_on
 `;
 
@@ -72,10 +72,10 @@ export async function create(
 
 export async function startFrom({
   taskId,
-  frequency,
+  schedule,
 }: {
   taskId: number;
-  frequency: Frequency;
+  schedule: Schedule;
 }): Promise<RecurringRow> {
   const [task] = await sql<
     {
@@ -98,7 +98,11 @@ export async function startFrom({
   }
 
   const today = toDateString(new Date());
-  const startsOn = task.dueDate ?? today;
+  const startsOn = schedule.startsOn || task.dueDate || today;
+  const settled = settledSchedule({
+    schedule: schedule,
+    startsOn: startsOn,
+  });
 
   const created = await create({
     list: task.list,
@@ -106,13 +110,12 @@ export async function startFrom({
     note: task.note,
     tags: task.tags,
     who: task.who,
-    frequency: frequency,
     dueTime: task.dueTime,
-    startsOn: startsOn,
-    weekdays:
-      frequency === "weekly" ? [parseISO(startsOn).getDay()] : [],
-    dayOfMonth:
-      frequency === "monthly" ? parseISO(startsOn).getDate() : null,
+    frequency: settled.frequency,
+    repeatEvery: settled.repeatEvery,
+    weekdays: settled.weekdays,
+    dayOfMonth: settled.dayOfMonth,
+    startsOn: settled.startsOn,
   });
 
   await sql`
@@ -132,9 +135,32 @@ export async function startFrom({
   return { ...created, generatedThrough: startsOn };
 }
 
+function settledSchedule({
+  schedule,
+  startsOn,
+}: {
+  schedule: Schedule;
+  startsOn: string;
+}): Schedule {
+  const startDate = parseISO(startsOn);
+  return {
+    frequency: schedule.frequency,
+    repeatEvery: schedule.repeatEvery,
+    startsOn: startsOn,
+    weekdays:
+      schedule.frequency === "weekly"
+        ? schedule.weekdays.length > 0
+          ? schedule.weekdays
+          : [startDate.getDay()]
+        : [],
+    dayOfMonth:
+      schedule.frequency === "monthly" ? startDate.getDate() : null,
+  };
+}
+
 export async function update(
   id: number,
-  changes: Partial<NewRecurringTask> & { paused?: boolean },
+  changes: Partial<NewRecurringTask>,
 ): Promise<RecurringRow> {
   const assignments = Object.fromEntries(
     Object.entries(changes).filter(
@@ -154,56 +180,25 @@ export async function update(
   return updated;
 }
 
-export interface ScheduleChanges {
-  frequency?: Frequency;
-  repeatEvery?: number;
-  weekdays?: number[];
-  startsOn?: string;
-  dueTime?: string | null;
-}
-
 export async function configure(
   id: number,
-  changes: ScheduleChanges,
+  schedule: Schedule,
 ): Promise<RecurringRow> {
   const existing = await byId(id);
   if (!existing) {
     throw new Error(`no recurring task with id ${id}`);
   }
 
-  const frequency = changes.frequency ?? existing.frequency;
-  const startsOn = changes.startsOn ?? existing.startsOn;
-  const startDate = parseISO(startsOn);
-  const weekdays = changes.weekdays ?? existing.weekdays;
-
-  const updated = await update(id, {
-    frequency: frequency,
-    repeatEvery: changes.repeatEvery ?? existing.repeatEvery,
-    startsOn: startsOn,
-    dueTime:
-      changes.dueTime === undefined ? undefined : changes.dueTime,
-    weekdays:
-      frequency === "weekly"
-        ? weekdays.length > 0
-          ? weekdays
-          : [startDate.getDay()]
-        : [],
-    dayOfMonth: frequency === "monthly" ? startDate.getDate() : null,
+  const settled = settledSchedule({
+    schedule: schedule,
+    startsOn: schedule.startsOn || existing.startsOn,
   });
+  const updated = await update(id, settled);
 
-  if (changes.dueTime !== undefined) {
+  if (settled.startsOn !== existing.startsOn) {
     await sql`
       update todo.tasks
-      set due_time = ${changes.dueTime}, updated_at = now()
-      where recurring_task_id = ${id}
-        and state not in ('complete', 'missed', 'skipped')
-    `;
-  }
-
-  if (changes.startsOn !== undefined) {
-    await sql`
-      update todo.tasks
-      set due_date = ${startsOn}, updated_at = now()
+      set due_date = ${settled.startsOn}, updated_at = now()
       where recurring_task_id = ${id}
         and state not in ('complete', 'missed', 'skipped')
     `;
@@ -218,7 +213,7 @@ export async function generateDue(): Promise<void> {
   const pending = await sql<RecurringRow[]>`
     select ${COLUMNS}
     from todo.recurring_tasks
-    where paused = false
+    where ended_at is null
       and (generated_through is null or generated_through < ${today})
   `;
 
@@ -325,22 +320,15 @@ async function generateOne({
   });
 }
 
-export async function pause(
-  id: number,
-  paused: boolean,
-): Promise<void> {
+export async function end(id: number): Promise<void> {
   await sql`
     update todo.recurring_tasks
-    set paused = ${paused},
-        generated_through = ${paused ? sql`generated_through` : sql`current_date`},
-        updated_at = now()
-    where id = ${id}
+    set ended_at = now(), updated_at = now()
+    where id = ${id} and ended_at is null
   `;
   await events.record({
     taskId: null,
     source: "app",
-    summary: paused
-      ? "Paused a recurring task"
-      : "Resumed a recurring task",
+    summary: "Stopped a repeating task",
   });
 }

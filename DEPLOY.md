@@ -75,6 +75,11 @@ Postgres runs on the same machine under its own launchd agent, with data in
 the same instance parallax itself uses, which is why the app is pinned to this
 machine.
 
-Migrations in `sql/` are applied by `npm run migrate`, which nothing runs
-automatically — run it on the machine when a change needs one. Applied filenames
-are recorded in `todo.migrations` and skipped on subsequent runs.
+Migrations in `sql/` are applied by `npm run migrate`, which every deploy runs
+before it builds. Applied filenames are recorded in `todo.migrations` and
+skipped on subsequent runs, so a deploy that brings no new migration does
+nothing. A migration that fails stops the deploy before the restart, leaving the
+old code running against the old schema.
+
+The database URL comes from `.env` in the checkout, which is not in the
+repository and has to be there for a deploy to migrate.

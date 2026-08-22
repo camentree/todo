@@ -5,6 +5,14 @@ export type EventSource = "app" | "system" | "mcp" | "agent";
 
 export type Frequency = "daily" | "weekly" | "monthly";
 
+export interface Schedule {
+  frequency: Frequency;
+  repeatEvery: number;
+  weekdays: number[];
+  dayOfMonth: number | null;
+  startsOn: string;
+}
+
 export interface Task {
   id: number;
   list: string;
@@ -26,6 +34,7 @@ export interface Task {
   commentCount: number;
   unseenCommentCount: number;
   lastCommentFromOthers: boolean;
+  schedule: Schedule | null;
   subtasks?: Task[];
 }
 
@@ -38,20 +47,15 @@ export interface Comment {
   seenAt: string | null;
 }
 
-export interface RecurringTask {
+export interface RecurringTask extends Schedule {
   id: number;
   list: string;
   title: string;
   note: string | null;
   tags: string[];
   who: string | null;
-  frequency: Frequency;
-  repeatEvery: number;
-  weekdays: number[];
-  dayOfMonth: number | null;
   dueTime: string | null;
-  startsOn: string;
-  paused: boolean;
+  endedAt: string | null;
   generatedThrough: string | null;
 }
 

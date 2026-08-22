@@ -5,21 +5,14 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { api } from "../api.ts";
-import { todayAsDateString } from "../format.ts";
 import {
-  dueDateIn,
-  dueTimeIn,
-  listIn,
-  parse,
-  recurrenceIn,
-  stageIn,
-  tagsIn,
-  whoIn,
-  type ParsedToken,
-} from "@shared/parser.ts";
+  AttributeChips,
+  typedTask,
+  withoutAttribute,
+} from "./TaskAttributes.tsx";
+import { api } from "../api.ts";
+import { renameChanges } from "../useTaskActions.ts";
 
-const GUESSED_KINDS = new Set(["dueDate", "dueTime", "recurrence"]);
 const LAST_LIST_KEY = "todo.lastList";
 const MOST_SUGGESTIONS = 5;
 
@@ -34,7 +27,6 @@ function lastUsedList(): string | null {
 export function NewTaskRow({ prefill }: { prefill: string }) {
   const [input, setInput] = useState("");
   const [note, setNote] = useState("");
-  const [dismissed, setDismissed] = useState<string[]>([]);
   const [active, setActive] = useState(false);
   const [caret, setCaret] = useState(0);
   const [suppressed, setSuppressed] = useState(false);
@@ -51,17 +43,8 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
     queryFn: api.lists,
   });
 
-  const parsed = useMemo(
-    () =>
-      parse({
-        input: input,
-        today: new Date(),
-        dismissed: dismissed,
-      }),
-    [input, dismissed],
-  );
-
-  const namedList = listIn(parsed.tokens);
+  const typed = useMemo(() => renameChanges(input), [input]);
+  const namedList = typed.list ?? null;
 
   const { data: knownTags = [] } = useQuery({
     queryKey: ["tags", namedList],
@@ -85,7 +68,7 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
   });
 
   const targetList = resolveList({
-    tokens: parsed.tokens,
+    named: typed.list,
     lists: lists,
   });
 
@@ -102,38 +85,11 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
       if (!targetList) {
         throw new Error("there is no list to add this to");
       }
-      const recurrence = recurrenceIn(parsed.tokens);
-      const tags = tagsIn(parsed.tokens);
-      const who = whoIn(parsed.tokens);
-      const dueDate = dueDateIn(parsed.tokens);
-      const dueTime = dueTimeIn(parsed.tokens);
-      const stage = stageIn(parsed.tokens);
-
-      if (recurrence) {
-        return api.createRecurring({
-          list: targetList,
-          title: parsed.title,
-          note: note.trim() || null,
-          tags: tags,
-          who: who,
-          frequency: recurrence.frequency,
-          repeatEvery: recurrence.repeatEvery,
-          weekdays: recurrence.weekdays,
-          dayOfMonth: recurrence.dayOfMonth,
-          dueTime: dueTime,
-          startsOn: dueDate ?? todayAsDateString(),
-        });
-      }
-
       return api.createTask({
+        ...typed,
+        title: typed.title ?? "",
         list: targetList,
-        title: parsed.title,
         note: note.trim() || null,
-        tags: tags,
-        who: who ?? null,
-        dueDate: dueDate ?? null,
-        dueTime: dueTime ?? null,
-        stage: stage ?? undefined,
       });
     },
     onSuccess: () => {
@@ -142,7 +98,6 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
       }
       queryClient.invalidateQueries();
       setNote("");
-      setDismissed([]);
       setSuppressed(false);
       if (closeAfterSave.current) {
         closeAfterSave.current = false;
@@ -155,7 +110,7 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
   });
 
   const canSubmit =
-    parsed.title.trim().length > 0 && Boolean(targetList);
+    (typed.title ?? "").trim().length > 0 && Boolean(targetList);
 
   function moveTo(next: string): void {
     setInput(next);
@@ -177,7 +132,6 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
   function discard(): void {
     setInput("");
     setNote("");
-    setDismissed([]);
     titleRef.current?.blur();
   }
 
@@ -208,11 +162,10 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
         setActive(false);
         setSuppressed(false);
         if (
-          parsed.title.trim().length === 0 &&
+          (typed.title ?? "").trim().length === 0 &&
           note.trim().length === 0
         ) {
           setInput("");
-          setDismissed([]);
           setNote("");
         }
       }}
@@ -298,24 +251,21 @@ export function NewTaskRow({ prefill }: { prefill: string }) {
         </div>
       )}
 
-      {parsed.tokens.length > 0 && (
-        <span className="task-meta">
-          {parsed.tokens.map((token) => (
-            <button
-              type="button"
-              key={`${token.kind}-${token.text}`}
-              tabIndex={-1}
-              className="capture-chip"
-              data-guess={GUESSED_KINDS.has(token.kind)}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => setDismissed([...dismissed, token.text])}
-              title="Put this back in the title"
-            >
-              {describe(token)}
-            </button>
-          ))}
-        </span>
-      )}
+      <AttributeChips
+        task={typedTask({ changes: typed, list: targetList ?? "" })}
+        onRemove={(attribute) =>
+          moveTo(
+            withoutAttribute({
+              task: typedTask({
+                changes: typed,
+                list: targetList ?? "",
+              }),
+              draft: input,
+              attribute: attribute,
+            }).draft,
+          )
+        }
+      />
 
       {(active || note.length > 0) && (
         <textarea
@@ -432,35 +382,13 @@ function suggestionsFor({
     .slice(0, MOST_SUGGESTIONS);
 }
 
-function describe(token: ParsedToken): string {
-  if (token.kind === "recurrence") {
-    return token.text;
-  }
-  if (token.kind === "dueDate" || token.kind === "dueTime") {
-    return token.value;
-  }
-  if (token.kind === "overdue" || token.kind === "noDueDate") {
-    return token.text;
-  }
-  const sigil =
-    token.kind === "tag"
-      ? "#"
-      : token.kind === "who"
-        ? "@"
-        : token.kind === "list"
-          ? "/"
-          : "!";
-  return `${sigil}${token.value}`;
-}
-
 function resolveList({
-  tokens,
+  named,
   lists,
 }: {
-  tokens: ParsedToken[];
+  named: string | undefined;
   lists: string[];
 }): string | null {
-  const named = listIn(tokens);
   const remembered = lastUsedList();
   return (
     named ??

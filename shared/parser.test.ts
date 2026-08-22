@@ -177,6 +177,16 @@ describe("parse", () => {
     expect(undone.tokens).toEqual([]);
   });
 
+  test("dismissing a token puts every word of it back", () => {
+    const undone = parse({
+      input: "Book flights at 3pm",
+      today: thursday,
+      dismissed: ["at 3pm"],
+    });
+    expect(undone.title).toBe("Book flights at 3pm");
+    expect(undone.tokens).toEqual([]);
+  });
+
   test("a possessive weekday is not a date", () => {
     expect(titleOf("Read Monday's report")).toBe(
       "Read Monday's report",
