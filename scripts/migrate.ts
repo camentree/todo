@@ -13,7 +13,7 @@ export async function migrate(): Promise<void> {
     throw new Error("DATABASE_URL is not set");
   }
 
-  const sql = postgres(database_url);
+  const sql = postgres(database_url, { onnotice: () => {} });
 
   await sql`create schema if not exists todo`;
   await sql`
