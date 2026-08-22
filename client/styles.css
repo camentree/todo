@@ -1000,6 +1000,28 @@ a {
   background: var(--chip-bg);
 }
 
+.info-discard {
+  position: absolute;
+  top: 0.8rem;
+  left: 0.9rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--dim);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.55);
+  font-size: 1.25rem;
+  line-height: 1;
+  z-index: 1;
+}
+
+.info-discard:hover {
+  color: var(--text);
+}
+
 .info-grabber {
   width: 3rem;
   height: 0.3rem;
@@ -1044,6 +1066,11 @@ a {
   border: 0;
   border-radius: 0;
   padding: 0.2rem 0;
+}
+
+.info-attributes {
+  min-height: 1.4rem;
+  margin-bottom: 0.5rem;
 }
 
 .info-field {
@@ -1342,6 +1369,10 @@ a {
 
   .info-done {
     display: grid;
+  }
+
+  .info-body {
+    padding-top: 3.4rem;
   }
 
   .app:has(.board[data-layout="columns"]) .topbar,

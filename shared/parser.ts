@@ -20,7 +20,7 @@ export type ParsedToken =
   | { kind: "tag"; text: string; value: string }
   | { kind: "who"; text: string; value: string }
   | { kind: "list"; text: string; value: string }
-  | { kind: "stage"; text: string; value: TaskStage }
+  | { kind: "stage"; text: string; value: TaskStage | "" }
   | { kind: "dueDate"; text: string; value: string }
   | { kind: "dueTime"; text: string; value: string }
   | { kind: "recurrence"; text: string; value: RecurrenceValue }
@@ -189,9 +189,6 @@ function bareWordAt(words: string[], index: number): string {
 function matchSigil({ words, index }: MatcherInput): Match | null {
   const word = wordAt(words, index);
   const body = word.slice(1);
-  if (body.length === 0) {
-    return null;
-  }
 
   if (word.startsWith("#")) {
     return {
@@ -212,8 +209,11 @@ function matchSigil({ words, index }: MatcherInput): Match | null {
     };
   }
   if (word.startsWith("!")) {
-    const stage = asStage(body.toLowerCase().replace(/[\s-]+/g, "_"));
-    if (stage) {
+    const stage =
+      body.length === 0
+        ? ""
+        : asStage(body.toLowerCase().replace(/[\s-]+/g, "_"));
+    if (stage !== null) {
       return {
         token: { kind: "stage", text: word, value: stage },
         consumed: 1,
@@ -653,7 +653,9 @@ export function listIn(tokens: ParsedToken[]): string | null {
   );
 }
 
-export function stageIn(tokens: ParsedToken[]): TaskStage | null {
+export function stageIn(
+  tokens: ParsedToken[],
+): TaskStage | "" | null {
   return (
     tokens.filter((token) => token.kind === "stage").at(-1)?.value ??
     null

@@ -96,10 +96,10 @@ export function NewTaskRow({
         list: targetList,
         title: parsed.title,
         tags: tags,
-        who: who ?? null,
+        who: who || null,
         dueDate: dueDate ?? null,
         dueTime: dueTime ?? null,
-        stage: stage ?? undefined,
+        stage: stage || undefined,
       });
     },
     onSuccess: () => {
