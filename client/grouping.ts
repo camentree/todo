@@ -32,10 +32,13 @@ export function buildGroups({
 
   const screenWide = scoped ? [scoped] : [];
   const held = settling ?? new Set<number>();
-  const hidden = sorted.filter((task) => putAway(task, held));
+  const showingFinished = scoped?.field === "state";
+  const setAside = (task: Task) =>
+    !showingFinished && putAway(task, held);
+  const hidden = sorted.filter(setAside);
 
   const groups = groupsOf({
-    sorted: sorted.filter((task) => !putAway(task, held)),
+    sorted: sorted.filter((task) => !setAside(task)),
     view: view,
     lists: lists,
     screenWide: screenWide,
@@ -57,7 +60,10 @@ export function buildGroups({
 }
 
 function putAway(task: Task, settling: Set<number>): boolean {
-  return task.state === "hidden" && !settling.has(task.id);
+  return (
+    (task.state === "hidden" || isTerminal(task.state)) &&
+    !settling.has(task.id)
+  );
 }
 
 function groupsOf({

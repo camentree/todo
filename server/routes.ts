@@ -61,6 +61,7 @@ api.get("/tasks", async (context) => {
       attribute: attribute,
       value: query.value ?? "",
       everything: query.everything === "true",
+      dueToday: query.today === "true",
     }),
   );
 });

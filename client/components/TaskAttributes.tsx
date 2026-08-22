@@ -1,4 +1,8 @@
-import { formatDueDate, formatDueTime } from "../format.ts";
+import {
+  cadenceOf,
+  formatDueDate,
+  formatDueTime,
+} from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { parse, type ParsedToken } from "@shared/parser.ts";
@@ -49,11 +53,13 @@ export function attributesOf(task: DescribedTask): TaskAttribute[] {
   const time = archived ? null : formatDueTime(task.dueTime);
 
   const items: (TaskAttribute | null)[] = [
-    {
-      field: "list",
-      text: task.list,
-      to: `/list/${encodeURIComponent(task.list)}`,
-    },
+    task.list
+      ? {
+          field: "list" as const,
+          text: task.list,
+          to: `/list/${encodeURIComponent(task.list)}`,
+        }
+      : null,
     ...task.tags.map(
       (tag): TaskAttribute => ({
         field: "tag",
@@ -68,11 +74,11 @@ export function attributesOf(task: DescribedTask): TaskAttribute[] {
           to: `/who/${encodeURIComponent(task.who)}`,
         }
       : null,
-    due
+    due && task.dueDate
       ? {
           field: "due_date",
           text: due,
-          to: `/due_date/${encodeURIComponent(due)}`,
+          to: `/due_date/${task.dueDate}`,
         }
       : null,
     time && task.dueTime
@@ -85,7 +91,7 @@ export function attributesOf(task: DescribedTask): TaskAttribute[] {
     task.schedule
       ? {
           field: "recurring",
-          text: "recurring",
+          text: cadenceOf(task.schedule),
           to: "/recurring/true",
         }
       : null,

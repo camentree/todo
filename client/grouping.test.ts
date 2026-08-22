@@ -35,7 +35,6 @@ function view(overrides: Partial<ViewPreference>): ViewPreference {
     breakUpBy: "none",
     sortBy: "resolved_at",
     sortDirection: "desc",
-    density: "compact",
     layout: "stacked",
     ...overrides,
   };

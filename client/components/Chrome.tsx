@@ -14,29 +14,11 @@ import { useTheme, type Theme } from "../theme.ts";
 import { canonicalName } from "@shared/names.ts";
 import type {
   BreakUpField,
-  Density,
-  Layout,
   Event as TaskEvent,
   SortDirection,
   SortField,
   ViewPreference,
 } from "@shared/types.ts";
-
-const DENSITY_OPTIONS: { value: Density; label: string }[] = [
-  { value: "airy", label: "Airy" },
-  { value: "compact", label: "Compact" },
-];
-
-const LAYOUT_OPTIONS: { value: Layout; label: string }[] = [
-  { value: "stacked", label: "Stacked" },
-  { value: "columns", label: "Columns" },
-];
-
-const THEME_OPTIONS: { value: Theme; label: string }[] = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-];
 
 const GROUP_OPTIONS: { field: BreakUpField; label: string }[] = [
   { field: "none", label: "Nothing" },
@@ -293,8 +275,8 @@ function ScopeMenu({ onClose }: { onClose: () => void }) {
     <div className="menu under-title">
       <MenuLink
         label="Today"
-        here={location.pathname === "/due_date/today"}
-        onGo={() => go("/due_date/today")}
+        here={location.pathname === "/today"}
+        onGo={() => go("/today")}
       />
       <MenuLink
         label="To Do"
@@ -392,62 +374,66 @@ function ViewMenu({
         </select>
       </label>
 
-      <MenuToggle
-        label="Spacing"
-        value={view.density}
-        options={DENSITY_OPTIONS}
-        onChoose={(density) => onViewChange({ density: density })}
-      />
-
       {view.breakUpBy !== "none" && (
-        <MenuToggle
-          label="Layout"
+        <MenuSwitch
+          label="Columns"
           wideOnly
-          value={view.layout}
-          options={LAYOUT_OPTIONS}
-          onChoose={(layout) => onViewChange({ layout: layout })}
+          on={view.layout === "columns"}
+          onChange={(on) =>
+            onViewChange({ layout: on ? "columns" : "stacked" })
+          }
         />
       )}
 
-      <MenuToggle
-        label="Appearance"
-        value={theme}
-        options={THEME_OPTIONS}
-        onChoose={onThemeChange}
+      <MenuSwitch
+        label="Custom appearance"
+        on={theme !== "system"}
+        onChange={(on) =>
+          onThemeChange(on ? preferredTheme() : "system")
+        }
       />
+
+      {theme !== "system" && (
+        <MenuSwitch
+          label="Dark mode"
+          on={theme === "dark"}
+          onChange={(on) => onThemeChange(on ? "dark" : "light")}
+        />
+      )}
     </div>
   );
 }
 
-function MenuToggle<Value extends string>({
+function preferredTheme(): Theme {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function MenuSwitch({
   label,
-  value,
-  options,
+  on,
   wideOnly = false,
-  onChoose,
+  onChange,
 }: {
   label: string;
-  value: Value;
-  options: { value: Value; label: string }[];
+  on: boolean;
   wideOnly?: boolean;
-  onChoose: (next: Value) => void;
+  onChange: (on: boolean) => void;
 }) {
   return (
-    <div className="menu-field" data-wide-only={wideOnly}>
+    <div className="menu-field row" data-wide-only={wideOnly}>
       <span className="menu-label">{label}</span>
-      <div className="menu-toggle" role="group" aria-label={label}>
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className="menu-toggle-option"
-            aria-pressed={option.value === value}
-            onClick={() => onChoose(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <button
+        type="button"
+        className="switch"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={() => onChange(!on)}
+      >
+        <span className="switch-knob" />
+      </button>
     </div>
   );
 }

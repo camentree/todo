@@ -5,14 +5,14 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { SubtaskRow } from "./SubtaskRow.tsx";
 import {
   AttributeChips,
   AttributeText,
   asRenamed,
   withoutAttribute,
 } from "./TaskAttributes.tsx";
-import { Chevron } from "./TaskBoard.tsx";
+import { Chevron, TaskRow } from "./TaskRow.tsx";
+import type { RowTask } from "./TaskRow.tsx";
 import { api } from "../api.ts";
 import { formatWhen } from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
@@ -36,7 +36,12 @@ const CLOSE_MILLISECONDS = 850;
 const DRAG_TO_CLOSE = 110;
 const INDENT = "  ";
 
-type InfoSection = "timing" | "subtasks" | "note" | "comments";
+type InfoSection =
+  | "metadata"
+  | "timing"
+  | "subtasks"
+  | "note"
+  | "comments";
 
 function sectionsHoldingSomething(
   task: Task | undefined,
@@ -70,7 +75,6 @@ export function TaskInfo({
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [newSubtask, setNewSubtask] = useState("");
   const [newTag, setNewTag] = useState("");
   const [titleFocused, setTitleFocused] = useState(false);
   const [edits, setEdits] = useState<Partial<Task>>({});
@@ -165,16 +169,13 @@ export function TaskInfo({
     onSuccess: refresh,
   });
   const addSubtask = useMutation({
-    mutationFn: () =>
+    mutationFn: (title: string) =>
       api.createTask({
         list: task?.list ?? "",
         parentId: taskId,
-        title: newSubtask,
+        title: title,
       }),
-    onSuccess: () => {
-      setNewSubtask("");
-      refresh();
-    },
+    onSuccess: refresh,
   });
   const toggleSubtask = useMutation({
     mutationFn: (subtask: Task) =>
@@ -361,6 +362,12 @@ export function TaskInfo({
             )}
           </div>
 
+          <Section
+            label="Metadata"
+            count={0}
+            open={openSections.includes("metadata")}
+            onToggle={() => toggleSection("metadata")}
+          >
           <label className="info-field">
             <span>List</span>
             <input
@@ -458,6 +465,7 @@ export function TaskInfo({
               </datalist>
             </div>
           </div>
+          </Section>
 
           <Section
             label="Timing"
@@ -666,40 +674,42 @@ export function TaskInfo({
           >
             <div className="info-subtasks">
               {subtasks.map((subtask) => (
-                <SubtaskRow
+                <SheetSubtask
                   key={subtask.id}
                   subtask={subtask}
-                  onToggle={() => toggleSubtask.mutate(subtask)}
-                  onRename={(next) =>
-                    renameSubtask.mutate({
-                      subtask: subtask,
-                      title: next,
-                    })
+                  onCommit={(changes) =>
+                    "state" in changes
+                      ? toggleSubtask.mutate(subtask)
+                      : renameSubtask.mutate({
+                          subtask: subtask,
+                          title: changes.title ?? subtask.title,
+                        })
                   }
                   onDelete={() => deleteSubtask.mutate(subtask)}
                 />
               ))}
-              <form
-                className="subtask"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (newSubtask.trim()) {
-                    addSubtask.mutate();
-                  }
+              <SheetSubtask
+                blank={true}
+                subtask={{
+                  ...(task.subtasks?.[0] ?? task),
+                  id: null,
+                  parentId: taskId,
+                  title: "",
+                  note: null,
+                  state: "to_do",
+                  tags: [],
+                  who: null,
+                  dueDate: null,
+                  dueTime: null,
+                  stage: null,
+                  schedule: null,
+                  subtasks: [],
                 }}
-              >
-                <span className="subtask-tick" />
-                <input
-                  className="subtask-title"
-                  value={newSubtask}
-                  onChange={(event) =>
-                    setNewSubtask(event.target.value)
-                  }
-                  placeholder="Add subtask"
-                  aria-label="Add subtask"
-                  enterKeyHint="done"
-                />
-              </form>
+                onCommit={(changes) =>
+                  addSubtask.mutate(changes.title ?? "")
+                }
+                onDelete={() => {}}
+              />
             </div>
           </Section>
 
@@ -963,4 +973,31 @@ function withIndentation({
     selectionStart: wholeLines ? blockStart : caret,
     selectionEnd: wholeLines ? blockEnd + moved : caret,
   };
+}
+
+function SheetSubtask({
+  subtask,
+  onCommit,
+  onDelete,
+  blank = false,
+}: {
+  subtask: RowTask;
+  onCommit: (changes: Partial<Task>) => void;
+  onDelete: () => void;
+  blank?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <TaskRow
+      task={subtask}
+      isEditing={blank || editing}
+      onEditingChange={setEditing}
+      onCommit={onCommit}
+      swipeLeft={
+        blank ? undefined : { name: "Delete", action: onDelete }
+      }
+      showAttributes={false}
+    />
+  );
 }

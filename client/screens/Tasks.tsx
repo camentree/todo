@@ -4,18 +4,15 @@ import { useLocation, useParams } from "react-router-dom";
 
 import { api } from "../api.ts";
 import { TopBar } from "../components/Chrome.tsx";
-import {
-  AddButton,
-  focusLastCaptureRow,
-} from "../components/NewTask.tsx";
 import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
+import { AddButton } from "../components/TaskRow.tsx";
 import type { MetaOmission } from "../components/TaskBoard.tsx";
 import { TaskInfo } from "../components/TaskInfo.tsx";
 import {
   asTitle,
   attributeText,
-  dueDateFromLabel,
+  todayAsDateString,
 } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
 import { useShortcuts } from "../useShortcuts.ts";
@@ -30,17 +27,26 @@ import type { Task } from "@shared/types.ts";
 export interface Scope {
   field: Attribute | null;
   value: string;
+  today: boolean;
 }
 
 export function Tasks() {
   const parameters = useParams();
   const { pathname } = useLocation();
-  const scope: Scope = {
-    field: asAttribute(parameters.field),
-    value: parameters.value
-      ? canonicalName(decodeURIComponent(parameters.value))
-      : "",
-  };
+  const scope: Scope =
+    pathname === "/today"
+      ? {
+          field: "due_date",
+          value: todayAsDateString(),
+          today: true,
+        }
+      : {
+          field: asAttribute(parameters.field),
+          value: parameters.value
+            ? canonicalName(decodeURIComponent(parameters.value))
+            : "",
+          today: false,
+        };
   const archived =
     scope.field === "archived" && scope.value === "true";
   const finished =
@@ -48,15 +54,17 @@ export function Tasks() {
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
   const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
-    scope.field ? `${scope.field}:${scope.value}` : "all",
+    viewKeyFor(scope),
     defaultView(scope),
   );
   const actions = useTaskActions(changeView);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
+    setCapturing(false);
   }, [pathname]);
 
   const { data: lists = [] } = useQuery({
@@ -65,7 +73,9 @@ export function Tasks() {
   });
 
   const { data: tasks = [], isPending } = useQuery({
-    queryKey: ["tasks", scope.field, scope.value],
+    queryKey: scope.today
+      ? ["tasks", "today"]
+      : ["tasks", scope.field, scope.value],
     queryFn: () => fetchTasks(scope),
   });
 
@@ -93,7 +103,7 @@ export function Tasks() {
     }
     if (event.key === "c" && !archived && !finished) {
       event.preventDefault();
-      focusLastCaptureRow();
+      setCapturing(true);
     }
     if (event.key === "f") {
       event.preventDefault();
@@ -164,13 +174,15 @@ export function Tasks() {
         <TaskBoard
           key={pathname}
           groups={groups}
-          density={view.density}
           layout={view.layout}
           capturePrefix={capturePrefix}
+          capturing={capturing}
+          onCapturingChange={setCapturing}
           actions={{
             toggle: actions.toggleTask,
             open: (task) => setOpenTaskId(task.id),
             rename: actions.rename,
+            create: actions.create,
             remove: actions.remove,
             swipeLeft: actions.swipeLeft,
             swipeRight: actions.swipeRight,
@@ -180,7 +192,7 @@ export function Tasks() {
       )}
 
       {!archived && !finished && searchText === null && (
-        <AddButton onClick={focusLastCaptureRow} />
+        <AddButton onClick={() => setCapturing(true)} />
       )}
 
       {openTaskId !== null && (
@@ -217,22 +229,37 @@ function messageFor({
 }
 
 function fetchTasks(scope: Scope): Promise<Task[]> {
+  if (scope.today) {
+    return api.tasks({ today: "true" });
+  }
   if (!scope.field) {
     return api.tasks({});
   }
-  const value =
-    scope.field === "due_date"
-      ? (dueDateFromLabel(scope.value) ?? scope.value)
-      : scope.value;
-  return api.tasks({ attribute: scope.field, value: value });
+  return api.tasks({ attribute: scope.field, value: scope.value });
+}
+
+function viewKeyFor(scope: Scope): string {
+  if (scope.today) {
+    return "today";
+  }
+  if (scope.field === "due_date") {
+    return "due_date";
+  }
+  return scope.field ? `${scope.field}:${scope.value}` : "all";
 }
 
 function titleFor(scope: Scope): string {
+  if (scope.today) {
+    return "Today";
+  }
   if (!scope.field) {
     return "To Do";
   }
   if (scope.field === "state" && scope.value === "complete") {
     return "Done";
+  }
+  if (scope.field === "due_date") {
+    return scope.value;
   }
   const text = attributeText(scope.field, scope.value);
   if (scope.field === "tag") {
@@ -279,7 +306,7 @@ function captureToken({
 }
 
 function emptyFor(scope: Scope): string {
-  if (scope.field === "due_date" && scope.value === "today") {
+  if (scope.today) {
     return "Nothing today.";
   }
   if (scope.field === "archived" && scope.value === "true") {

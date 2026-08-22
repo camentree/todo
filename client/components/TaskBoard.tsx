@@ -1,32 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-import { NewTaskRow } from "./NewTask.tsx";
-import { SubtaskRow } from "./SubtaskRow.tsx";
-import {
-  AttributeChips,
-  asRenamed,
-  attributesOf,
-  withoutAttribute,
-} from "./TaskAttributes.tsx";
+import { typedTask } from "./TaskAttributes.tsx";
+import { Chevron, TaskRow } from "./TaskRow.tsx";
+import type { MetaOmission, RowTask } from "./TaskRow.tsx";
 import { isDueToday } from "../format.ts";
 import { useShortcuts } from "../useShortcuts.ts";
 import { renameChanges } from "../useTaskActions.ts";
-import type { Attribute } from "@shared/attributes.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
-import type { Density, Layout, Task } from "@shared/types.ts";
+import type { Layout, Task } from "@shared/types.ts";
 
-const SWIPE_FRACTION = 0.4;
-const LONG_PRESS_MILLISECONDS = 400;
 const FLICK_MILLISECONDS = 500;
 
 export const HIDDEN_GROUP = "hidden";
 
-export interface MetaOmission {
-  field: Attribute;
-  label: string;
-}
+export { Chevron } from "./TaskRow.tsx";
+export type { MetaOmission } from "./TaskRow.tsx";
 
 export interface BoardGroup {
   key: string;
@@ -47,6 +36,7 @@ export interface RowActions {
   toggle: (task: Task) => void;
   open: (task: Task) => void;
   rename: (task: Task, changes: Partial<Task>) => void;
+  create: (changes: Partial<Task>) => Promise<Task>;
   remove: (task: Task) => void;
   swipeLeft: (task: Task) => void;
   swipeRight: (task: Task) => void;
@@ -55,9 +45,10 @@ export interface RowActions {
 export interface TaskBoardProps {
   groups: BoardGroup[];
   actions: RowActions;
-  density: Density;
   layout: Layout;
   capturePrefix: string | null;
+  capturing: boolean;
+  onCapturingChange: (open: boolean) => void;
   onMove: (
     taskId: number,
     landing: Landing,
@@ -80,14 +71,21 @@ interface Flick {
 export function TaskBoard({
   groups,
   actions,
-  density,
   layout,
   capturePrefix,
+  capturing,
+  onCapturingChange,
   onMove,
 }: TaskBoardProps) {
   const [lift, setLift] = useState<Lift | null>(null);
+  const [capturingGroup, setCapturingGroup] = useState<
+    string | null
+  >(null);
+  const liftRef = useRef<Lift | null>(null);
+  const finishLatest = useRef<() => void>(() => {});
   const [editingId, setEditingId] = useState<number | null>(null);
   const [focusedId, setFocusedId] = useState<number | null>(null);
+  const [landingId, setLandingId] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(
     new Set([HIDDEN_GROUP]),
   );
@@ -104,6 +102,22 @@ export function TaskBoard({
   const focusedIndex = shown.findIndex(
     (task) => task.id === focusedId,
   );
+
+  useEffect(() => {
+    if (landingId === null) {
+      return;
+    }
+    if (!shown.some((task) => task.id === landingId)) {
+      return;
+    }
+    setFocusedId(landingId);
+    setLandingId(null);
+    requestAnimationFrame(() =>
+      boardRef.current
+        ?.querySelector(`[data-task="${landingId}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" }),
+    );
+  }, [landingId, shown]);
 
   function focusAt(index: number): void {
     const task =
@@ -246,22 +260,28 @@ export function TaskBoard({
     return null;
   }
 
-  function commit(): void {
-    if (!lift) {
+  function finishLift(): void {
+    const dropped = liftRef.current;
+    liftRef.current = null;
+    setLift(null);
+    if (!dropped) {
       return;
     }
-    const target = groups.find((group) => group.key === lift.toKey);
-    const source = groups.find((group) => group.key === lift.fromKey);
-    setLift(null);
+    const target = groups.find(
+      (group) => group.key === dropped.toKey,
+    );
+    const source = groups.find(
+      (group) => group.key === dropped.fromKey,
+    );
     if (!target || !source) {
       return;
     }
 
     const ids = target.tasks
       .map((task) => task.id)
-      .filter((id) => id !== lift.taskId);
-    const at = Math.min(lift.index, ids.length);
-    ids.splice(at, 0, lift.taskId);
+      .filter((id) => id !== dropped.taskId);
+    const at = Math.min(dropped.index, ids.length);
+    ids.splice(at, 0, dropped.taskId);
 
     const landing: Landing =
       target.key === source.key
@@ -273,14 +293,56 @@ export function TaskBoard({
       target.tasks.every((task, index) => task.id === ids[index]);
 
     if (!unchanged) {
-      onMove(lift.taskId, landing, ids);
+      onMove(dropped.taskId, landing, ids);
     }
   }
+
+  useEffect(() => {
+    finishLatest.current = finishLift;
+  });
+
+  function startLift({
+    taskId,
+    fromKey,
+    pointerX,
+    pointerY,
+  }: {
+    taskId: number;
+    fromKey: string;
+    pointerX: number;
+    pointerY: number;
+  }): void {
+    function track(atX: number, atY: number): void {
+      const next = placeAt(atX, atY, taskId, fromKey);
+      liftRef.current = next;
+      setLift(next);
+    }
+
+    function onDragMove(event: PointerEvent): void {
+      event.preventDefault();
+      track(event.clientX, event.clientY);
+    }
+
+    function onDragEnd(): void {
+      window.removeEventListener("pointermove", onDragMove);
+      window.removeEventListener("pointerup", onDragEnd);
+      window.removeEventListener("pointercancel", onDragEnd);
+      finishLatest.current();
+    }
+
+    track(pointerX, pointerY);
+    window.addEventListener("pointermove", onDragMove);
+    window.addEventListener("pointerup", onDragEnd);
+    window.addEventListener("pointercancel", onDragEnd);
+  }
+
+  const lastGroupKey = groups
+    .filter((group) => group.key !== HIDDEN_GROUP)
+    .at(-1)?.key;
 
   return (
     <div
       className="board"
-      data-density={density}
       data-layout={layout}
       ref={boardRef}
     >
@@ -290,6 +352,14 @@ export function TaskBoard({
           group={group}
           actions={actions}
           capturePrefix={capturePrefix}
+          capturingHere={capturingGroup === group.key}
+          capturingUnseeded={capturing && group.key === lastGroupKey}
+          onLanded={setLandingId}
+          onCaptureHere={(open) => {
+            onCapturingChange(false);
+            setCapturingGroup(open ? group.key : null);
+          }}
+          onCaptureDone={() => onCapturingChange(false)}
           editingId={editingId}
           onEditingIdChange={setEditingId}
           focusedId={focusedId}
@@ -308,22 +378,27 @@ export function TaskBoard({
           }
           lift={lift}
           flick={flick}
-          onLiftStart={(taskId, pointerX, pointerY) =>
-            setLift(placeAt(pointerX, pointerY, taskId, group.key))
+          onLongPress={(taskId, pointerX, pointerY) =>
+            startLift({
+              taskId: taskId,
+              fromKey: group.key,
+              pointerX: pointerX,
+              pointerY: pointerY,
+            })
           }
-          onLiftMove={(taskId, pointerX, pointerY) =>
-            setLift(
-              placeAt(
-                pointerX,
-                pointerY,
-                taskId,
-                lift?.fromKey ?? group.key,
-              ),
-            )
-          }
-          onLiftEnd={commit}
         />
       ))}
+
+      {capturePrefix !== null && groups.length === 0 && (
+        <div className="tasks board-capture">
+          <CaptureRow
+            prefill={capturing ? "" : capturePrefix}
+            actions={actions}
+            focusOnMount={capturing}
+            onDismiss={() => onCapturingChange(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -351,6 +426,11 @@ function Group({
   group,
   actions,
   capturePrefix,
+  capturingHere,
+  capturingUnseeded,
+  onCaptureHere,
+  onCaptureDone,
+  onLanded,
   collapsed,
   onToggleCollapsed,
   lift,
@@ -359,13 +439,16 @@ function Group({
   onEditingIdChange,
   focusedId,
   onFocusedIdChange,
-  onLiftStart,
-  onLiftMove,
-  onLiftEnd,
+  onLongPress,
 }: {
   group: BoardGroup;
   actions: RowActions;
   capturePrefix: string | null;
+  capturingHere: boolean;
+  capturingUnseeded: boolean;
+  onCaptureHere: (open: boolean) => void;
+  onCaptureDone: () => void;
+  onLanded: (taskId: number) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   lift: Lift | null;
@@ -374,21 +457,17 @@ function Group({
   onEditingIdChange: (taskId: number | null) => void;
   focusedId: number | null;
   onFocusedIdChange: (taskId: number | null) => void;
-  onLiftStart: (
+  onLongPress: (
     taskId: number,
     pointerX: number,
     pointerY: number,
   ) => void;
-  onLiftMove: (
-    taskId: number,
-    pointerX: number,
-    pointerY: number,
-  ) => void;
-  onLiftEnd: () => void;
 }) {
   const prefill = [capturePrefix, group.prefill]
     .filter((part) => part)
     .join(" ");
+  const canCapture =
+    capturePrefix !== null && group.key !== HIDDEN_GROUP;
 
   return (
     <div className="group" data-group-key={group.key}>
@@ -410,296 +489,102 @@ function Group({
         <div>
           <div className="tasks">
             {group.tasks.map((task, index) => (
-              <Row
-                key={task.id}
-                task={task}
-                index={index}
-                group={group}
-                actions={actions}
-                lift={lift}
-                flick={flick}
-                editing={editingId === task.id}
-                onEditStart={() => onEditingIdChange(task.id)}
-                onEditEnd={() => onEditingIdChange(null)}
-                focused={focusedId === task.id}
-                onFocus={() => onFocusedIdChange(task.id)}
-                onLeave={() => onFocusedIdChange(null)}
-                onLiftStart={onLiftStart}
-                onLiftMove={onLiftMove}
-                onLiftEnd={onLiftEnd}
-              />
+              <div key={task.id}>
+                {lift?.toKey === group.key &&
+                  lift.index === index && (
+                    <div className="drop-line" />
+                  )}
+                <div
+                  className="task-shell"
+                  data-row="true"
+                  data-task={task.id}
+                  data-group={group.key}
+                  data-index={index}
+                  data-lifting={lift?.taskId === task.id}
+                  data-focused={focusedId === task.id}
+                  onMouseEnter={() => onFocusedIdChange(task.id)}
+                  onMouseLeave={() => onFocusedIdChange(null)}
+                >
+                  <TaskRow
+                    task={task}
+                    isEditing={editingId === task.id}
+                    onEditingChange={(editing) =>
+                      onEditingIdChange(editing ? task.id : null)
+                    }
+                    onCommit={(changes) => {
+                      saveTask({
+                        task: task,
+                        changes: changes,
+                        actions: actions,
+                      });
+                      onLanded(task.id);
+                    }}
+                    onInfoOpen={() => actions.open(task)}
+                    swipeLeft={{
+                      name: leftSwipeLabel(task),
+                      action: () => actions.swipeLeft(task),
+                    }}
+                    swipeRight={{
+                      name: rightSwipeLabel(task),
+                      action: () => actions.swipeRight(task),
+                    }}
+                    onLongPress={(pointerX, pointerY) =>
+                      onLongPress(task.id, pointerX, pointerY)
+                    }
+                    flickingTo={
+                      flick?.taskId === task.id
+                        ? flick.direction
+                        : null
+                    }
+                    showAttributes={true}
+                    omitAttributes={group.omitFromMeta}
+                    subtasks={(task.subtasks ?? []).map((subtask) => (
+                      <SubtaskRow
+                        key={subtask.id}
+                        subtask={subtask}
+                        actions={actions}
+                      />
+                    ))}
+                  />
+                </div>
+              </div>
             ))}
             {lift?.toKey === group.key &&
               lift.index >= group.tasks.length && (
                 <div className="drop-line" />
               )}
-            {capturePrefix !== null && (
-              <NewTaskRow prefill={prefill ? `${prefill} ` : ""} />
+            {canCapture && capturingUnseeded && (
+              <CaptureRow
+                prefill=""
+                actions={actions}
+                focusOnMount={true}
+                onCreated={onLanded}
+                onDismiss={onCaptureDone}
+              />
+            )}
+
+            {canCapture && !capturingUnseeded && capturingHere && (
+              <CaptureRow
+                prefill={prefill}
+                actions={actions}
+                focusOnMount={true}
+                onCreated={onLanded}
+                onDismiss={() => onCaptureHere(false)}
+              />
+            )}
+
+            {canCapture && !capturingUnseeded && !capturingHere && (
+              <button
+                type="button"
+                className="capture-space"
+                aria-label={`Add to ${group.label || "this list"}`}
+                onClick={() => onCaptureHere(true)}
+              />
             )}
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function Row({
-  task,
-  index,
-  group,
-  actions,
-  lift,
-  flick,
-  editing,
-  onEditStart,
-  onEditEnd,
-  focused,
-  onFocus,
-  onLeave,
-  onLiftStart,
-  onLiftMove,
-  onLiftEnd,
-}: {
-  task: Task;
-  index: number;
-  group: BoardGroup;
-  actions: RowActions;
-  lift: Lift | null;
-  flick: Flick | null;
-  editing: boolean;
-  onEditStart: () => void;
-  onEditEnd: () => void;
-  focused: boolean;
-  onFocus: () => void;
-  onLeave: () => void;
-  onLiftStart: (
-    taskId: number,
-    pointerX: number,
-    pointerY: number,
-  ) => void;
-  onLiftMove: (
-    taskId: number,
-    pointerX: number,
-    pointerY: number,
-  ) => void;
-  onLiftEnd: () => void;
-}) {
-  const [showSubtasks, setShowSubtasks] = useState(false);
-  const [draft, setDraft] = useState(task.title);
-  const [edits, setEdits] = useState<Partial<Task>>({});
-  const lifting = lift?.taskId === task.id;
-  const flickingTo =
-    flick?.taskId === task.id ? flick.direction : null;
-
-  useEffect(() => {
-    if (editing) {
-      setDraft(task.title);
-      setEdits({});
-    }
-  }, [editing, task.title]);
-
-  const uncommittedTask: Task = {
-    ...asRenamed({ task: task, draft: draft }),
-    ...edits,
-  };
-
-  const gesture = useRowGesture({
-    onLeft: () => actions.swipeLeft(task),
-    onRight: () => actions.swipeRight(task),
-    onLiftStart: (pointerX, pointerY) =>
-      onLiftStart(task.id, pointerX, pointerY),
-    onLiftMove: (pointerX, pointerY) =>
-      onLiftMove(task.id, pointerX, pointerY),
-    onLiftEnd: onLiftEnd,
-    enabled: !isTerminal(task.state),
-  });
-
-  const subtasks = task.subtasks ?? [];
-  const finished = subtasks.filter((subtask) =>
-    isTerminal(subtask.state),
-  ).length;
-
-  const flickTravel =
-    flickingTo === "left"
-      ? -SWIPE_FRACTION * 100
-      : SWIPE_FRACTION * 100;
-  const shift =
-    flickingTo === null ? `${gesture.offset}px` : `${flickTravel}%`;
-
-  return (
-    <>
-      {lift?.toKey === group.key && lift.index === index && (
-        <div className="drop-line" />
-      )}
-      <div
-        className="task-shell"
-        data-row="true"
-        data-task={task.id}
-        data-group={group.key}
-        data-index={index}
-        data-lifting={lifting}
-      >
-        <div className="swipe-track">
-          {(gesture.swiping || flickingTo !== null) && (
-            <>
-              <div className="swipe-action archive">
-                {leftSwipeLabel(task)}
-              </div>
-              <div
-                className={
-                  task.archivedAt
-                    ? "swipe-action remove"
-                    : "swipe-action defer"
-                }
-              >
-                {rightSwipeLabel(task)}
-              </div>
-            </>
-          )}
-
-          <div
-            className="task"
-            ref={gesture.ref}
-            data-done={isTerminal(task.state)}
-            data-editing={editing}
-            data-focused={focused}
-            data-swiping={gesture.swiping}
-            style={{ transform: `translateX(${shift})` }}
-            onMouseEnter={onFocus}
-            onMouseLeave={() => {
-              if (focused) {
-                onLeave();
-              }
-            }}
-            onPointerDown={gesture.down}
-            onPointerMove={gesture.move}
-            onPointerUp={gesture.up}
-            onPointerCancel={gesture.up}
-          >
-            <div className="task-main">
-              <button
-                type="button"
-                className="task-tick"
-                data-state={task.state}
-                aria-label={`Mark ${task.title} done`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  actions.toggle(task);
-                }}
-              />
-
-              {editing ? (
-                <TitleField
-                  task={task}
-                  draft={draft}
-                  onDraftChange={setDraft}
-                  onCommit={(title) => {
-                    actions.rename(task, {
-                      ...renameChanges(title),
-                      ...edits,
-                    });
-                    onEditEnd();
-                  }}
-                  onCancel={onEditEnd}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className="task-title"
-                  onClick={() => {
-                    if (!gesture.travelled()) {
-                      onEditStart();
-                    }
-                  }}
-                >
-                  {task.title}
-                </button>
-              )}
-
-              <button
-                type="button"
-                className="task-info"
-                aria-label="Task details"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  dismissKeyboard();
-                  actions.open(task);
-                }}
-                onClick={() => actions.open(task)}
-              >
-                <InfoIcon />
-              </button>
-
-              {task.lastCommentFromOthers && (
-                <span
-                  className="comment-dot"
-                  aria-label="Waiting on you"
-                />
-              )}
-
-              {subtasks.length > 0 && (
-                <button
-                  type="button"
-                  className="subtask-toggle"
-                  aria-label="Show subtasks"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowSubtasks(!showSubtasks);
-                  }}
-                >
-                  <span className="subtask-count">
-                    {finished}/{subtasks.length}
-                  </span>
-                  <Chevron open={showSubtasks} />
-                </button>
-              )}
-            </div>
-
-            {editing ? (
-              <AttributeChips
-                task={uncommittedTask}
-                onRemove={(attribute) => {
-                  const without = withoutAttribute({
-                    task: uncommittedTask,
-                    draft: draft,
-                    attribute: attribute,
-                  });
-                  setDraft(without.draft);
-                  setEdits({ ...edits, ...without.changes });
-                }}
-              />
-            ) : (
-              <Meta
-                task={task}
-                group={group}
-                travelled={gesture.travelled}
-                onOpen={() => actions.open(task)}
-              />
-            )}
-          </div>
-        </div>
-
-        {subtasks.length > 0 && (
-          <div className="collapsible" data-open={showSubtasks}>
-            <div>
-              <div className="subtasks">
-                {subtasks.map((subtask) => (
-                  <SubtaskRow
-                    key={subtask.id}
-                    subtask={subtask}
-                    onToggle={() => actions.toggle(subtask)}
-                    onRename={(next) =>
-                    actions.rename(subtask, { title: next })
-                  }
-                    onDelete={() => actions.remove(subtask)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
   );
 }
 
@@ -719,336 +604,106 @@ export function leftSwipeLabel(task: Task): string {
   return task.archivedAt ? "Unarchive" : "Archive";
 }
 
-function dismissKeyboard(): void {
-  const focused = document.activeElement;
-  if (focused instanceof HTMLElement) {
-    focused.blur();
-  }
-}
-
-function TitleField({
-  task,
-  draft,
-  onDraftChange,
-  onCommit,
-  onCancel,
+function SubtaskRow({
+  subtask,
+  actions,
 }: {
-  task: Task;
-  draft: string;
-  onDraftChange: (draft: string) => void;
-  onCommit: (title: string) => void;
-  onCancel: () => void;
+  subtask: Task;
+  actions: RowActions;
 }) {
-  function finish(): void {
-    const trimmed = draft.trim();
-    if (trimmed && trimmed !== task.title) {
-      onCommit(trimmed);
-      return;
-    }
-    onCancel();
-  }
+  const [editing, setEditing] = useState(false);
 
   return (
-    <input
-      className="task-title editing"
-      value={draft}
-      autoFocus
-      enterKeyHint="done"
-      aria-label="Title"
-      onChange={(event) => onDraftChange(event.target.value)}
-      onBlur={finish}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") {
-          finish();
-        }
-        if (event.key === "Escape") {
-          onCancel();
-        }
+    <TaskRow
+      task={subtask}
+      isEditing={editing}
+      onEditingChange={setEditing}
+      onCommit={(changes) =>
+        saveTask({
+          task: subtask,
+          changes: changes,
+          actions: actions,
+        })
+      }
+      onInfoOpen={() => actions.open(subtask)}
+      swipeLeft={{
+        name: "Delete",
+        action: () => actions.remove(subtask),
       }}
+      showAttributes={false}
     />
   );
 }
 
-function InfoIcon() {
-  return (
-    <svg
-      width="19"
-      height="19"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        cx="10"
-        cy="10"
-        r="7.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M10 9v4.4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <circle cx="10" cy="6.4" r="0.95" fill="currentColor" />
-    </svg>
-  );
-}
-
-function Meta({
-  task,
-  group,
-  travelled,
-  onOpen,
+function CaptureRow({
+  prefill,
+  actions,
+  focusOnMount = false,
+  onCreated,
+  onDismiss,
 }: {
-  task: Task;
-  group: BoardGroup;
-  travelled: () => boolean;
-  onOpen: () => void;
+  prefill: string;
+  actions: RowActions;
+  focusOnMount?: boolean;
+  onCreated?: (taskId: number) => void;
+  onDismiss?: () => void;
 }) {
-  const navigate = useNavigate();
-
-  const shown = attributesOf(task).filter(
-    (item) =>
-      item.text.toLowerCase() === "today" ||
-      !group.omitFromMeta.some(
-        (omission) =>
-          omission.field === item.field &&
-          omission.label.toLowerCase() === item.text.toLowerCase(),
-      ),
-  );
-
-  if (shown.length === 0) {
-    return null;
-  }
-
-  return (
-    <span className="task-meta">
-      {shown.map(({ field, text, to }) => (
-        <button
-          type="button"
-          key={`${field}-${text}`}
-          className={field === "tag" ? "tag" : undefined}
-          onClick={() => {
-            if (travelled()) {
-              return;
-            }
-            if (to) {
-              navigate(to);
-            } else {
-              onOpen();
-            }
-          }}
-        >
-          {text.toLowerCase()}
-        </button>
-      ))}
-    </span>
-  );
-}
-
-export function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      className="chevron"
-      data-open={open}
-      width="13"
-      height="13"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M6 3.5 10.5 8 6 12.5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function useRowGesture({
-  onLeft,
-  onRight,
-  onLiftStart,
-  onLiftMove,
-  onLiftEnd,
-  enabled,
-}: {
-  onLeft: () => void;
-  onRight: () => void;
-  onLiftStart: (pointerX: number, pointerY: number) => void;
-  onLiftMove: (pointerX: number, pointerY: number) => void;
-  onLiftEnd: () => void;
-  enabled: boolean;
-}) {
-  const [offset, setOffset] = useState(0);
-  const start = useRef<{ x: number; y: number } | null>(null);
-  const sideways = useRef(0);
-  const furthest = useRef(0);
-  const holding = useRef(false);
-  const active = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const element = useRef<HTMLDivElement>(null);
-  const stopWatching = useRef<(() => void) | null>(null);
-  const endLatest = useRef<() => void>(() => {});
-
-  useEffect(() => {
-    const node = element.current;
-    if (!node) {
-      return;
-    }
-    function holdTheScroll(event: TouchEvent): void {
-      if (holding.current) {
-        event.preventDefault();
-      }
-    }
-    node.addEventListener("touchmove", holdTheScroll, {
-      passive: false,
-    });
-    return () => node.removeEventListener("touchmove", holdTheScroll);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      stopWatching.current?.();
-      if (timer.current) {
-        clearTimeout(timer.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    endLatest.current = endGesture;
-  });
-
-  function stopTimer(): void {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-  }
-
-  function watchForRelease(
-    pointerId: number,
-    finish: () => void,
-  ): void {
-    stopWatching.current?.();
-
-    function onPointerRelease(event: PointerEvent): void {
-      if (event.pointerId === pointerId) {
-        finish();
-      }
-    }
-    function onWindowBlur(): void {
-      finish();
-    }
-
-    window.addEventListener("pointerup", onPointerRelease);
-    window.addEventListener("pointercancel", onPointerRelease);
-    window.addEventListener("blur", onWindowBlur);
-    stopWatching.current = () => {
-      window.removeEventListener("pointerup", onPointerRelease);
-      window.removeEventListener("pointercancel", onPointerRelease);
-      window.removeEventListener("blur", onWindowBlur);
-      stopWatching.current = null;
-    };
-  }
-
-  return {
-    ref: element,
-    offset: offset,
-    swiping: offset !== 0,
-    travelled: () => furthest.current > 8,
-    down: (event: React.PointerEvent) => {
-      if (!enabled) {
-        return;
-      }
-      active.current = true;
-      watchForRelease(event.pointerId, () => endLatest.current());
-      start.current = { x: event.clientX, y: event.clientY };
-      sideways.current = 0;
-      furthest.current = 0;
-      holding.current = false;
-      const pointerX = event.clientX;
-      const pointerY = event.clientY;
-      const node = event.currentTarget;
-      const pointerId = event.pointerId;
-      timer.current = setTimeout(() => {
-        holding.current = true;
-        if (node.isConnected) {
-          node.setPointerCapture(pointerId);
-        }
-        onLiftStart(pointerX, pointerY);
-      }, LONG_PRESS_MILLISECONDS);
-    },
-    move: (event: React.PointerEvent) => {
-      if (!start.current) {
-        return;
-      }
-      const dx = event.clientX - start.current.x;
-      const dy = event.clientY - start.current.y;
-      furthest.current = Math.max(
-        furthest.current,
-        Math.abs(dx),
-        Math.abs(dy),
-      );
-
-      if (holding.current) {
-        onLiftMove(event.clientX, event.clientY);
-        return;
-      }
-
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
-        stopTimer();
-        start.current = null;
-        setOffset(0);
-        return;
-      }
-
-      if (Math.abs(dx) > 6) {
-        stopTimer();
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }
-      }
-      sideways.current = dx;
-      setOffset(dx);
-    },
-    up: () => endGesture(),
+  const titleRef = useRef<HTMLInputElement>(null);
+  const seeded = renameChanges(prefill);
+  const blank: RowTask = {
+    ...typedTask({ changes: seeded, list: seeded.list ?? "" }),
+    id: null,
+    parentId: null,
+    recurringTaskId: null,
+    title: "",
+    note: null,
+    state: "to_do",
+    resolvedAt: null,
+    sortOrder: 0,
+    createdAt: "",
+    updatedAt: "",
+    commentCount: 0,
+    unseenCommentCount: 0,
+    lastCommentFromOthers: false,
+    subtasks: [],
   };
 
-  function endGesture(): void {
-    if (!active.current) {
-      return;
+  useEffect(() => {
+    if (focusOnMount) {
+      titleRef.current?.focus({ preventScroll: true });
     }
-    active.current = false;
-    stopWatching.current?.();
-    stopTimer();
+  }, [focusOnMount]);
 
-    if (holding.current) {
-      holding.current = false;
-      start.current = null;
-      setOffset(0);
-      onLiftEnd();
-      return;
-    }
-    if (!start.current) {
-      return;
-    }
-    const dx = sideways.current;
-    const threshold =
-      (element.current?.offsetWidth ?? 0) * SWIPE_FRACTION;
-    start.current = null;
-    sideways.current = 0;
-    setOffset(0);
-    if (dx <= -threshold) {
-      onLeft();
-    } else if (dx >= threshold) {
-      onRight();
-    }
+  return (
+    <TaskRow
+      task={blank}
+      isEditing={true}
+      onEditingChange={(editing) => {
+        if (!editing) {
+          onDismiss?.();
+        }
+      }}
+      onCommit={(changes) =>
+        actions.create(changes).then((made) => onCreated?.(made.id))
+      }
+      showAttributes={false}
+      inputRef={titleRef}
+    />
+  );
+}
+
+function saveTask({
+  task,
+  changes,
+  actions,
+}: {
+  task: Task;
+  changes: Partial<Task>;
+  actions: RowActions;
+}): void {
+  if ("state" in changes) {
+    actions.toggle(task);
+    return;
   }
+  actions.rename(task, changes);
 }

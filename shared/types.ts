@@ -84,14 +84,11 @@ export type SortField =
 
 export type SortDirection = "asc" | "desc";
 
-export type Density = "airy" | "compact";
-
 export type Layout = "stacked" | "columns";
 
 export interface ViewPreference {
   breakUpBy: BreakUpField;
   sortBy: SortField;
   sortDirection: SortDirection;
-  density: Density;
   layout: Layout;
 }
