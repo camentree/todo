@@ -704,30 +704,17 @@ a {
   color: var(--dim);
 }
 
-.capture-chip:has(.chip-remove) {
-  position: relative;
-  margin-top: 0.3rem;
-  margin-right: 0.3rem;
+.capture-chip.removable {
+  cursor: pointer;
+  transition:
+    color var(--tap) linear,
+    background var(--tap) linear;
 }
 
-.chip-remove {
-  position: absolute;
-  top: -0.35rem;
-  right: -0.35rem;
-  width: 0.95rem;
-  height: 0.95rem;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--faint);
-  color: var(--ground);
-  font-size: 0.68rem;
-  line-height: 1;
-  text-align: center;
-}
-
-.chip-remove:hover {
-  background: var(--dim);
+.capture-chip.removable:hover {
+  background: var(--hairline);
+  color: var(--dim);
+  text-decoration: line-through;
 }
 
 .scrim {

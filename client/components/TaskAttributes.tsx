@@ -140,27 +140,31 @@ export function AttributeChips({
 
   return (
     <span className="task-meta">
-      {attributes.map((attribute) => (
-        <span
-          key={`${attribute.field}-${attribute.text}`}
-          className="capture-chip"
-          data-field={attribute.field}
-        >
-          {sigilFor(attribute.field)}
-          {attribute.text.toLowerCase()}
-          {onRemove && attribute.field !== "list" && (
-            <button
-              type="button"
-              className="chip-remove"
-              aria-label={`Remove ${attribute.text}`}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onRemove(attribute)}
-            >
-              ×
-            </button>
-          )}
-        </span>
-      ))}
+      {attributes.map((attribute) =>
+        onRemove && attribute.field !== "list" ? (
+          <button
+            type="button"
+            key={`${attribute.field}-${attribute.text}`}
+            className="capture-chip removable"
+            data-field={attribute.field}
+            aria-label={`Remove ${attribute.text}`}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onRemove(attribute)}
+          >
+            {sigilFor(attribute.field)}
+            {attribute.text.toLowerCase()}
+          </button>
+        ) : (
+          <span
+            key={`${attribute.field}-${attribute.text}`}
+            className="capture-chip"
+            data-field={attribute.field}
+          >
+            {sigilFor(attribute.field)}
+            {attribute.text.toLowerCase()}
+          </span>
+        ),
+      )}
     </span>
   );
 }
