@@ -43,12 +43,7 @@ type InfoSection =
   | "note"
   | "comments";
 
-function sectionsHoldingSomething(
-  task: Task | undefined,
-): InfoSection[] {
-  if (!task) {
-    return [];
-  }
+function sectionsHoldingSomething(task: Task): InfoSection[] {
   const sections: InfoSection[] = [];
   if (task.dueDate || task.dueTime || task.schedule) {
     sections.push("timing");
@@ -81,9 +76,7 @@ export function TaskInfo({
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [closing, setClosing] = useState(false);
-  const [chosenSections, setChosenSections] = useState<
-    InfoSection[] | null
-  >(null);
+  const [openSections, setOpenSections] = useState<InfoSection[]>([]);
 
   const started = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -102,8 +95,6 @@ export function TaskInfo({
     queryFn: api.lists,
   });
   const editedTask = task ? { ...task, ...edits } : undefined;
-  const openSections =
-    chosenSections ?? sectionsHoldingSomething(editedTask);
   const commentsOpen = openSections.includes("comments");
   const hasTiming = Boolean(
     editedTask?.dueDate ||
@@ -113,10 +104,8 @@ export function TaskInfo({
 
   useEffect(() => {
     if (hasTiming) {
-      setChosenSections((chosen) =>
-        chosen && !chosen.includes("timing")
-          ? [...chosen, "timing"]
-          : chosen,
+      setOpenSections((open) =>
+        open.includes("timing") ? open : [...open, "timing"],
       );
     }
   }, [hasTiming]);
@@ -137,6 +126,7 @@ export function TaskInfo({
       started.current = true;
       setTitle(task.title);
       setNote(task.note ?? "");
+      setOpenSections(sectionsHoldingSomething(task));
     }
   }, [task]);
 
@@ -232,7 +222,7 @@ export function TaskInfo({
   });
 
   function toggleSection(section: InfoSection): void {
-    setChosenSections(
+    setOpenSections(
       openSections.includes(section)
         ? openSections.filter((open) => open !== section)
         : [...openSections, section],
@@ -368,103 +358,106 @@ export function TaskInfo({
             open={openSections.includes("metadata")}
             onToggle={() => toggleSection("metadata")}
           >
-          <label className="info-field">
-            <span>List</span>
-            <input
-              list="known-lists"
-              key={uncommittedTask.list}
-              defaultValue={uncommittedTask.list}
-              onBlur={(event) => {
-                const next = canonicalName(event.target.value);
-                if (next && next !== uncommittedTask.list) {
-                  setEdits({ ...edits, list: next });
-                }
-              }}
-            />
-            <datalist id="known-lists">
-              {lists.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-          </label>
-
-          <label className="info-field">
-            <span>Stage</span>
-            <select
-              value={uncommittedTask.stage ?? ""}
-              onChange={(event) =>
-                setEdits({
-                  ...edits,
-                  stage: (event.target.value ||
-                    null) as TaskStage | null,
-                })
-              }
-            >
-              <option value="">None</option>
-              {TASK_STAGES.map((stage) => (
-                <option key={stage} value={stage}>
-                  {stageLabel(stage)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="info-field">
-            <span>Tags</span>
-            <div className="info-tags">
-              {uncommittedTask.tags.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  className="tag-chip"
-                  aria-label={`Remove ${tag}`}
-                  onClick={() =>
-                    setEdits({
-                      ...edits,
-                      tags: uncommittedTask.tags.filter(
-                        (existing) => existing !== tag,
-                      ),
-                    })
-                  }
-                >
-                  {tag}
-                  <span className="tag-remove">×</span>
-                </button>
-              ))}
+            <label className="info-field">
+              <span>List</span>
               <input
-                className="tag-input"
-                list="known-tags"
-                value={newTag}
-                placeholder="Add a tag"
-                aria-label="Add a tag"
-                enterKeyHint="done"
-                onChange={(event) => setNewTag(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") {
-                    return;
+                list="known-lists"
+                key={uncommittedTask.list}
+                defaultValue={uncommittedTask.list}
+                onBlur={(event) => {
+                  const next = canonicalName(event.target.value);
+                  if (next && next !== uncommittedTask.list) {
+                    setEdits({ ...edits, list: next });
                   }
-                  event.preventDefault();
-                  const tag = canonicalName(newTag).replace(/^#/, "");
-                  if (tag && !uncommittedTask.tags.includes(tag)) {
-                    setEdits({
-                      ...edits,
-                      tags: [...uncommittedTask.tags, tag],
-                    });
-                  }
-                  setNewTag("");
                 }}
               />
-              <datalist id="known-tags">
-                {knownTags
-                  .filter(
-                    (tag) => !uncommittedTask.tags.includes(tag),
-                  )
-                  .map((tag) => (
-                    <option key={tag} value={tag} />
-                  ))}
+              <datalist id="known-lists">
+                {lists.map((name) => (
+                  <option key={name} value={name} />
+                ))}
               </datalist>
+            </label>
+
+            <label className="info-field">
+              <span>Stage</span>
+              <select
+                value={uncommittedTask.stage ?? ""}
+                onChange={(event) =>
+                  setEdits({
+                    ...edits,
+                    stage: (event.target.value ||
+                      null) as TaskStage | null,
+                  })
+                }
+              >
+                <option value="">None</option>
+                {TASK_STAGES.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {stageLabel(stage)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="info-field">
+              <span>Tags</span>
+              <div className="info-tags">
+                {uncommittedTask.tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="tag-chip"
+                    aria-label={`Remove ${tag}`}
+                    onClick={() =>
+                      setEdits({
+                        ...edits,
+                        tags: uncommittedTask.tags.filter(
+                          (existing) => existing !== tag,
+                        ),
+                      })
+                    }
+                  >
+                    {tag}
+                    <span className="tag-remove">×</span>
+                  </button>
+                ))}
+                <input
+                  className="tag-input"
+                  list="known-tags"
+                  value={newTag}
+                  placeholder="Add a tag"
+                  aria-label="Add a tag"
+                  enterKeyHint="done"
+                  onChange={(event) => setNewTag(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") {
+                      return;
+                    }
+                    event.preventDefault();
+                    const tag = canonicalName(newTag).replace(
+                      /^#/,
+                      "",
+                    );
+                    if (tag && !uncommittedTask.tags.includes(tag)) {
+                      setEdits({
+                        ...edits,
+                        tags: [...uncommittedTask.tags, tag],
+                      });
+                    }
+                    setNewTag("");
+                  }}
+                />
+                <datalist id="known-tags">
+                  {knownTags
+                    .filter(
+                      (tag) => !uncommittedTask.tags.includes(tag),
+                    )
+                    .map((tag) => (
+                      <option key={tag} value={tag} />
+                    ))}
+                </datalist>
+              </div>
             </div>
-          </div>
           </Section>
 
           <Section
@@ -600,7 +593,7 @@ export function TaskInfo({
               </div>
             </div>
 
-            <label className="info-field">
+            <div className="info-field">
               <span>{repeats ? "Starts" : "Date"}</span>
               <div className="info-input">
                 <input
@@ -635,9 +628,9 @@ export function TaskInfo({
                   </button>
                 )}
               </div>
-            </label>
+            </div>
 
-            <label className="info-field">
+            <div className="info-field">
               <span>Time</span>
               <div className="info-input">
                 <input
@@ -663,7 +656,7 @@ export function TaskInfo({
                   </button>
                 )}
               </div>
-            </label>
+            </div>
           </Section>
 
           <Section
