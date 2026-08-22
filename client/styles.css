@@ -446,8 +446,8 @@ a {
   flex-shrink: 0;
   align-self: center;
   transition:
-    background-color var(--tap) linear,
-    border-color var(--tap) linear;
+    background-color var(--motion) var(--ease),
+    border-color var(--motion) var(--ease);
 }
 
 .task-tick[data-state="complete"],
@@ -465,6 +465,7 @@ a {
   text-align: left;
   flex: 1;
   min-width: 0;
+  transition: color var(--motion) var(--ease);
 }
 
 .task-title.editing {

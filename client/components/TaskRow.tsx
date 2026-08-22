@@ -47,6 +47,7 @@ export function TaskRow({
   omitAttributes = [],
   focusOnMount = false,
   renderSubtask,
+  renderNewSubtask,
   expanded = false,
   onExpandedChange,
 }: {
@@ -65,6 +66,7 @@ export function TaskRow({
   omitAttributes?: AttributeOmission[];
   focusOnMount?: boolean;
   renderSubtask?: (subtask: CreatedTask) => ReactNode;
+  renderNewSubtask?: (parent: Task) => ReactNode;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
 }) {
@@ -240,6 +242,7 @@ export function TaskRow({
                 suggest={parseAttributes}
                 caretAt={caretAt}
                 takeFocus={!unsaved || focusOnMount}
+                isSubtask={task.parentId !== null}
                 onEnter={commit}
                 onEscape={stopEditing}
               />
@@ -331,6 +334,7 @@ export function TaskRow({
             {renderSubtask && children.length > 0 && (
               <div className="subtasks">
                 {children.map((child) => renderSubtask(child))}
+                {renderNewSubtask?.(task)}
               </div>
             )}
           </div>
@@ -418,6 +422,7 @@ function TitleField({
   suggest,
   caretAt,
   takeFocus,
+  isSubtask,
   onEnter,
   onEscape,
 }: {
@@ -428,6 +433,7 @@ function TitleField({
   suggest: boolean;
   caretAt: number | null;
   takeFocus: boolean;
+  isSubtask: boolean;
   onEnter: () => void;
   onEscape: () => void;
 }) {
@@ -456,6 +462,7 @@ function TitleField({
         className: "task-title editing",
         "aria-label": "Title",
         enterKeyHint: "done",
+        autoCapitalize: isSubtask ? "none" : "sentences",
         onFocus: (event) => {
           const row = event.currentTarget.closest(".task");
           if (row) {
