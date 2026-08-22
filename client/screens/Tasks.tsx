@@ -69,8 +69,8 @@ export function Tasks() {
   });
 
   const { data: searchable = [] } = useQuery({
-    queryKey: ["tasks", "searchable"],
-    queryFn: () => api.tasks({ includeArchived: "true" }),
+    queryKey: ["tasks", "everything"],
+    queryFn: () => api.tasks({ everything: "true" }),
     enabled: searchText !== null,
   });
 
@@ -95,9 +95,19 @@ export function Tasks() {
         : "No matches.";
 
   useShortcuts((event) => {
+    if (event.key === "Escape" && searchText !== null) {
+      event.preventDefault();
+      setSearchText(null);
+      return;
+    }
     if (event.key === "c" && !archived && !finished) {
       event.preventDefault();
       setAdding(true);
+    }
+    if (event.key === "f") {
+      event.preventDefault();
+      setAdding(false);
+      setSearchText("");
     }
     if (event.key === "?") {
       event.preventDefault();
@@ -105,13 +115,23 @@ export function Tasks() {
     }
   });
 
-  const groups = buildGroups({
-    tasks: showing,
-    view: view,
-    lists: lists,
-    settling: actions.settling,
-    scoped: scopedTo(scope),
-  });
+  const groups =
+    searchText === null
+      ? buildGroups({
+          tasks: tasks,
+          view: view,
+          lists: lists,
+          settling: actions.settling,
+          scoped: scopedTo(scope),
+        })
+      : [
+          {
+            key: "results",
+            label: "",
+            omitFromMeta: [],
+            tasks: results,
+          },
+        ];
 
   return (
     <>

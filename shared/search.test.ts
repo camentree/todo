@@ -45,7 +45,7 @@ describe("searchTasks", () => {
     ).toEqual([]);
   });
 
-  test("matches title, note, list, tags and who", () => {
+  test("matches the title and the note, nothing else", () => {
     const tasks = [
       task({ id: 1, title: "Book flights" }),
       task({ id: 2, title: "Call the vet", note: "about flights" }),
@@ -58,10 +58,28 @@ describe("searchTasks", () => {
     expect(titlesFor("flights", tasks)).toEqual([
       "Book flights",
       "Call the vet",
-      "Pay rent",
-      "Pack",
-      "Ask",
     ]);
+  });
+
+  test("the title outranks the note", () => {
+    const tasks = [
+      task({ id: 1, title: "Water the plants", note: "flight" }),
+      task({ id: 2, title: "Book a flight" }),
+    ];
+
+    expect(titlesFor("flight", tasks)).toEqual([
+      "Book a flight",
+      "Water the plants",
+    ]);
+  });
+
+  test("a scattering of letters is not a match", () => {
+    const tasks = [
+      task({ id: 1, title: "Call the pharmacy about the refill" }),
+      task({ id: 2, title: "Plan the trip to Portland" }),
+    ];
+
+    expect(titlesFor("pro", tasks)).toEqual([]);
   });
 
   test("tolerates dropped letters in a title", () => {

@@ -58,6 +58,7 @@ api.get("/tasks", async (context) => {
     await tasks.query({
       attribute: attribute,
       value: query.value ?? "",
+      everything: query.everything === "true",
     }),
   );
 });

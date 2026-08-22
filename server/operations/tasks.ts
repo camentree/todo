@@ -68,16 +68,26 @@ const FILTERS: Record<
 export async function query({
   attribute,
   value,
+  everything = false,
 }: {
   attribute: Attribute | null;
   value: string;
+  everything?: boolean;
 }): Promise<Task[]> {
   const parents = await sql<Task[]>`
     select ${COLUMNS}
     from todo.tasks
     where parent_id is null
-      ${attribute === "state" ? sql`` : sql`and ${NOT_LONG_RESOLVED}`}
-      ${attribute === "archived" ? sql`` : sql`and archived_at is null`}
+      ${
+        attribute === "state" || everything
+          ? sql``
+          : sql`and ${NOT_LONG_RESOLVED}`
+      }
+      ${
+        attribute === "archived" || everything
+          ? sql``
+          : sql`and archived_at is null`
+      }
       ${attribute ? sql`and ${FILTERS[attribute](value)}` : sql``}
     order by sort_order asc, id asc
   `;

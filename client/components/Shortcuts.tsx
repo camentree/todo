@@ -11,6 +11,7 @@ const KEYS = [
   { keys: ["a"], does: "Archive it" },
   { keys: ["h"], does: "Hide it" },
   { keys: ["c"], does: "Add a task" },
+  { keys: ["f"], does: "Search" },
   { keys: ["esc"], does: "Clear the focus" },
   { keys: ["?"], does: "This list" },
 ];

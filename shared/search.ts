@@ -1,9 +1,14 @@
 import { format } from "date-fns";
+import Fuse from "fuse.js";
 
 import { parse } from "./parser.ts";
 import type { Task } from "./types.ts";
 
-const SHORTEST_FUZZY_TERM = 3;
+const MATCHING = {
+  threshold: 0.3,
+  ignoreLocation: true,
+  useExtendedSearch: true,
+};
 
 interface SearchCriteria {
   tags: string[];
@@ -29,10 +34,43 @@ export function searchTasks({
   if (isBlank(criteria)) {
     return [];
   }
+
   const todayText = format(today, "yyyy-MM-dd");
-  return tasks.filter((task) =>
-    matches({ task: task, criteria: criteria, today: todayText }),
+  const narrowed = tasks.filter((task) =>
+    fits({ task: task, criteria: criteria, today: todayText }),
   );
+
+  const typed = criteria.terms.join(" ");
+  if (typed.length === 0) {
+    return narrowed;
+  }
+
+  const byTitle = rankedOn({
+    tasks: narrowed,
+    typed: typed,
+    field: "title",
+  });
+  const byNote = rankedOn({
+    tasks: narrowed,
+    typed: typed,
+    field: "note",
+  }).filter((task) => !byTitle.includes(task));
+
+  return [...byTitle, ...byNote];
+}
+
+function rankedOn({
+  tasks,
+  typed,
+  field,
+}: {
+  tasks: Task[];
+  typed: string;
+  field: "title" | "note";
+}): Task[] {
+  return new Fuse(tasks, { ...MATCHING, keys: [field] })
+    .search(typed)
+    .map((result) => result.item);
 }
 
 function read({
@@ -102,7 +140,7 @@ function isBlank(criteria: SearchCriteria): boolean {
   );
 }
 
-function matches({
+function fits({
   task,
   criteria,
   today,
@@ -151,48 +189,10 @@ function matches({
     return false;
   }
 
-  const title = task.title.toLowerCase();
-  const haystack = [
-    title,
-    (task.note ?? "").toLowerCase(),
-    task.list.toLowerCase(),
-    tags.join(" "),
-    (task.who ?? "").toLowerCase(),
-  ].join(" ");
-
-  if (
-    !criteria.phrases.every((phrase) => haystack.includes(phrase))
-  ) {
-    return false;
-  }
-
-  return criteria.terms.every(
-    (term) =>
-      haystack.includes(term) ||
-      (term.length >= SHORTEST_FUZZY_TERM &&
-        isSubsequenceOf({ term: term, within: title })),
-  );
+  const written = `${task.title} ${task.note ?? ""}`.toLowerCase();
+  return criteria.phrases.every((phrase) => written.includes(phrase));
 }
 
 function spaced(value: string): string {
   return value.replace(/[_-]+/g, " ");
-}
-
-function isSubsequenceOf({
-  term,
-  within,
-}: {
-  term: string;
-  within: string;
-}): boolean {
-  let cursor = 0;
-  for (const letter of within) {
-    if (letter === term[cursor]) {
-      cursor += 1;
-      if (cursor === term.length) {
-        return true;
-      }
-    }
-  }
-  return false;
 }

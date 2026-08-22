@@ -17,10 +17,14 @@ export function useShortcuts(
         return;
       }
       const active = document.activeElement;
-      if (
+      const typing =
         active instanceof HTMLElement &&
-        active.closest("input, textarea, select")
-      ) {
+        active.closest("input, textarea, select");
+      const leavingSearch =
+        event.key === "Escape" &&
+        active instanceof HTMLElement &&
+        active.hasAttribute("data-search-field");
+      if (typing && !leavingSearch) {
         return;
       }
       if (document.querySelector("[role=dialog]")) {
