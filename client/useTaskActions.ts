@@ -119,6 +119,20 @@ function patched({
   });
 }
 
+export function taskAsLine(task: CreatedTask): string {
+  return [
+    task.title,
+    ...task.tags.map((tag) => `#${tag}`),
+    task.who ? `@${task.who}` : "",
+    `/${task.list}`,
+    task.stage ? `!${task.stage}` : "",
+    task.dueDate ?? "",
+    task.dueTime ? task.dueTime.slice(0, 5) : "",
+  ]
+    .filter((part) => part)
+    .join(" ");
+}
+
 export function renameChanges(input: string): Partial<Task> {
   const parsed = parse({ input: input, today: new Date() });
 

@@ -7,6 +7,7 @@ import type { AttributeOmission } from "./TaskRow.tsx";
 import { isDueToday } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
 import { useShortcuts } from "../useShortcuts.ts";
+import { renameChanges, taskAsLine } from "../useTaskActions.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import type { TaskState } from "@shared/states.ts";
 import type {
@@ -128,6 +129,7 @@ export function TaskBoard({
     number | null
   >(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const copied = useRef<string | null>(null);
   const { lift, startLift } = useDragToReorder({
     groups: groups,
     boardRef: boardRef,
@@ -180,6 +182,24 @@ export function TaskBoard({
       : []),
   ]);
 
+  function copy(task: CreatedTask): void {
+    const line = taskAsLine(task);
+    copied.current = line;
+    void navigator.clipboard?.writeText(line).catch(() => {});
+  }
+
+  async function paste(): Promise<void> {
+    const fromSystem = await navigator.clipboard
+      ?.readText()
+      .catch(() => "");
+    const line = fromSystem || copied.current;
+    if (!line?.trim()) {
+      return;
+    }
+    const made = await actions.create(renameChanges(line));
+    land(made.id);
+  }
+
   function editBeside(taskId: number, step: number): void {
     const here = walk.indexOf(taskId);
     const next = here === -1 ? undefined : walk[here + step];
@@ -219,6 +239,11 @@ export function TaskBoard({
     if (step !== 0) {
       event.preventDefault();
       focusStep(step);
+      return;
+    }
+    if (event.key === "p") {
+      event.preventDefault();
+      void paste();
     }
   });
 
@@ -309,6 +334,7 @@ export function TaskBoard({
             editBeside(task.id, backwards ? -1 : 1)
           }
           onAddSubtask={() => addSubtaskTo(task.id)}
+          onCopy={() => copy(task)}
           swipeLeft={{
             name: leftSwipeLabel(task),
             action: () => actions.swipeLeft(task),

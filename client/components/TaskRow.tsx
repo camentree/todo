@@ -40,6 +40,7 @@ export function TaskRow({
   onInfoOpen,
   onFocusNext,
   onAddSubtask,
+  onCopy,
   swipeLeft,
   swipeRight,
   onLongPress,
@@ -61,6 +62,7 @@ export function TaskRow({
   onInfoOpen?: () => void;
   onFocusNext?: () => void;
   onAddSubtask?: () => void;
+  onCopy?: () => void;
   swipeLeft?: SwipeAction;
   swipeRight?: SwipeAction;
   onLongPress?: (pointerX: number, pointerY: number) => void;
@@ -145,6 +147,11 @@ export function TaskRow({
     if (event.key === "o" && onExpandedChange && expandable) {
       event.preventDefault();
       onExpandedChange(!expanded);
+      return;
+    }
+    if (event.key === "c" && onCopy) {
+      event.preventDefault();
+      onCopy();
       return;
     }
     if (event.key === "+" && onAddSubtask) {

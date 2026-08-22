@@ -123,7 +123,7 @@ export function Tasks() {
       setSearchText(null);
       return;
     }
-    if (event.key === "c" && !archived && !finished) {
+    if (event.key === "n" && !archived && !finished) {
       event.preventDefault();
       setCapturing(true);
     }
