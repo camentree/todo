@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 
 import { SubtaskRow } from "./SubtaskRow.tsx";
 import {
-  formatDueDate,
-  formatDueTime,
-  isDueToday,
-} from "../format.ts";
+  AttributeChips,
+  asRenamed,
+  attributesOf,
+  withoutAttribute,
+} from "./TaskAttributes.tsx";
+import { isDueToday } from "../format.ts";
 import { useShortcuts } from "../useShortcuts.ts";
+import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
-import { stageLabel } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { Density, Layout, Task } from "@shared/types.ts";
@@ -42,7 +44,7 @@ export interface Landing {
 export interface RowActions {
   toggle: (task: Task) => void;
   open: (task: Task) => void;
-  rename: (task: Task, title: string) => void;
+  rename: (task: Task, changes: Partial<Task>) => void;
   remove: (task: Task) => void;
   swipeLeft: (task: Task) => void;
   swipeRight: (task: Task) => void;
@@ -469,9 +471,23 @@ function Row({
   onLiftEnd: () => void;
 }) {
   const [showSubtasks, setShowSubtasks] = useState(false);
+  const [draft, setDraft] = useState(task.title);
+  const [edits, setEdits] = useState<Partial<Task>>({});
   const lifting = lift?.taskId === task.id;
   const flickingTo =
     flick?.taskId === task.id ? flick.direction : null;
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(task.title);
+      setEdits({});
+    }
+  }, [editing, task.title]);
+
+  const uncommittedTask: Task = {
+    ...asRenamed({ task: task, draft: draft }),
+    ...edits,
+  };
 
   const gesture = useRowGesture({
     onLeft: () => actions.swipeLeft(task),
@@ -561,8 +577,13 @@ function Row({
               {editing ? (
                 <TitleField
                   task={task}
-                  onCommit={(next) => {
-                    actions.rename(task, next);
+                  draft={draft}
+                  onDraftChange={setDraft}
+                  onCommit={(title) => {
+                    actions.rename(task, {
+                      ...renameChanges(title),
+                      ...edits,
+                    });
                     onEditEnd();
                   }}
                   onCancel={onEditEnd}
@@ -620,12 +641,27 @@ function Row({
               )}
             </div>
 
-            <Meta
-              task={task}
-              group={group}
-              travelled={gesture.travelled}
-              onOpen={() => actions.open(task)}
-            />
+            {editing ? (
+              <AttributeChips
+                task={uncommittedTask}
+                onRemove={(attribute) => {
+                  const without = withoutAttribute({
+                    task: uncommittedTask,
+                    draft: draft,
+                    attribute: attribute,
+                  });
+                  setDraft(without.draft);
+                  setEdits({ ...edits, ...without.changes });
+                }}
+              />
+            ) : (
+              <Meta
+                task={task}
+                group={group}
+                travelled={gesture.travelled}
+                onOpen={() => actions.open(task)}
+              />
+            )}
           </div>
         </div>
 
@@ -638,7 +674,9 @@ function Row({
                     key={subtask.id}
                     subtask={subtask}
                     onToggle={() => actions.toggle(subtask)}
-                    onRename={(next) => actions.rename(subtask, next)}
+                    onRename={(next) =>
+                    actions.rename(subtask, { title: next })
+                  }
                     onDelete={() => actions.remove(subtask)}
                   />
                 ))}
@@ -676,15 +714,17 @@ function dismissKeyboard(): void {
 
 function TitleField({
   task,
+  draft,
+  onDraftChange,
   onCommit,
   onCancel,
 }: {
   task: Task;
+  draft: string;
+  onDraftChange: (draft: string) => void;
   onCommit: (title: string) => void;
   onCancel: () => void;
 }) {
-  const [draft, setDraft] = useState(task.title);
-
   function finish(): void {
     const trimmed = draft.trim();
     if (trimmed && trimmed !== task.title) {
@@ -701,7 +741,7 @@ function TitleField({
       autoFocus
       enterKeyHint="done"
       aria-label="Title"
-      onChange={(event) => setDraft(event.target.value)}
+      onChange={(event) => onDraftChange(event.target.value)}
       onBlur={finish}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
@@ -742,12 +782,6 @@ function InfoIcon() {
   );
 }
 
-interface MetaItem {
-  field: Attribute;
-  text: string;
-  to?: string;
-}
-
 function Meta({
   task,
   group,
@@ -760,69 +794,15 @@ function Meta({
   onOpen: () => void;
 }) {
   const navigate = useNavigate();
-  const archived = task.archivedAt !== null;
-  const due = archived ? null : formatDueDate(task.dueDate);
-  const time = archived ? null : formatDueTime(task.dueTime);
 
-  const items: (MetaItem | null)[] = [
-    {
-      field: "list",
-      text: task.list,
-      to: `/list/${encodeURIComponent(task.list)}`,
-    },
-    ...task.tags.map(
-      (tag): MetaItem => ({
-        field: "tag",
-        text: tag,
-        to: `/tag/${encodeURIComponent(tag)}`,
-      }),
-    ),
-    task.who
-      ? {
-          field: "who",
-          text: task.who,
-          to: `/who/${encodeURIComponent(task.who)}`,
-        }
-      : null,
-    due
-      ? {
-          field: "due_date",
-          text: due,
-          to: `/due_date/${encodeURIComponent(due)}`,
-        }
-      : null,
-    time && task.dueTime
-      ? {
-          field: "due_time",
-          text: time,
-          to: `/due_time/${task.dueTime.slice(0, 5)}`,
-        }
-      : null,
-    task.recurringTaskId
-      ? {
-          field: "recurring",
-          text: "recurring",
-          to: "/recurring/true",
-        }
-      : null,
-    task.stage
-      ? {
-          field: "stage",
-          text: stageLabel(task.stage),
-          to: `/stage/${task.stage}`,
-        }
-      : null,
-  ];
-
-  const shown = items.filter(
-    (item): item is MetaItem =>
-      item !== null &&
-      (item.text.toLowerCase() === "today" ||
-        !group.omitFromMeta.some(
-          (omission) =>
-            omission.field === item.field &&
-            omission.label.toLowerCase() === item.text.toLowerCase(),
-        )),
+  const shown = attributesOf(task).filter(
+    (item) =>
+      item.text.toLowerCase() === "today" ||
+      !group.omitFromMeta.some(
+        (omission) =>
+          omission.field === item.field &&
+          omission.label.toLowerCase() === item.text.toLowerCase(),
+      ),
   );
 
   if (shown.length === 0) {

@@ -25,9 +25,9 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: [
-      "**/*.test.ts",
       "../shared/**/*.test.ts",
       "../server/**/*.test.ts",
+      "**/*.test.ts",
     ],
   },
 });

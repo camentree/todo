@@ -6,12 +6,16 @@ import { isDueToday } from "./format.ts";
 import type { Landing } from "./components/TaskBoard.tsx";
 import { reassignSlots } from "@shared/ordering.ts";
 import {
+  dueDateIn,
+  dueTimeIn,
   listIn,
   parse,
+  recurrenceIn,
   stageIn,
   tagsIn,
   whoIn,
 } from "@shared/parser.ts";
+import { toDateString } from "@shared/recurrence.ts";
 import { isTerminal, type TaskState } from "@shared/states.ts";
 import type { Task, ViewPreference } from "@shared/types.ts";
 
@@ -67,34 +71,34 @@ function patched({
   });
 }
 
-const GUESSED_KINDS = new Set(["dueDate", "dueTime", "recurrence"]);
-
-function renameChanges(task: Task, input: string): Partial<Task> {
-  const guessed = parse({
-    input: input,
-    today: new Date(),
-    dismissed: [],
-  }).tokens.filter((token) => GUESSED_KINDS.has(token.kind));
-
-  const parsed = parse({
-    input: input,
-    today: new Date(),
-    dismissed: guessed.map((token) => token.text),
-  });
+export function renameChanges(input: string): Partial<Task> {
+  const parsed = parse({ input: input, today: new Date() });
 
   const tags = tagsIn(parsed.tokens);
   const who = whoIn(parsed.tokens);
   const list = listIn(parsed.tokens);
   const stage = stageIn(parsed.tokens);
+  const dueDate = dueDateIn(parsed.tokens);
+  const dueTime = dueTimeIn(parsed.tokens);
+  const recurrence = recurrenceIn(parsed.tokens);
+  const startsOn = dueDate ?? toDateString(new Date());
 
   return {
     title: parsed.title,
-    ...(tags.length > 0
-      ? { tags: [...new Set([...task.tags, ...tags])] }
+    ...(recurrence
+      ? {
+          schedule: { ...recurrence, startsOn: startsOn },
+          dueDate: startsOn,
+        }
       : {}),
-    ...(who ? { who: who } : {}),
+    ...(tags.length > 0
+      ? { tags: tags.filter((tag) => tag.length > 0) }
+      : {}),
+    ...(who === null ? {} : { who: who === "" ? null : who }),
     ...(list ? { list: list } : {}),
-    ...(stage ? { stage: stage } : {}),
+    ...(stage === null ? {} : { stage: stage === "" ? null : stage }),
+    ...(dueDate ? { dueDate: dueDate } : {}),
+    ...(dueTime ? { dueTime: dueTime } : {}),
   };
 }
 
@@ -157,10 +161,15 @@ export function useTaskActions(
   });
 
   const rename = useMutation({
-    mutationFn: ({ task, title }: { task: Task; title: string }) =>
-      api.updateTask(task.id, renameChanges(task, title)),
-    onMutate: ({ task, title }) => {
-      patchEverywhere(task.id, renameChanges(task, title));
+    mutationFn: ({
+      task,
+      changes,
+    }: {
+      task: Task;
+      changes: Partial<Task>;
+    }) => api.updateTask(task.id, changes),
+    onMutate: ({ task, changes }) => {
+      patchEverywhere(task.id, changes);
     },
     onSettled: refresh,
   });
@@ -281,8 +290,8 @@ export function useTaskActions(
   return {
     settling: settling,
     toggleTask: (task: Task) => setState.mutate(task),
-    rename: (task: Task, title: string) =>
-      rename.mutate({ task: task, title: title }),
+    rename: (task: Task, changes: Partial<Task>) =>
+      rename.mutate({ task: task, changes: changes }),
     remove: (task: Task) => remove.mutate(task),
     swipeLeft: (task: Task) => swipeLeft.mutate(task),
     swipeRight: (task: Task) => swipeRight.mutate(task),

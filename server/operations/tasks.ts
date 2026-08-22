@@ -1,12 +1,13 @@
 import { sql } from "../database.ts";
 import { CAMEN } from "./comments.ts";
 import * as events from "./events.ts";
+import * as recurring from "./recurring.ts";
 import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
 import type { Attribute } from "@shared/attributes.ts";
-import type { EventSource, Task } from "@shared/types.ts";
+import type { EventSource, Schedule, Task } from "@shared/types.ts";
 
 const NOT_LONG_RESOLVED = sql`
   (state not in ('complete', 'skipped') or resolved_at::date = current_date)
@@ -30,7 +31,19 @@ const COLUMNS = sql`
       limit 1
     ),
     false
-  ) as last_comment_from_others
+  ) as last_comment_from_others,
+  (
+    select json_build_object(
+      'frequency', schedule.frequency,
+      'repeatEvery', schedule.repeat_every,
+      'weekdays', schedule.weekdays,
+      'dayOfMonth', schedule.day_of_month,
+      'startsOn', schedule.starts_on
+    )
+    from todo.recurring_tasks as schedule
+    where schedule.id = todo.tasks.recurring_task_id
+      and schedule.ended_at is null
+  ) as schedule
 `;
 
 const FILTERS: Record<
@@ -139,6 +152,7 @@ export interface NewTask {
   who?: string | null;
   dueDate?: string | null;
   dueTime?: string | null;
+  schedule?: Schedule | null;
 }
 
 export async function create(
@@ -183,7 +197,15 @@ export async function create(
     });
   }
 
-  return created;
+  if (!task.schedule) {
+    return created;
+  }
+
+  await recurring.startFrom({
+    taskId: created.id,
+    schedule: task.schedule,
+  });
+  return (await byId(created.id)) ?? created;
 }
 
 async function requireCanHaveChildren(
@@ -210,9 +232,21 @@ export interface TaskChanges {
   dueDate?: string | null;
   dueTime?: string | null;
   parentId?: number | null;
+  schedule?: Schedule | null;
 }
 
-function canonicalNamesIn(changes: TaskChanges): TaskChanges {
+const SHARED_WITH_SCHEDULE = [
+  "title",
+  "note",
+  "list",
+  "tags",
+  "who",
+  "dueTime",
+];
+
+type TaskFields = Omit<TaskChanges, "schedule">;
+
+function canonicalNamesIn(changes: TaskFields): TaskFields {
   return {
     ...changes,
     ...(changes.list === undefined
@@ -230,16 +264,28 @@ export async function update(
   changes: TaskChanges,
   source: EventSource = "app",
 ): Promise<Task> {
-  const [updated] = await sql<Task[]>`
-    update todo.tasks
-    set ${sql(pruneUndefined(canonicalNamesIn(changes)))}, updated_at = now()
-    where id = ${id}
-    returning ${COLUMNS}
-  `;
+  const { schedule, ...fields } = changes;
+  const assignments = pruneUndefined(canonicalNamesIn(fields));
 
-  if (!updated) {
+  if (Object.keys(assignments).length > 0) {
+    await sql`
+      update todo.tasks
+      set ${sql(assignments)}, updated_at = now()
+      where id = ${id}
+    `;
+  }
+
+  const edited = await byId(id);
+  if (!edited) {
     throw new Error(`no task with id ${id}`);
   }
+
+  if (schedule !== undefined) {
+    await applySchedule({ task: edited, schedule: schedule });
+  }
+  await shareWithSchedule({ taskId: id, assignments: assignments });
+
+  const updated = (await byId(id)) ?? edited;
 
   if (source !== "app") {
     await events.record({
@@ -250,6 +296,47 @@ export async function update(
   }
 
   return updated;
+}
+
+async function applySchedule({
+  task,
+  schedule,
+}: {
+  task: Task;
+  schedule: Schedule | null;
+}): Promise<void> {
+  if (schedule === null) {
+    if (task.schedule && task.recurringTaskId) {
+      await recurring.end(task.recurringTaskId);
+    }
+    return;
+  }
+  if (task.schedule && task.recurringTaskId) {
+    await recurring.configure(task.recurringTaskId, schedule);
+    return;
+  }
+  await recurring.startFrom({ taskId: task.id, schedule: schedule });
+}
+
+async function shareWithSchedule({
+  taskId,
+  assignments,
+}: {
+  taskId: number;
+  assignments: TaskFields;
+}): Promise<void> {
+  const task = await byId(taskId);
+  if (!task?.schedule || !task.recurringTaskId) {
+    return;
+  }
+  const shared = Object.fromEntries(
+    Object.entries(assignments).filter(([field]) =>
+      SHARED_WITH_SCHEDULE.includes(field),
+    ),
+  );
+  if (Object.keys(shared).length > 0) {
+    await recurring.update(task.recurringTaskId, shared);
+  }
 }
 
 export async function setState(

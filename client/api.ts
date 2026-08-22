@@ -1,11 +1,5 @@
 import type { TaskState } from "@shared/states.ts";
-import type {
-  Comment,
-  Event,
-  Frequency,
-  RecurringTask,
-  Task,
-} from "@shared/types.ts";
+import type { Comment, Event, Task } from "@shared/types.ts";
 
 async function request<T>(
   path: string,
@@ -33,10 +27,6 @@ function send<T>(
     method: method,
     body: JSON.stringify(body),
   });
-}
-
-export interface RecurringTaskDetail extends RecurringTask {
-  subtaskTitles: string[];
 }
 
 export const api = {
@@ -85,34 +75,6 @@ export const api = {
     send<{ ok: true }>("/tasks/unarchive", "POST", { ids: ids }),
   reorderTasks: (ids: number[]) =>
     send<{ ok: true }>("/tasks/reorder", "POST", { ids: ids }),
-
-  recurringTask: (id: number) =>
-    request<RecurringTaskDetail>(`/recurring/${id}`),
-  createRecurring: (body: Record<string, unknown>) =>
-    send<RecurringTaskDetail>("/recurring", "POST", body),
-  pauseRecurring: (id: number, paused: boolean) =>
-    send<{ ok: true }>(`/recurring/${id}/pause`, "POST", {
-      paused: paused,
-    }),
-  repeatTask: (taskId: number, frequency: Frequency) =>
-    send<RecurringTaskDetail>(`/tasks/${taskId}/repeat`, "POST", {
-      frequency: frequency,
-    }),
-  configureRecurring: (
-    id: number,
-    changes: {
-      frequency?: Frequency;
-      repeatEvery?: number;
-      weekdays?: number[];
-      startsOn?: string;
-      dueTime?: string | null;
-    },
-  ) =>
-    send<RecurringTaskDetail>(
-      `/recurring/${id}/schedule`,
-      "POST",
-      changes,
-    ),
 
   unseenEvents: () => request<Event[]>("/events/unseen"),
   markEventsSeen: () =>

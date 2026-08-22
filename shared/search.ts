@@ -94,6 +94,9 @@ function read({
   const parsed = parse({ input: input, today: today, search: true });
 
   for (const token of parsed.tokens) {
+    if ("value" in token && token.value === "") {
+      continue;
+    }
     if (token.kind === "tag") {
       criteria.tags.push(token.value.toLowerCase());
     } else if (token.kind === "who") {
