@@ -86,6 +86,7 @@ api.post("/tasks", async (context) => {
       who: body.who,
       dueDate: body.dueDate,
       dueTime: body.dueTime,
+      schedule: body.schedule,
       state: body.state ? taskState(body.state) : undefined,
     }),
   );
@@ -165,52 +166,6 @@ api.post("/tasks/unarchive", async (context) => {
 api.post("/tasks/reorder", async (context) => {
   const body = await context.req.json();
   await tasks.reorder(body.ids);
-  return context.json({ ok: true });
-});
-
-api.get("/recurring/:id", async (context) => {
-  const found = await recurring.byId(
-    numberParam(context.req.param("id")),
-  );
-  if (!found) {
-    return context.json({ error: "no such recurring task" }, 404);
-  }
-  return context.json(found);
-});
-
-api.post("/recurring", async (context) => {
-  const body = await context.req.json();
-  const created = await recurring.create(body);
-  await recurring.generateDue();
-  return context.json(created);
-});
-
-api.post("/tasks/:id/repeat", async (context) => {
-  const body = await context.req.json();
-  return context.json(
-    await recurring.startFrom({
-      taskId: numberParam(context.req.param("id")),
-      frequency: body.frequency,
-    }),
-  );
-});
-
-api.post("/recurring/:id/schedule", async (context) => {
-  const body = await context.req.json();
-  return context.json(
-    await recurring.configure(
-      numberParam(context.req.param("id")),
-      body,
-    ),
-  );
-});
-
-api.post("/recurring/:id/pause", async (context) => {
-  const body = await context.req.json();
-  await recurring.pause(
-    numberParam(context.req.param("id")),
-    body.paused,
-  );
   return context.json({ ok: true });
 });
 

@@ -12,15 +12,8 @@ import {
   startOfWeek,
 } from "date-fns";
 
-import type { Frequency } from "./types.ts";
-
-export interface Schedule {
-  frequency: Frequency;
-  repeatEvery: number;
-  weekdays: number[];
-  dayOfMonth: number | null;
-  startsOn: string;
-}
+export type { Schedule } from "./types.ts";
+import type { Schedule } from "./types.ts";
 
 export function toDateString(date: Date): string {
   return format(date, "yyyy-MM-dd");

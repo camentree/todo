@@ -1,6 +1,7 @@
 import { formatDueDate, formatDueTime } from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
+import { parse, type ParsedToken } from "@shared/parser.ts";
 import { stageLabel } from "@shared/stages.ts";
 import type { Task } from "@shared/types.ts";
 
@@ -10,7 +11,39 @@ export interface TaskAttribute {
   to?: string;
 }
 
-export function attributesOf(task: Task): TaskAttribute[] {
+export type DescribedTask = Pick<
+  Task,
+  | "list"
+  | "tags"
+  | "who"
+  | "dueDate"
+  | "dueTime"
+  | "stage"
+  | "archivedAt"
+  | "schedule"
+>;
+
+export function typedTask({
+  changes,
+  list,
+}: {
+  changes: Partial<Task>;
+  list: string;
+}): DescribedTask {
+  return {
+    tags: [],
+    who: null,
+    dueDate: null,
+    dueTime: null,
+    stage: null,
+    archivedAt: null,
+    schedule: null,
+    ...changes,
+    list: list,
+  };
+}
+
+export function attributesOf(task: DescribedTask): TaskAttribute[] {
   const archived = task.archivedAt !== null;
   const due = archived ? null : formatDueDate(task.dueDate);
   const time = archived ? null : formatDueTime(task.dueTime);
@@ -49,7 +82,7 @@ export function attributesOf(task: Task): TaskAttribute[] {
           to: `/due_time/${task.dueTime.slice(0, 5)}`,
         }
       : null,
-    task.recurringTaskId
+    task.schedule
       ? {
           field: "recurring",
           text: "recurring",
@@ -78,7 +111,7 @@ export function asRenamed({
   return { ...task, ...renameChanges(draft) };
 }
 
-export function AttributeText({ task }: { task: Task }) {
+export function AttributeText({ task }: { task: DescribedTask }) {
   const attributes = attributesOf(task);
   if (attributes.length === 0) {
     return null;
@@ -93,7 +126,13 @@ export function AttributeText({ task }: { task: Task }) {
   );
 }
 
-export function AttributeChips({ task }: { task: Task }) {
+export function AttributeChips({
+  task,
+  onRemove,
+}: {
+  task: DescribedTask;
+  onRemove?: (attribute: TaskAttribute) => void;
+}) {
   const attributes = attributesOf(task);
   if (attributes.length === 0) {
     return null;
@@ -101,18 +140,105 @@ export function AttributeChips({ task }: { task: Task }) {
 
   return (
     <span className="task-meta">
-      {attributes.map(({ field, text }) => (
+      {attributes.map((attribute) => (
         <span
-          key={`${field}-${text}`}
+          key={`${attribute.field}-${attribute.text}`}
           className="capture-chip"
-          data-field={field}
+          data-field={attribute.field}
         >
-          {sigilFor(field)}
-          {text.toLowerCase()}
+          {sigilFor(attribute.field)}
+          {attribute.text.toLowerCase()}
+          {onRemove && attribute.field !== "list" && (
+            <button
+              type="button"
+              className="chip-remove"
+              aria-label={`Remove ${attribute.text}`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onRemove(attribute)}
+            >
+              ×
+            </button>
+          )}
         </span>
       ))}
     </span>
   );
+}
+
+export function withoutAttribute({
+  task,
+  draft,
+  attribute,
+}: {
+  task: DescribedTask;
+  draft: string;
+  attribute: TaskAttribute;
+}): { draft: string; changes: Partial<Task> } {
+  const spoken = parse({ input: draft, today: new Date() })
+    .tokens.filter((token) =>
+      saysSo({ token: token, attribute: attribute }),
+    )
+    .map((token) => token.text);
+
+  return {
+    draft: spoken
+      .reduce((text, word) => text.split(word).join(" "), draft)
+      .replace(/\s+/g, " ")
+      .trim(),
+    changes: clearing({ task: task, attribute: attribute }),
+  };
+}
+
+function saysSo({
+  token,
+  attribute,
+}: {
+  token: ParsedToken;
+  attribute: TaskAttribute;
+}): boolean {
+  if (attribute.field === "recurring") {
+    return token.kind === "recurrence";
+  }
+  if (attribute.field === "due_date") {
+    return token.kind === "dueDate";
+  }
+  if (attribute.field === "due_time") {
+    return token.kind === "dueTime";
+  }
+  if (attribute.field === "tag") {
+    return token.kind === "tag" && token.value === attribute.text;
+  }
+  return token.kind === attribute.field;
+}
+
+function clearing({
+  task,
+  attribute,
+}: {
+  task: DescribedTask;
+  attribute: TaskAttribute;
+}): Partial<Task> {
+  if (attribute.field === "tag") {
+    return {
+      tags: task.tags.filter((tag) => tag !== attribute.text),
+    };
+  }
+  if (attribute.field === "who") {
+    return { who: null };
+  }
+  if (attribute.field === "stage") {
+    return { stage: null };
+  }
+  if (attribute.field === "due_date") {
+    return { dueDate: null };
+  }
+  if (attribute.field === "due_time") {
+    return { dueTime: null };
+  }
+  if (attribute.field === "recurring") {
+    return { schedule: null };
+  }
+  return {};
 }
 
 function sigilFor(field: Attribute): string {

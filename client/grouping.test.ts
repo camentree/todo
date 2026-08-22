@@ -22,6 +22,7 @@ function task(overrides: Partial<Task>): Task {
     archivedAt: null,
     createdAt: "2026-08-01T09:00:00Z",
     updatedAt: "2026-08-01T09:00:00Z",
+    schedule: null,
     commentCount: 0,
     unseenCommentCount: 0,
     lastCommentFromOthers: false,

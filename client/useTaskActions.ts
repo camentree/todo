@@ -10,10 +10,12 @@ import {
   dueTimeIn,
   listIn,
   parse,
+  recurrenceIn,
   stageIn,
   tagsIn,
   whoIn,
 } from "@shared/parser.ts";
+import { toDateString } from "@shared/recurrence.ts";
 import { isTerminal, type TaskState } from "@shared/states.ts";
 import type { Task, ViewPreference } from "@shared/types.ts";
 
@@ -78,9 +80,17 @@ export function renameChanges(input: string): Partial<Task> {
   const stage = stageIn(parsed.tokens);
   const dueDate = dueDateIn(parsed.tokens);
   const dueTime = dueTimeIn(parsed.tokens);
+  const recurrence = recurrenceIn(parsed.tokens);
+  const startsOn = dueDate ?? toDateString(new Date());
 
   return {
     title: parsed.title,
+    ...(recurrence
+      ? {
+          schedule: { ...recurrence, startsOn: startsOn },
+          dueDate: startsOn,
+        }
+      : {}),
     ...(tags.length > 0
       ? { tags: tags.filter((tag) => tag.length > 0) }
       : {}),
@@ -151,10 +161,15 @@ export function useTaskActions(
   });
 
   const rename = useMutation({
-    mutationFn: ({ task, title }: { task: Task; title: string }) =>
-      api.updateTask(task.id, renameChanges(title)),
-    onMutate: ({ task, title }) => {
-      patchEverywhere(task.id, renameChanges(title));
+    mutationFn: ({
+      task,
+      changes,
+    }: {
+      task: Task;
+      changes: Partial<Task>;
+    }) => api.updateTask(task.id, changes),
+    onMutate: ({ task, changes }) => {
+      patchEverywhere(task.id, changes);
     },
     onSettled: refresh,
   });
@@ -275,8 +290,8 @@ export function useTaskActions(
   return {
     settling: settling,
     toggleTask: (task: Task) => setState.mutate(task),
-    rename: (task: Task, title: string) =>
-      rename.mutate({ task: task, title: title }),
+    rename: (task: Task, changes: Partial<Task>) =>
+      rename.mutate({ task: task, changes: changes }),
     remove: (task: Task) => remove.mutate(task),
     swipeLeft: (task: Task) => swipeLeft.mutate(task),
     swipeRight: (task: Task) => swipeRight.mutate(task),

@@ -10,16 +10,18 @@ import {
   AttributeChips,
   AttributeText,
   asRenamed,
+  withoutAttribute,
 } from "./TaskAttributes.tsx";
 import { Chevron } from "./TaskBoard.tsx";
-import { api, type RecurringTaskDetail } from "../api.ts";
+import { api } from "../api.ts";
 import { formatWhen } from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import { useLockedScroll } from "../useLockedScroll.ts";
 import { canonicalName } from "@shared/names.ts";
+import { toDateString } from "@shared/recurrence.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
-import type { Frequency, Task } from "@shared/types.ts";
+import type { Frequency, Schedule, Task } from "@shared/types.ts";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -43,7 +45,7 @@ function sectionsHoldingSomething(
     return [];
   }
   const sections: InfoSection[] = [];
-  if (task.dueDate || task.dueTime || task.recurringTaskId) {
+  if (task.dueDate || task.dueTime || task.schedule) {
     sections.push("timing");
   }
   if ((task.subtasks ?? []).length > 0) {
@@ -75,9 +77,6 @@ export function TaskInfo({
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [closing, setClosing] = useState(false);
-  const [pendingRepeats, setPendingRepeats] = useState<
-    boolean | null
-  >(null);
   const [chosenSections, setChosenSections] = useState<
     InfoSection[] | null
   >(null);
@@ -98,14 +97,25 @@ export function TaskInfo({
     queryKey: ["lists"],
     queryFn: api.lists,
   });
-  const { data: schedule } = useQuery({
-    queryKey: ["recurring", task?.recurringTaskId],
-    queryFn: () => api.recurringTask(task?.recurringTaskId ?? 0),
-    enabled: Boolean(task?.recurringTaskId),
-  });
+  const editedTask = task ? { ...task, ...edits } : undefined;
   const openSections =
-    chosenSections ?? sectionsHoldingSomething(task);
+    chosenSections ?? sectionsHoldingSomething(editedTask);
   const commentsOpen = openSections.includes("comments");
+  const hasTiming = Boolean(
+    editedTask?.dueDate ||
+      editedTask?.dueTime ||
+      editedTask?.schedule,
+  );
+
+  useEffect(() => {
+    if (hasTiming) {
+      setChosenSections((chosen) =>
+        chosen && !chosen.includes("timing")
+          ? [...chosen, "timing"]
+          : chosen,
+      );
+    }
+  }, [hasTiming]);
 
   const { data: comments = [] } = useQuery({
     queryKey: ["comments", taskId],
@@ -125,14 +135,6 @@ export function TaskInfo({
       setNote(task.note ?? "");
     }
   }, [task]);
-
-  const savedRepeats = Boolean(schedule && !schedule.paused);
-
-  useEffect(() => {
-    if (pendingRepeats === savedRepeats) {
-      setPendingRepeats(null);
-    }
-  }, [pendingRepeats, savedRepeats]);
 
   const unseenComments = task?.unseenCommentCount ?? 0;
 
@@ -203,38 +205,6 @@ export function TaskInfo({
       refresh();
     },
   });
-  const startRepeating = useMutation({
-    mutationFn: async (): Promise<void> => {
-      if (task?.recurringTaskId) {
-        await api.pauseRecurring(task.recurringTaskId, false);
-        return;
-      }
-      await api.repeatTask(taskId, "daily");
-    },
-    onSuccess: refresh,
-  });
-  const configureSchedule = useMutation({
-    mutationFn: (changes: {
-      frequency?: Frequency;
-      repeatEvery?: number;
-      weekdays?: number[];
-      startsOn?: string;
-      dueTime?: string | null;
-    }) => api.configureRecurring(task?.recurringTaskId ?? 0, changes),
-    onMutate: (changes) => {
-      queryClient.setQueryData(
-        ["recurring", task?.recurringTaskId],
-        (cached: RecurringTaskDetail | undefined) =>
-          cached ? { ...cached, ...changes } : cached,
-      );
-    },
-    onSuccess: refresh,
-  });
-  const stopRepeating = useMutation({
-    mutationFn: () =>
-      api.pauseRecurring(task?.recurringTaskId ?? 0, true),
-    onSuccess: refresh,
-  });
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
@@ -287,13 +257,21 @@ export function TaskInfo({
     setTimeout(onClose, CLOSE_MILLISECONDS);
   }
 
-  if (!task) {
+  if (!task || !editedTask) {
     return null;
   }
 
-  const uncommittedTask: Task = { ...task, ...edits };
+  const uncommittedTask: Task = editedTask;
   const subtasks = task.subtasks ?? [];
-  const repeats = pendingRepeats ?? savedRepeats;
+  const schedule = uncommittedTask.schedule;
+  const repeats = schedule !== null;
+
+  function changeSchedule(changes: Partial<Schedule>): void {
+    if (!schedule) {
+      return;
+    }
+    setEdits({ ...edits, schedule: { ...schedule, ...changes } });
+  }
 
   const commitTitle = (): void => {
     const changes = renameChanges(title);
@@ -367,6 +345,15 @@ export function TaskInfo({
                   task: uncommittedTask,
                   draft: title,
                 })}
+                onRemove={(attribute) => {
+                  const without = withoutAttribute({
+                    task: uncommittedTask,
+                    draft: title,
+                    attribute: attribute,
+                  });
+                  setTitle(without.draft);
+                  setEdits({ ...edits, ...without.changes });
+                }}
               />
             ) : (
               <AttributeText task={uncommittedTask} />
@@ -481,21 +468,29 @@ export function TaskInfo({
               <input
                 type="checkbox"
                 checked={repeats}
-                onChange={(event) => {
-                  setPendingRepeats(event.target.checked);
-                  if (event.target.checked) {
-                    startRepeating.mutate();
-                  } else {
-                    stopRepeating.mutate();
-                  }
-                }}
+                onChange={(event) =>
+                  setEdits({
+                    ...edits,
+                    schedule: event.target.checked
+                      ? {
+                          frequency: "daily",
+                          repeatEvery: 1,
+                          weekdays: [],
+                          dayOfMonth: null,
+                          startsOn:
+                            uncommittedTask.dueDate ??
+                            toDateString(new Date()),
+                        }
+                      : null,
+                  })
+                }
               />
               <span>Repeats</span>
             </label>
 
             <div
               className="collapsible unhurried"
-              data-open={repeats && Boolean(schedule)}
+              data-open={repeats}
             >
               <div className="info-repeat">
                 {schedule && (
@@ -521,7 +516,7 @@ export function TaskInfo({
                               10,
                             );
                             if (typed >= 1) {
-                              configureSchedule.mutate({
+                              changeSchedule({
                                 repeatEvery: Math.min(52, typed),
                               });
                             }
@@ -539,7 +534,7 @@ export function TaskInfo({
                         <select
                           value={schedule.frequency}
                           onChange={(event) =>
-                            configureSchedule.mutate({
+                            changeSchedule({
                               frequency: event.target
                                 .value as Frequency,
                             })
@@ -577,7 +572,7 @@ export function TaskInfo({
                                 index,
                               )}
                               onClick={() =>
-                                configureSchedule.mutate({
+                                changeSchedule({
                                   weekdays: toggleWeekday(
                                     schedule.weekdays,
                                     index,
@@ -608,7 +603,7 @@ export function TaskInfo({
                   }
                   onChange={(event) =>
                     repeats && schedule
-                      ? configureSchedule.mutate({
+                      ? changeSchedule({
                           startsOn:
                             event.target.value || schedule.startsOn,
                         })
@@ -640,14 +635,10 @@ export function TaskInfo({
                   type="time"
                   value={uncommittedTask.dueTime?.slice(0, 5) ?? ""}
                   onChange={(event) =>
-                    repeats && schedule
-                      ? configureSchedule.mutate({
-                          dueTime: event.target.value || null,
-                        })
-                      : setEdits({
-                          ...edits,
-                          dueTime: event.target.value || null,
-                        })
+                    setEdits({
+                      ...edits,
+                      dueTime: event.target.value || null,
+                    })
                   }
                 />
                 {uncommittedTask.dueTime && (
@@ -656,9 +647,7 @@ export function TaskInfo({
                     className="info-clear"
                     aria-label="Clear time"
                     onClick={() =>
-                      repeats && schedule
-                        ? configureSchedule.mutate({ dueTime: null })
-                        : setEdits({ ...edits, dueTime: null })
+                      setEdits({ ...edits, dueTime: null })
                     }
                   >
                     ×

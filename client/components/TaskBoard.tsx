@@ -6,9 +6,11 @@ import {
   AttributeChips,
   asRenamed,
   attributesOf,
+  withoutAttribute,
 } from "./TaskAttributes.tsx";
 import { isDueToday } from "../format.ts";
 import { useShortcuts } from "../useShortcuts.ts";
+import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
@@ -42,7 +44,7 @@ export interface Landing {
 export interface RowActions {
   toggle: (task: Task) => void;
   open: (task: Task) => void;
-  rename: (task: Task, title: string) => void;
+  rename: (task: Task, changes: Partial<Task>) => void;
   remove: (task: Task) => void;
   swipeLeft: (task: Task) => void;
   swipeRight: (task: Task) => void;
@@ -470,6 +472,7 @@ function Row({
 }) {
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [draft, setDraft] = useState(task.title);
+  const [edits, setEdits] = useState<Partial<Task>>({});
   const lifting = lift?.taskId === task.id;
   const flickingTo =
     flick?.taskId === task.id ? flick.direction : null;
@@ -477,8 +480,14 @@ function Row({
   useEffect(() => {
     if (editing) {
       setDraft(task.title);
+      setEdits({});
     }
   }, [editing, task.title]);
+
+  const uncommittedTask: Task = {
+    ...asRenamed({ task: task, draft: draft }),
+    ...edits,
+  };
 
   const gesture = useRowGesture({
     onLeft: () => actions.swipeLeft(task),
@@ -570,8 +579,11 @@ function Row({
                   task={task}
                   draft={draft}
                   onDraftChange={setDraft}
-                  onCommit={(next) => {
-                    actions.rename(task, next);
+                  onCommit={(title) => {
+                    actions.rename(task, {
+                      ...renameChanges(title),
+                      ...edits,
+                    });
                     onEditEnd();
                   }}
                   onCancel={onEditEnd}
@@ -631,7 +643,16 @@ function Row({
 
             {editing ? (
               <AttributeChips
-                task={asRenamed({ task: task, draft: draft })}
+                task={uncommittedTask}
+                onRemove={(attribute) => {
+                  const without = withoutAttribute({
+                    task: uncommittedTask,
+                    draft: draft,
+                    attribute: attribute,
+                  });
+                  setDraft(without.draft);
+                  setEdits({ ...edits, ...without.changes });
+                }}
               />
             ) : (
               <Meta
@@ -653,7 +674,9 @@ function Row({
                     key={subtask.id}
                     subtask={subtask}
                     onToggle={() => actions.toggle(subtask)}
-                    onRename={(next) => actions.rename(subtask, next)}
+                    onRename={(next) =>
+                    actions.rename(subtask, { title: next })
+                  }
                     onDelete={() => actions.remove(subtask)}
                   />
                 ))}
