@@ -14,6 +14,7 @@ export function App() {
           path="/due_date/today"
           element={<Navigate to="/today" replace />}
         />
+        <Route path="/task/:taskId" element={<Tasks />} />
         <Route path="/:field/:value" element={<Tasks />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

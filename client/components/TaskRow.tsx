@@ -79,6 +79,7 @@ export function TaskRow({
   const [hasFocus, setHasFocus] = useState(false);
   const [caretAt, setCaretAt] = useState<number | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const openedByPointer = useRef(false);
   const unsaved = task.id === null;
 
   useEffect(() => {
@@ -306,9 +307,16 @@ export function TaskRow({
                 onPointerDown={(event) => {
                   event.preventDefault();
                   dismissKeyboard();
+                  openedByPointer.current = true;
                   onInfoOpen();
                 }}
-                onClick={onInfoOpen}
+                onClick={() => {
+                  if (openedByPointer.current) {
+                    openedByPointer.current = false;
+                    return;
+                  }
+                  onInfoOpen();
+                }}
               >
                 <InfoIcon />
               </button>
