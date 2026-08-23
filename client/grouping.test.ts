@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { sortTasks } from "./grouping.ts";
-import type { Task, ViewPreference } from "@shared/types.ts";
+import { buildGroups, sortTasks } from "./grouping.ts";
+import type { CreatedTask, ViewPreference } from "@shared/types.ts";
 
-function task(overrides: Partial<Task>): Task {
+function task(overrides: Partial<CreatedTask>): CreatedTask {
   return {
     id: 1,
     list: "home",
@@ -78,5 +78,26 @@ describe("sorting by when a task was finished", () => {
         view: view({ sortDirection: "asc" }),
       }).map((sorted) => sorted.id),
     ).toEqual([3, 1, 2]);
+  });
+});
+
+describe("a ticked task once the ledger catches up", () => {
+  const ticked = task({ id: 1, state: "complete" });
+  const waiting = task({ id: 2, state: "to_do" });
+
+  test("drops into the hidden group", () => {
+    expect(
+      buildGroups({
+        tasks: [ticked, waiting],
+        view: view({}),
+        lists: ["home"],
+      }).map((group) => ({
+        key: group.key,
+        ids: group.tasks.map((found) => found.id),
+      })),
+    ).toEqual([
+      { key: "all", ids: [2] },
+      { key: "hidden", ids: [1] },
+    ]);
   });
 });

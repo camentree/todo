@@ -20,9 +20,11 @@ bugs if you have not read them.
   the row where it is.
 - **A ticked task stays in place until the next day.** Finishing something must
   not make it vanish out from under the tap that finished it.
-- **Nothing is ever coloured red.** Colour means where you are in the app, not
-  urgency — being late is a date, not an alarm. One accent plus neutrals, and
-  nothing else in the app is coloured, tags included.
+- **Red is only ever for something going wrong.** Being late is a date, not an
+  alarm, and no task is ever coloured for urgency — tags included. Red belongs
+  to the swipe that destroys something and to a write that failed, because
+  those are the only places where the app is telling you it broke rather than
+  telling you where you are. Everything else is one accent plus neutrals.
 - **Rows are separated by whitespace, not by rules or cards.** A busy screen is
   worse than a plain one.
 - **Light-first, because the app gets used outdoors.** Contrast has to survive

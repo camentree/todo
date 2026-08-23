@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import { api } from "./api.ts";
+import { recordFailure } from "./failures.ts";
 import { isDueToday } from "./format.ts";
 import type { Landing } from "./components/TaskBoard.tsx";
 import { reassignSlots } from "@shared/ordering.ts";
@@ -12,14 +13,19 @@ import {
   parse,
   recurrenceIn,
   stageIn,
+  stateIn,
   tagsIn,
   whoIn,
 } from "@shared/parser.ts";
 import { toDateString } from "@shared/recurrence.ts";
 import { isTerminal, type TaskState } from "@shared/states.ts";
-import type { Task, ViewPreference } from "@shared/types.ts";
+import type {
+  CreatedTask,
+  Task,
+  ViewPreference,
+} from "@shared/types.ts";
 
-const SETTLE_MILLISECONDS = 600;
+const HOLD_MILLISECONDS = 2000;
 const FLUSH_MILLISECONDS = 500;
 const LAST_LIST_KEY = "todo.lastList";
 
@@ -37,7 +43,7 @@ interface QueuedMove {
   orderedIds: number[];
 }
 
-function looksLikeTasks(value: unknown): value is Task[] {
+function looksLikeTasks(value: unknown): value is CreatedTask[] {
   return (
     Array.isArray(value) &&
     (value.length === 0 ||
@@ -53,11 +59,11 @@ function patched({
   id,
   changes,
 }: {
-  tasks: Task[];
+  tasks: CreatedTask[];
   id: number;
   changes: Partial<Task>;
-}): Task[] {
-  return tasks.map((task) => {
+}): CreatedTask[] {
+  return tasks.map((task): CreatedTask => {
     const subtasks = task.subtasks
       ? patched({ tasks: task.subtasks, id: id, changes: changes })
       : task.subtasks;
@@ -69,6 +75,8 @@ function patched({
     return {
       ...task,
       ...changes,
+      id: task.id,
+      list: changes.list ?? task.list,
       subtasks:
         changes.state === "complete" && subtasks
           ? subtasks.map((subtask) => ({
@@ -87,6 +95,7 @@ export function renameChanges(input: string): Partial<Task> {
   const who = whoIn(parsed.tokens);
   const list = listIn(parsed.tokens);
   const stage = stageIn(parsed.tokens);
+  const state = stateIn(parsed.tokens);
   const dueDate = dueDateIn(parsed.tokens);
   const dueTime = dueTimeIn(parsed.tokens);
   const recurrence = recurrenceIn(parsed.tokens);
@@ -106,6 +115,12 @@ export function renameChanges(input: string): Partial<Task> {
     ...(who === null ? {} : { who: who === "" ? null : who }),
     ...(list ? { list: list } : {}),
     ...(stage === null ? {} : { stage: stage === "" ? null : stage }),
+    ...(state === null || state === "archived"
+      ? {}
+      : { state: state }),
+    ...(state === "archived"
+      ? { archivedAt: new Date().toISOString() }
+      : {}),
     ...(dueDate ? { dueDate: dueDate } : {}),
     ...(dueTime ? { dueTime: dueTime } : {}),
   };
@@ -115,7 +130,9 @@ export function useTaskActions(
   onManualOrder?: (changes: Partial<ViewPreference>) => void,
 ) {
   const queryClient = useQueryClient();
-  const [settling, setSettling] = useState<Set<number>>(new Set());
+  const [justToggled, setJustToggled] = useState<
+    Map<number, TaskState>
+  >(new Map());
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(
     new Map(),
   );
@@ -123,8 +140,6 @@ export function useTaskActions(
   const moveTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-
-  const refresh = () => queryClient.invalidateQueries();
 
   function patchEverywhere(id: number, changes: Partial<Task>): void {
     queryClient.setQueriesData({ queryKey: [] }, (cached: unknown) =>
@@ -134,44 +149,72 @@ export function useTaskActions(
     );
   }
 
-  function holdInPlace(id: number): void {
-    const existing = timers.current.get(id);
-    if (existing) {
-      clearTimeout(existing);
-    }
-    setSettling((current) => new Set(current).add(id));
-    timers.current.set(
-      id,
-      setTimeout(() => {
-        setSettling((current) => {
-          const next = new Set(current);
-          next.delete(id);
-          return next;
-        });
-        timers.current.delete(id);
-      }, SETTLE_MILLISECONDS),
+  function takeBack(ids: number[]): void {
+    queryClient.setQueriesData({ queryKey: [] }, (cached: unknown) =>
+      looksLikeTasks(cached)
+        ? cached.filter((task) => !ids.includes(task.id))
+        : cached,
     );
   }
 
-  const setState = useMutation({
-    mutationFn: (task: Task) =>
-      api.setState(
-        task.id,
-        isTerminal(task.state) ? "to_do" : "complete",
-      ),
-    onMutate: async (task: Task) => {
-      const next = isTerminal(task.state) ? "to_do" : "complete";
-      patchEverywhere(task.id, { state: next });
-      if (next === "complete" && task.parentId === null) {
-        holdInPlace(task.id);
-      }
-    },
-    onSettled: refresh,
-  });
+  function addToLedger(task: CreatedTask): void {
+    queryClient.setQueriesData({ queryKey: [] }, (cached: unknown) =>
+      looksLikeTasks(cached) &&
+      !cached.some((held) => held.id === task.id)
+        ? [...cached, task]
+        : cached,
+    );
+  }
+
+  function landed(written: CreatedTask[]): void {
+    for (const task of written) {
+      patchEverywhere(task.id, task);
+    }
+  }
+
+  function report(doing: string) {
+    return (error: unknown) =>
+      recordFailure({ doing: doing, error: error });
+  }
+
+  function toggleState(task: CreatedTask): void {
+    const showing = justToggled.get(task.id) ?? task.state;
+    const next: TaskState = isTerminal(showing)
+      ? "to_do"
+      : "complete";
+
+    const running = timers.current.get(task.id);
+    if (running) {
+      clearTimeout(running);
+    }
+    const written = api.setState(task.id, next).then(
+      (updated: CreatedTask) => ({ updated: updated, error: null }),
+      (error: unknown) => ({ updated: null, error: error }),
+    );
+
+    setJustToggled((current) => new Map(current).set(task.id, next));
+    timers.current.set(
+      task.id,
+      setTimeout(() => {
+        timers.current.delete(task.id);
+        void written.then(({ updated, error }) => {
+          setJustToggled((current) => {
+            const settled = new Map(current);
+            settled.delete(task.id);
+            return settled;
+          });
+          if (updated) {
+            patchEverywhere(updated.id, updated);
+            return;
+          }
+          report("tick that off")(error);
+        });
+      }, HOLD_MILLISECONDS),
+    );
+  }
 
   function someList(): string {
-    const known =
-      queryClient.getQueryData<string[]>(["lists"]) ?? [];
+    const known = queryClient.getQueryData<string[]>(["lists"]) ?? [];
     const remembered = lastUsedList();
     return remembered && known.includes(remembered)
       ? remembered
@@ -185,10 +228,11 @@ export function useTaskActions(
         title: changes.title ?? "",
         list: changes.list || someList(),
       }),
-    onSuccess: (task: Task) => {
+    onSuccess: (task: CreatedTask) => {
       rememberList(task.list);
-      refresh();
+      addToLedger(task);
     },
+    onError: report("add that task"),
   });
 
   const rename = useMutation({
@@ -196,32 +240,42 @@ export function useTaskActions(
       task,
       changes,
     }: {
-      task: Task;
+      task: CreatedTask;
       changes: Partial<Task>;
     }) => api.updateTask(task.id, changes),
     onMutate: ({ task, changes }) => {
       patchEverywhere(task.id, changes);
     },
-    onSettled: refresh,
+    onSuccess: (written: CreatedTask) =>
+      patchEverywhere(written.id, written),
+    onError: (error: unknown, { task }) => {
+      patchEverywhere(task.id, task);
+      report("save that edit")(error);
+    },
   });
 
   const remove = useMutation({
-    mutationFn: (task: Task) => api.deleteTask(task.id),
-    onSuccess: refresh,
+    mutationFn: (task: CreatedTask) => api.deleteTask(task.id),
+    onSuccess: ({ removed }) => takeBack(removed),
+    onError: report("delete that task"),
   });
 
   const swipeLeft = useMutation({
-    mutationFn: (task: Task) =>
+    mutationFn: (task: CreatedTask) =>
       task.archivedAt
         ? api.unarchiveTasks([task.id])
         : api.archiveTasks([task.id]),
-    onSuccess: refresh,
+    onSuccess: landed,
+    onError: report("archive that task"),
   });
 
   const swipeRight = useMutation({
-    mutationFn: (task: Task) => {
+    mutationFn: (task: CreatedTask) => {
       if (task.archivedAt) {
-        return api.deleteTask(task.id);
+        return api.deleteTask(task.id).then(({ removed }) => {
+          takeBack(removed);
+          return [];
+        });
       }
       if (task.state === "hidden") {
         return api.unhideTask(task.id);
@@ -230,7 +284,8 @@ export function useTaskActions(
         ? api.deferTask(task.id)
         : api.hideTask(task.id);
     },
-    onSuccess: refresh,
+    onSuccess: landed,
+    onError: report("put that task away"),
   });
 
   function reorderInMemory(orderedIds: number[]): void {
@@ -242,7 +297,7 @@ export function useTaskActions(
         }
         const held = orderedIds
           .map((id) => cached.find((task) => task.id === id))
-          .filter((task): task is Task => task !== undefined);
+          .filter((task): task is CreatedTask => task !== undefined);
         if (held.length !== orderedIds.length) {
           return cached;
         }
@@ -271,26 +326,29 @@ export function useTaskActions(
     void (async () => {
       for (const { taskId, landing, orderedIds } of queued) {
         if (landing.stage !== undefined) {
-          await api.setState(
-            taskId,
-            landing.stage === "complete" ? "complete" : "to_do",
-          );
+          landed([
+            await api.setState(
+              taskId,
+              landing.stage === "complete" ? "complete" : "to_do",
+            ),
+          ]);
         }
         if (
           landing.list !== undefined ||
           landing.stage !== undefined
         ) {
-          await api.updateTask(taskId, {
-            list: landing.list,
-            stage: landing.stage,
-          });
+          landed([
+            await api.updateTask(taskId, {
+              list: landing.list,
+              stage: landing.stage,
+            }),
+          ]);
         }
         if (orderedIds.length > 1) {
-          await api.reorderTasks(orderedIds);
+          landed(await api.reorderTasks(orderedIds));
         }
       }
-      refresh();
-    })();
+    })().catch(report("move that task"));
   }
 
   function move(
@@ -319,14 +377,14 @@ export function useTaskActions(
   }
 
   return {
-    settling: settling,
-    toggleTask: (task: Task) => setState.mutate(task),
-    rename: (task: Task, changes: Partial<Task>) =>
+    justToggled: justToggled,
+    toggleTask: toggleState,
+    rename: (task: CreatedTask, changes: Partial<Task>) =>
       rename.mutate({ task: task, changes: changes }),
     create: (changes: Partial<Task>) => create.mutateAsync(changes),
-    remove: (task: Task) => remove.mutate(task),
-    swipeLeft: (task: Task) => swipeLeft.mutate(task),
-    swipeRight: (task: Task) => swipeRight.mutate(task),
+    remove: (task: CreatedTask) => remove.mutate(task),
+    swipeLeft: (task: CreatedTask) => swipeLeft.mutate(task),
+    swipeRight: (task: CreatedTask) => swipeRight.mutate(task),
     move: (
       taskId: number,
       landing: Landing,

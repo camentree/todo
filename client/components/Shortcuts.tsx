@@ -3,27 +3,28 @@ import { Fragment, useEffect } from "react";
 import { useLockedScroll } from "../useLockedScroll.ts";
 
 const KEYS = [
-  { keys: ["j", "↓", "⌃n"], does: "Next task" },
-  { keys: ["k", "↑", "⌃p"], does: "Previous task" },
-  { keys: ["space"], does: "Tick it off" },
-  { keys: ["enter"], does: "Rename it" },
-  { keys: ["i"], does: "Open its info" },
-  { keys: ["a"], does: "Archive it" },
-  { keys: ["h"], does: "Hide it" },
-  { keys: ["c"], does: "Add a task" },
-  { keys: ["f"], does: "Search" },
-  { keys: ["esc"], does: "Clear the focus" },
-  { keys: ["?"], does: "This list" },
+  { keys: ["j", "↓", "⌃n"], does: "next" },
+  { keys: ["k", "↑", "⌃p"], does: "previous" },
+  { keys: ["space"], does: "toggle complete" },
+  { keys: ["enter"], does: "rename" },
+  { keys: ["i"], does: "info" },
+  { keys: ["a"], does: "archive" },
+  { keys: ["h"], does: "hide/skip" },
+  { keys: ["c"], does: "add" },
+  { keys: ["f"], does: "search" },
+  { keys: ["esc"], does: "blur" },
+  { keys: ["?"], does: "help" },
 ];
 
 const SYMBOLS = [
-  { symbol: "#health", means: "a tag" },
-  { symbol: "@claude", means: "who it belongs to" },
-  { symbol: "/programming", means: "the list" },
-  { symbol: "!blocked", means: "the stage" },
-  { symbol: "tomorrow, 3pm, aug 20", means: "a due date and time" },
-  { symbol: "daily, every 2 weeks", means: "a repeating schedule" },
-  { symbol: "\\today", means: "the word itself, no date" },
+  { symbol: "#health", means: "tag" },
+  { symbol: "@claude", means: "assignee" },
+  { symbol: "/programming", means: "list name" },
+  { symbol: "!blocked", means: "programming stage" },
+  { symbol: ":complete", means: "state" },
+  { symbol: "tomorrow, 3pm, aug 20", means: "due date/time" },
+  { symbol: "daily, every 2 weeks", means: "schedule" },
+  { symbol: "\\today", means: "escape character" },
 ];
 
 export function Shortcuts({ onClose }: { onClose: () => void }) {

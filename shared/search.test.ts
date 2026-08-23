@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vitest";
 
 import { searchTasks } from "./search.ts";
-import type { Task } from "./types.ts";
+import type { CreatedTask } from "./types.ts";
 
 const thursday = new Date(2026, 7, 13);
 
-function task(fields: Partial<Task> & { title: string }): Task {
+function task(
+  fields: Partial<CreatedTask> & { title: string },
+): CreatedTask {
   return {
     id: 1,
     list: "home",
@@ -31,7 +33,7 @@ function task(fields: Partial<Task> & { title: string }): Task {
   };
 }
 
-function titlesFor(input: string, tasks: Task[]): string[] {
+function titlesFor(input: string, tasks: CreatedTask[]): string[] {
   return searchTasks({
     tasks: tasks,
     input: input,
@@ -160,6 +162,61 @@ describe("searchTasks", () => {
 
     expect(titlesFor("overdue", tasks)).toEqual(["Late"]);
     expect(titlesFor("no date", tasks)).toEqual(["Someday"]);
+  });
+
+  test("a colon reads where the task stands", () => {
+    const tasks = [
+      task({ id: 1, title: "Ship it" }),
+      task({ id: 2, title: "Book a table", state: "complete" }),
+      task({ id: 3, title: "Call the vet", state: "skipped" }),
+      task({
+        id: 4,
+        title: "Old thing",
+        archivedAt: "2026-08-01T00:00:00Z",
+      }),
+    ];
+
+    expect(titlesFor(":to-do", tasks)).toEqual([
+      "Ship it",
+      "Old thing",
+    ]);
+    expect(titlesFor(":complete", tasks)).toEqual(["Book a table"]);
+    expect(titlesFor(":skipped", tasks)).toEqual(["Call the vet"]);
+    expect(titlesFor(":archived", tasks)).toEqual(["Old thing"]);
+  });
+
+  test("a partly typed state still narrows", () => {
+    const tasks = [
+      task({ id: 1, title: "Ship it" }),
+      task({ id: 2, title: "Book a table", state: "complete" }),
+    ];
+
+    expect(titlesFor(":comp", tasks)).toEqual(["Book a table"]);
+  });
+
+  test("a minus drops a state", () => {
+    const tasks = [
+      task({ id: 1, title: "Ship it" }),
+      task({ id: 2, title: "Book a table", state: "complete" }),
+      task({
+        id: 3,
+        title: "Old thing",
+        archivedAt: "2026-08-01T00:00:00Z",
+      }),
+    ];
+
+    expect(titlesFor("-:complete -:archived", tasks)).toEqual([
+      "Ship it",
+    ]);
+  });
+
+  test("a colon mid-word is not a state", () => {
+    const tasks = [
+      task({ id: 1, title: "Note: buy milk" }),
+      task({ id: 2, title: "Book a table", state: "complete" }),
+    ];
+
+    expect(titlesFor("note:", tasks)).toEqual(["Note: buy milk"]);
   });
 
   test("the same sigil twice widens instead of narrowing", () => {

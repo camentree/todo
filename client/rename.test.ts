@@ -17,6 +17,21 @@ describe("renameChanges", () => {
     });
   });
 
+  test("a state sigil sets the state", () => {
+    expect(renameChanges("File the form :complete")).toEqual({
+      title: "File the form",
+      state: "complete",
+    });
+  });
+
+  test("archived is not a state, so it sets the timestamp", () => {
+    const changes = renameChanges("Old thing :archived");
+
+    expect(changes.title).toBe("Old thing");
+    expect(changes.state).toBeUndefined();
+    expect(typeof changes.archivedAt).toBe("string");
+  });
+
   test("tags replace the ones already there", () => {
     expect(renameChanges("Call the pharmacy #urgent").tags).toEqual([
       "urgent",

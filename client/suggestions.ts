@@ -16,7 +16,7 @@ export function sigilBefore({
   caret: number;
 }): Opening | null {
   const before = input.slice(0, caret);
-  const found = before.match(/(?:^|\s)([#@/!])(\S*)$/);
+  const found = before.match(/(?:^|\s)([#@/!:])(\S*)$/);
   const sigil = found?.[1];
   const typed = found?.[2];
   if (!sigil || typed === undefined) {
@@ -35,26 +35,27 @@ export function suggestionsFor({
   knownTags,
   knownWho,
   stages,
+  states,
 }: {
   opening: Opening | null;
   lists: string[];
   knownTags: string[];
   knownWho: string[];
   stages: string[];
+  states: readonly string[];
 }): string[] {
   if (!opening) {
     return [];
   }
-  const candidates =
-    opening.sigil === "/"
-      ? lists
-      : opening.sigil === "#"
-        ? knownTags
-        : opening.sigil === "!"
-          ? stages
-          : knownWho;
+  const candidates = {
+    "/": lists,
+    "#": knownTags,
+    "@": knownWho,
+    "!": stages,
+    ":": states,
+  }[opening.sigil];
 
-  return candidates
+  return (candidates ?? [])
     .filter(
       (candidate) =>
         candidate.toLowerCase().startsWith(opening.typed) &&

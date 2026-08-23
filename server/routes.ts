@@ -5,7 +5,6 @@ import * as events from "./operations/events.ts";
 import * as lists from "./operations/lists.ts";
 import * as recurring from "./operations/recurring.ts";
 import * as tasks from "./operations/tasks.ts";
-import { asAttribute } from "@shared/attributes.ts";
 import { TASK_STATES } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
 
@@ -49,20 +48,8 @@ api.get("/who", async (context) => {
 
 api.get("/tasks", async (context) => {
   await recurring.generateDue();
-  const query = context.req.query();
-  const attribute = asAttribute(query.attribute);
-
-  if (query.attribute && !attribute) {
-    throw new Error(`${query.attribute} is not an attribute`);
-  }
-
   return context.json(
-    await tasks.query({
-      attribute: attribute,
-      value: query.value ?? "",
-      everything: query.everything === "true",
-      dueToday: query.today === "true",
-    }),
+    await tasks.query({ since: context.req.query("since") ?? null }),
   );
 });
 
@@ -91,6 +78,7 @@ api.post("/tasks", async (context) => {
       dueTime: body.dueTime,
       schedule: body.schedule,
       state: body.state ? taskState(body.state) : undefined,
+      archivedAt: body.archivedAt,
     }),
   );
 });
@@ -103,8 +91,9 @@ api.patch("/tasks/:id", async (context) => {
 });
 
 api.delete("/tasks/:id", async (context) => {
-  await tasks.remove(numberParam(context.req.param("id")));
-  return context.json({ ok: true });
+  return context.json({
+    removed: await tasks.remove(numberParam(context.req.param("id"))),
+  });
 });
 
 api.post("/tasks/:id/state", async (context) => {
@@ -118,18 +107,21 @@ api.post("/tasks/:id/state", async (context) => {
 });
 
 api.post("/tasks/:id/hide", async (context) => {
-  await tasks.hide(numberParam(context.req.param("id")));
-  return context.json({ ok: true });
+  return context.json(
+    await tasks.hide(numberParam(context.req.param("id"))),
+  );
 });
 
 api.post("/tasks/:id/unhide", async (context) => {
-  await tasks.unhide(numberParam(context.req.param("id")));
-  return context.json({ ok: true });
+  return context.json(
+    await tasks.unhide(numberParam(context.req.param("id"))),
+  );
 });
 
 api.post("/tasks/:id/defer", async (context) => {
-  await tasks.deferByOneDay(numberParam(context.req.param("id")));
-  return context.json({ ok: true });
+  return context.json(
+    await tasks.deferByOneDay(numberParam(context.req.param("id"))),
+  );
 });
 
 api.get("/tasks/:id/comments", async (context) => {
@@ -156,20 +148,17 @@ api.post("/tasks/:id/comments/seen", async (context) => {
 
 api.post("/tasks/archive", async (context) => {
   const body = await context.req.json();
-  await tasks.archive(body.ids);
-  return context.json({ ok: true });
+  return context.json(await tasks.archive(body.ids));
 });
 
 api.post("/tasks/unarchive", async (context) => {
   const body = await context.req.json();
-  await tasks.unarchive(body.ids);
-  return context.json({ ok: true });
+  return context.json(await tasks.unarchive(body.ids));
 });
 
 api.post("/tasks/reorder", async (context) => {
   const body = await context.req.json();
-  await tasks.reorder(body.ids);
-  return context.json({ ok: true });
+  return context.json(await tasks.reorder(body.ids));
 });
 
 api.get("/events/unseen", async (context) => {

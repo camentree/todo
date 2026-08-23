@@ -3,26 +3,34 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 
 import { api } from "../api.ts";
-import { TopBar } from "../components/Chrome.tsx";
+import { SearchField } from "../components/SearchField.tsx";
+import { TopBar } from "../components/TopBar.tsx";
 import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import { AddButton } from "../components/TaskRow.tsx";
-import type { MetaOmission } from "../components/TaskBoard.tsx";
+import type { AttributeOmission } from "../components/TaskBoard.tsx";
 import { TaskInfo } from "../components/TaskInfo.tsx";
 import {
   asTitle,
   attributeText,
   todayAsDateString,
 } from "../format.ts";
-import { buildGroups } from "../grouping.ts";
 import { useShortcuts } from "../useShortcuts.ts";
 import { useTaskActions } from "../useTaskActions.ts";
-import { defaultView, useViewPreference } from "../viewPreference.ts";
+import {
+  defaultView,
+  historyStartsOn,
+  SEARCH_VIEW,
+  SEARCH_VIEW_KEY,
+  useSettledHistory,
+  useViewPreference,
+} from "../settings.ts";
 import { asAttribute } from "@shared/attributes.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { canonicalName } from "@shared/names.ts";
+import { asStage } from "@shared/stages.ts";
 import { searchTasks } from "@shared/search.ts";
-import type { Task } from "@shared/types.ts";
+import type { CreatedTask } from "@shared/types.ts";
 
 export interface Scope {
   field: Attribute | null;
@@ -57,14 +65,15 @@ export function Tasks() {
   const [capturing, setCapturing] = useState(false);
   const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
-    viewKeyFor(scope),
-    defaultView(scope),
+    searchText === null ? viewKeyFor(scope) : SEARCH_VIEW_KEY,
+    searchText === null ? defaultView(scope) : SEARCH_VIEW,
   );
   const actions = useTaskActions(changeView);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     setCapturing(false);
+    setSearchText(null);
   }, [pathname]);
 
   const { data: lists = [] } = useQuery({
@@ -72,31 +81,30 @@ export function Tasks() {
     queryFn: api.lists,
   });
 
-  const { data: tasks = [], isPending } = useQuery({
-    queryKey: scope.today
-      ? ["tasks", "today"]
-      : ["tasks", scope.field, scope.value],
-    queryFn: () => fetchTasks(scope),
+  const since = historyStartsOn(useSettledHistory());
+
+  const { data: everything = [], isPending } = useQuery({
+    queryKey: ["tasks", since],
+    queryFn: () => api.tasks(since),
   });
 
-  const { data: searchable = [] } = useQuery({
-    queryKey: ["tasks", "everything"],
-    queryFn: () => api.tasks({ everything: "true" }),
-    enabled: searchText !== null,
-  });
+  const tasks = useMemo(
+    () => everything.filter((task) => within(task, scope)),
+    [everything, scope.field, scope.value, scope.today],
+  );
 
   const results = useMemo(
     () =>
       searchTasks({
-        tasks: searchable,
+        tasks: everything,
         input: searchText ?? "",
         today: new Date(),
       }),
-    [searchable, searchText],
+    [everything, searchText],
   );
 
   useShortcuts((event) => {
-    if (event.key === "Escape" && searchText !== null) {
+    if (event.key === "F" && searchText !== null) {
       event.preventDefault();
       setSearchText(null);
       return;
@@ -107,7 +115,13 @@ export function Tasks() {
     }
     if (event.key === "f") {
       event.preventDefault();
-      setSearchText("");
+      if (searchText === null) {
+        setSearchText("");
+        return;
+      }
+      document
+        .querySelector<HTMLInputElement>("[data-search-field]")
+        ?.focus();
     }
     if (event.key === "?") {
       event.preventDefault();
@@ -115,81 +129,58 @@ export function Tasks() {
     }
   });
 
-  const groups =
-    searchText === null
-      ? buildGroups({
-          tasks: tasks,
-          view: view,
-          lists: lists,
-          settling: actions.settling,
-          scoped: scopedTo(scope),
-        })
-      : [
-          {
-            key: "results",
-            label: "",
-            omitFromMeta: [],
-            tasks: results,
-          },
-        ];
-
-  const capturePrefix =
+  const captureSeed =
     searchText !== null || archived || finished
       ? null
       : scope.field && scope.field !== view.breakUpBy
-        ? captureToken({ field: scope.field, value: scope.value })
-        : "";
-
-  const message = messageFor({
-    searchText: searchText,
-    isPending: isPending,
-    tasks: tasks,
-    results: results,
-    scope: scope,
-  });
-  const boardHidden =
-    searchText === null ? isPending : results.length === 0;
+        ? seedFor(scope)
+        : {};
 
   return (
     <>
       <TopBar
-        title={titleFor(scope)}
+        title={searchText === null ? titleFor(scope) : "Search"}
         view={view}
         onViewChange={changeView}
+        searching={searchText !== null}
         onOpenSearch={() => setSearchText("")}
-        search={
-          searchText === null
-            ? undefined
-            : {
-                text: searchText,
-                onChange: setSearchText,
-                onClose: () => setSearchText(null),
-              }
-        }
       />
 
-      {message && <p className="empty">{message}</p>}
-
-      {!boardHidden && (
-        <TaskBoard
-          key={pathname}
-          groups={groups}
-          layout={view.layout}
-          capturePrefix={capturePrefix}
-          capturing={capturing}
-          onCapturingChange={setCapturing}
-          actions={{
-            toggle: actions.toggleTask,
-            open: (task) => setOpenTaskId(task.id),
-            rename: actions.rename,
-            create: actions.create,
-            remove: actions.remove,
-            swipeLeft: actions.swipeLeft,
-            swipeRight: actions.swipeRight,
-          }}
-          onMove={actions.move}
+      {searchText !== null && (
+        <SearchField
+          text={searchText}
+          onChange={setSearchText}
+          onClose={() => setSearchText(null)}
         />
       )}
+
+      <TaskBoard
+        key={pathname}
+        tasks={searchText === null ? tasks : results}
+        justToggled={actions.justToggled}
+        view={view}
+        lists={lists}
+        omitAttributes={searchText === null ? scopedTo(scope) : []}
+        showFinished={finished || searchText !== null}
+        pending={searchText === null && isPending}
+        emptyMessage={emptyMessageFor({
+          searchText: searchText,
+          scope: scope,
+        })}
+        captureSeed={captureSeed}
+        capturing={capturing}
+        onCapturingChange={setCapturing}
+        actions={{
+          toggle: actions.toggleTask,
+          open: (task) => setOpenTaskId(task.id),
+          rename: actions.rename,
+          create: actions.create,
+          remove: actions.remove,
+          swipeLeft: actions.swipeLeft,
+          swipeRight: actions.swipeRight,
+        }}
+        onMove={actions.move}
+      />
 
       {!archived && !finished && searchText === null && (
         <AddButton onClick={() => setCapturing(true)} />
@@ -207,35 +198,89 @@ export function Tasks() {
   );
 }
 
-function messageFor({
+function emptyMessageFor({
   searchText,
-  isPending,
-  tasks,
-  results,
   scope,
 }: {
   searchText: string | null;
-  isPending: boolean;
-  tasks: Task[];
-  results: Task[];
   scope: Scope;
-}): string | null {
+}): string {
   if (searchText === null) {
-    return !isPending && tasks.length === 0 ? emptyFor(scope) : null;
+    return emptyFor(scope);
   }
-  return searchText.trim().length > 0 && results.length === 0
-    ? "No matches."
-    : null;
+  return searchText.trim().length > 0 ? "No matches." : "";
 }
 
-function fetchTasks(scope: Scope): Promise<Task[]> {
+function within(task: CreatedTask, scope: Scope): boolean {
   if (scope.today) {
-    return api.tasks({ today: "true" });
+    return (
+      task.archivedAt === null &&
+      task.state !== "missed" &&
+      (dueOnOrBefore(task.dueDate, todayAsDateString()) ||
+        task.unseenCommentCount > 0)
+    );
   }
-  if (!scope.field) {
-    return api.tasks({});
+  if (scope.field === "archived") {
+    return (task.archivedAt !== null) === (scope.value === "true");
   }
-  return api.tasks({ attribute: scope.field, value: scope.value });
+  if (task.archivedAt !== null) {
+    return false;
+  }
+  if (scope.field === null) {
+    return notLongResolved(task);
+  }
+  if (scope.field === "state") {
+    return task.state === scope.value;
+  }
+  return notLongResolved(task) && matches(task, scope);
+}
+
+function matches(task: CreatedTask, scope: Scope): boolean {
+  if (scope.field === "list") {
+    return canonicalName(task.list) === scope.value;
+  }
+  if (scope.field === "tag") {
+    return task.tags.some(
+      (tag) => canonicalName(tag) === scope.value,
+    );
+  }
+  if (scope.field === "who") {
+    return (
+      task.who !== null && canonicalName(task.who) === scope.value
+    );
+  }
+  if (scope.field === "stage") {
+    return task.stage === scope.value;
+  }
+  if (scope.field === "due_date") {
+    return task.dueDate === scope.value;
+  }
+  if (scope.field === "due_time") {
+    return task.dueTime === scope.value;
+  }
+  if (scope.field === "recurring") {
+    return (
+      (task.recurringTaskId !== null) === (scope.value === "true")
+    );
+  }
+  return true;
+}
+
+function notLongResolved(task: CreatedTask): boolean {
+  if (task.state !== "complete" && task.state !== "skipped") {
+    return true;
+  }
+  return (
+    task.resolvedAt !== null &&
+    task.resolvedAt.slice(0, 10) === todayAsDateString()
+  );
+}
+
+function dueOnOrBefore(
+  dueDate: string | null,
+  today: string,
+): boolean {
+  return dueDate !== null && dueDate <= today;
 }
 
 function viewKeyFor(scope: Scope): string {
@@ -271,38 +316,34 @@ function titleFor(scope: Scope): string {
   return asTitle(text);
 }
 
-function scopedTo(scope: Scope): MetaOmission | null {
+function scopedTo(scope: Scope): AttributeOmission[] {
   return scope.field
-    ? {
-        field: scope.field,
-        label: attributeText(scope.field, scope.value),
-      }
-    : null;
+    ? [
+        {
+          field: scope.field,
+          label: attributeText(scope.field, scope.value),
+        },
+      ]
+    : [];
 }
 
-function captureToken({
-  field,
-  value,
-}: {
-  field: Attribute;
-  value: string;
-}): string {
-  if (field === "list") {
-    return `/${value}`;
+function seedFor(scope: Scope): Partial<CreatedTask> {
+  if (scope.field === "list") {
+    return { list: scope.value };
   }
-  if (field === "tag") {
-    return `#${value}`;
+  if (scope.field === "tag") {
+    return { tags: [scope.value] };
   }
-  if (field === "who") {
-    return `@${value}`;
+  if (scope.field === "who") {
+    return { who: scope.value };
   }
-  if (field === "stage") {
-    return `!${value}`;
+  if (scope.field === "stage") {
+    return { stage: asStage(scope.value) };
   }
-  if (field === "due_date") {
-    return value;
+  if (scope.field === "due_date") {
+    return { dueDate: scope.value };
   }
-  return "";
+  return {};
 }
 
 function emptyFor(scope: Scope): string {

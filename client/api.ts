@@ -1,5 +1,10 @@
 import type { TaskState } from "@shared/states.ts";
-import type { Comment, Event, Task } from "@shared/types.ts";
+import type {
+  Comment,
+  CreatedTask,
+  Event,
+  Task,
+} from "@shared/types.ts";
 
 async function request<T>(
   path: string,
@@ -41,28 +46,30 @@ export const api = {
       `/who${list ? `?list=${encodeURIComponent(list)}` : ""}`,
     ),
 
-  tasks: (params: Record<string, string>) =>
-    request<Task[]>(
-      `/tasks?${new URLSearchParams(params).toString()}`,
+  tasks: (since: string | null) =>
+    request<CreatedTask[]>(
+      `/tasks${since === null ? "" : `?since=${since}`}`,
     ),
-  task: (id: number) => request<Task>(`/tasks/${id}`),
+  task: (id: number) => request<CreatedTask>(`/tasks/${id}`),
 
   createTask: (
     body: Partial<Task> & { list: string; title: string },
-  ) => send<Task>("/tasks", "POST", body),
+  ) => send<CreatedTask>("/tasks", "POST", body),
   updateTask: (id: number, body: Partial<Task>) =>
-    send<Task>(`/tasks/${id}`, "PATCH", body),
+    send<CreatedTask>(`/tasks/${id}`, "PATCH", body),
   setState: (id: number, state: TaskState) =>
-    send<Task>(`/tasks/${id}/state`, "POST", { state: state }),
+    send<CreatedTask>(`/tasks/${id}/state`, "POST", { state: state }),
   deleteTask: (id: number) =>
-    request<{ ok: true }>(`/tasks/${id}`, { method: "DELETE" }),
+    request<{ removed: number[] }>(`/tasks/${id}`, {
+      method: "DELETE",
+    }),
 
   hideTask: (id: number) =>
-    send<{ ok: true }>(`/tasks/${id}/hide`, "POST", {}),
+    send<CreatedTask[]>(`/tasks/${id}/hide`, "POST", {}),
   unhideTask: (id: number) =>
-    send<{ ok: true }>(`/tasks/${id}/unhide`, "POST", {}),
+    send<CreatedTask[]>(`/tasks/${id}/unhide`, "POST", {}),
   deferTask: (id: number) =>
-    send<{ ok: true }>(`/tasks/${id}/defer`, "POST", {}),
+    send<CreatedTask[]>(`/tasks/${id}/defer`, "POST", {}),
 
   comments: (taskId: number) =>
     request<Comment[]>(`/tasks/${taskId}/comments`),
@@ -73,11 +80,11 @@ export const api = {
   markCommentsSeen: (taskId: number) =>
     send<{ ok: true }>(`/tasks/${taskId}/comments/seen`, "POST", {}),
   archiveTasks: (ids: number[]) =>
-    send<{ ok: true }>("/tasks/archive", "POST", { ids: ids }),
+    send<CreatedTask[]>("/tasks/archive", "POST", { ids: ids }),
   unarchiveTasks: (ids: number[]) =>
-    send<{ ok: true }>("/tasks/unarchive", "POST", { ids: ids }),
+    send<CreatedTask[]>("/tasks/unarchive", "POST", { ids: ids }),
   reorderTasks: (ids: number[]) =>
-    send<{ ok: true }>("/tasks/reorder", "POST", { ids: ids }),
+    send<CreatedTask[]>("/tasks/reorder", "POST", { ids: ids }),
 
   unseenEvents: () => request<Event[]>("/events/unseen"),
   markEventsSeen: () =>

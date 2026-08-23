@@ -3,38 +3,36 @@ import { parseISO } from "date-fns";
 import { HIDDEN_GROUP } from "./components/TaskBoard.tsx";
 import type {
   BoardGroup,
-  MetaOmission,
+  AttributeOmission,
 } from "./components/TaskBoard.tsx";
 import { formatDueDate } from "./format.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
-import type { Task, ViewPreference } from "@shared/types.ts";
+import type {
+  CreatedTask,
+  Task,
+  ViewPreference,
+} from "@shared/types.ts";
 
 export function buildGroups({
   tasks,
   view,
   lists,
-  settling,
-  scoped,
+  omitAttributes = [],
+  showFinished = false,
 }: {
-  tasks: Task[];
+  tasks: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  settling?: Set<number>;
-  scoped?: MetaOmission | null;
+  omitAttributes?: AttributeOmission[];
+  showFinished?: boolean;
 }): BoardGroup[] {
-  const sorted = sortTasks({
-    tasks: tasks,
-    view: view,
-    settling: settling,
-  });
+  const sorted = sortTasks({ tasks: tasks, view: view });
 
-  const screenWide = scoped ? [scoped] : [];
-  const held = settling ?? new Set<number>();
-  const showingFinished = scoped?.field === "state";
-  const setAside = (task: Task) =>
-    !showingFinished && putAway(task, held);
+  const screenWide = omitAttributes;
+  const setAside = (task: CreatedTask) =>
+    !showFinished && putAway(task);
   const hidden = sorted.filter(setAside);
 
   const groups = groupsOf({
@@ -53,17 +51,14 @@ export function buildGroups({
     {
       key: HIDDEN_GROUP,
       label: "Hidden",
-      omitFromMeta: screenWide,
+      omitAttributes: screenWide,
       tasks: hidden,
     },
   ];
 }
 
-function putAway(task: Task, settling: Set<number>): boolean {
-  return (
-    (task.state === "hidden" || isTerminal(task.state)) &&
-    !settling.has(task.id)
-  );
+function putAway(task: CreatedTask): boolean {
+  return task.state === "hidden" || isTerminal(task.state);
 }
 
 function groupsOf({
@@ -72,17 +67,17 @@ function groupsOf({
   lists,
   screenWide,
 }: {
-  sorted: Task[];
+  sorted: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  screenWide: MetaOmission[];
+  screenWide: AttributeOmission[];
 }): BoardGroup[] {
   if (view.breakUpBy === "none") {
     return [
       {
         key: "all",
         label: "",
-        omitFromMeta: screenWide,
+        omitAttributes: screenWide,
         tasks: sorted,
       },
     ];
@@ -94,8 +89,8 @@ function groupsOf({
         key: `list-${list}`,
         label: list,
         list: list,
-        prefill: `/${list}`,
-        omitFromMeta: [
+        seed: { list: list },
+        omitAttributes: [
           ...screenWide,
           { field: "list" as const, label: list },
         ],
@@ -109,8 +104,8 @@ function groupsOf({
       key: `stage-${stage}`,
       label: stageLabel(stage),
       stage: stage,
-      prefill: `!${stage}`,
-      omitFromMeta: [
+      seed: { stage: stage },
+      omitAttributes: [
         ...screenWide,
         { field: "stage" as const, label: stageLabel(stage) },
       ],
@@ -119,9 +114,8 @@ function groupsOf({
   }
 
   const breakUpBy = view.breakUpBy;
-  const buckets = new Map<string, Task[]>();
+  const buckets = new Map<string, CreatedTask[]>();
   const rank = new Map<string, string | null>();
-  const prefill = new Map<string, string | undefined>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
@@ -137,14 +131,6 @@ function groupsOf({
           rankFor({
             task: task,
             breakUpBy: breakUpBy,
-            label: label,
-          }),
-        );
-        prefill.set(
-          label,
-          prefillFor({
-            task: task,
-            breakUpBy: view.breakUpBy,
             label: label,
           }),
         );
@@ -168,55 +154,61 @@ function groupsOf({
   return entries.map(([label, grouped]) => ({
     key: `${breakUpBy}-${label}`,
     label: label,
-    prefill: prefill.get(label),
-    omitFromMeta: [...screenWide, { field: breakUpBy, label: label }],
+    seed: seedFor({ breakUpBy: breakUpBy, label: label }),
+    omitAttributes: [
+      ...screenWide,
+      { field: breakUpBy, label: label },
+    ],
     tasks: grouped,
   }));
 }
 
-function prefillFor({
-  task,
+function seedFor({
   breakUpBy,
   label,
 }: {
-  task: Task;
   breakUpBy: ViewPreference["breakUpBy"];
   label: string;
-}): string | undefined {
+}): Partial<Task> {
   if (breakUpBy === "due_date") {
-    return task.dueDate ?? undefined;
+    return { dueDate: label };
   }
   if (breakUpBy === "who") {
-    return task.who ? `@${task.who}` : undefined;
+    return { who: label };
   }
-  return task.tags.includes(label) ? `#${label}` : undefined;
+  if (breakUpBy === "tag") {
+    return { tags: [label] };
+  }
+  return {};
 }
 
-function stageOf(task: Task): TaskStage {
+function stageOf(task: CreatedTask): TaskStage {
   if (task.state === "complete") {
     return "complete";
   }
   return task.stage ?? "to_do";
 }
 
-function sinks(task: Task): boolean {
+function sinks(task: CreatedTask): boolean {
   return isTerminal(task.state) || task.state === "hidden";
 }
 
 export function sortTasks({
   tasks,
   view,
-  settling = new Set<number>(),
 }: {
-  tasks: Task[];
+  tasks: CreatedTask[];
   view: ViewPreference;
-  settling?: Set<number>;
-}): Task[] {
+}): CreatedTask[] {
+  if (view.sortBy === "relevance") {
+    return tasks;
+  }
+
   const direction = view.sortDirection === "desc" ? -1 : 1;
 
   return [...tasks].sort((left, right) => {
-    const leftDone = sinks(left) && !settling.has(left.id);
-    const rightDone = sinks(right) && !settling.has(right.id);
+    const leftDone = sinks(left);
+    const rightDone = sinks(right);
     if (leftDone !== rightDone) {
       return leftDone ? 1 : -1;
     }
@@ -231,8 +223,8 @@ function compare({
   right,
   view,
 }: {
-  left: Task;
-  right: Task;
+  left: CreatedTask;
+  right: CreatedTask;
   view: ViewPreference;
 }): number {
   if (view.sortBy === "title") {
@@ -268,7 +260,7 @@ function rankFor({
   breakUpBy,
   label,
 }: {
-  task: Task;
+  task: CreatedTask;
   breakUpBy: ViewPreference["breakUpBy"];
   label: string;
 }): string | null {
@@ -285,7 +277,7 @@ function labelsFor({
   task,
   breakUpBy,
 }: {
-  task: Task;
+  task: CreatedTask;
   breakUpBy: ViewPreference["breakUpBy"];
 }): string[] {
   if (breakUpBy === "tag") {

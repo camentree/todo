@@ -7,6 +7,7 @@ import {
 
 import { canonicalName } from "./names.ts";
 import { asStage, type TaskStage } from "./stages.ts";
+import { asSearchableState, type SearchableState } from "./states.ts";
 import type { Frequency } from "./types.ts";
 
 export interface RecurrenceValue {
@@ -21,6 +22,7 @@ export type ParsedToken =
   | { kind: "who"; text: string; value: string }
   | { kind: "list"; text: string; value: string }
   | { kind: "stage"; text: string; value: TaskStage | "" }
+  | { kind: "state"; text: string; value: SearchableState }
   | { kind: "dueDate"; text: string; value: string }
   | { kind: "dueTime"; text: string; value: string }
   | { kind: "recurrence"; text: string; value: RecurrenceValue }
@@ -147,6 +149,7 @@ function matchAt({
 }): Match | null {
   const matchers = [
     matchSigil,
+    matchState,
     ...(search ? [matchQuotedPhrase, matchSearchFlag] : []),
     matchRecurrence,
     matchRelativeDate,
@@ -271,6 +274,26 @@ function matchSearchFlag({
     };
   }
   return null;
+}
+
+function matchState({ words, index }: MatcherInput): Match | null {
+  const word = wordAt(words, index);
+  if (!word.startsWith(":")) {
+    return null;
+  }
+  const state = asSearchableState(
+    word
+      .slice(1)
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_"),
+  );
+  if (state === null) {
+    return null;
+  }
+  return {
+    token: { kind: "state", text: word, value: state },
+    consumed: 1,
+  };
 }
 
 function matchRecurrence({
@@ -658,6 +681,15 @@ export function stageIn(
 ): TaskStage | "" | null {
   return (
     tokens.filter((token) => token.kind === "stage").at(-1)?.value ??
+    null
+  );
+}
+
+export function stateIn(
+  tokens: ParsedToken[],
+): SearchableState | null {
+  return (
+    tokens.filter((token) => token.kind === "state").at(-1)?.value ??
     null
   );
 }

@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import Fuse from "fuse.js";
 
 import { parse } from "./parser.ts";
-import type { Task } from "./types.ts";
+import type { CreatedTask } from "./types.ts";
 
 const MATCHING = {
   threshold: 0.3,
@@ -15,6 +15,7 @@ interface Filters {
   who: string[];
   lists: string[];
   stages: string[];
+  states: string[];
   phrases: string[];
   terms: string[];
   overdue: boolean;
@@ -31,10 +32,10 @@ export function searchTasks({
   input,
   today,
 }: {
-  tasks: Task[];
+  tasks: CreatedTask[];
   input: string;
   today: Date;
-}): Task[] {
+}): CreatedTask[] {
   const criteria = read({ input: input, today: today });
   if (isBlank(criteria.wanted) && isBlank(criteria.unwanted)) {
     return [];
@@ -72,9 +73,9 @@ function rankedFor({
   tasks,
   terms,
 }: {
-  tasks: Task[];
+  tasks: CreatedTask[];
   terms: string[];
-}): Task[] {
+}): CreatedTask[] {
   const typed = terms.join(" ");
   if (typed.length === 0) {
     return tasks;
@@ -99,10 +100,10 @@ function rankedOn({
   typed,
   field,
 }: {
-  tasks: Task[];
+  tasks: CreatedTask[];
   typed: string;
   field: "title" | "note";
-}): Task[] {
+}): CreatedTask[] {
   return new Fuse(tasks, { ...MATCHING, keys: [field] })
     .search(typed)
     .map((result) => result.item);
@@ -148,6 +149,7 @@ function filtersIn({
     who: [],
     lists: [],
     stages: [],
+    states: [],
     phrases: [],
     terms: [],
     overdue: false,
@@ -172,6 +174,8 @@ function filtersIn({
       filters.lists.push(token.value.toLowerCase());
     } else if (token.kind === "stage") {
       filters.stages.push(token.value);
+    } else if (token.kind === "state") {
+      filters.states.push(token.value);
     } else if (token.kind === "phrase") {
       filters.phrases.push(token.value.toLowerCase());
     } else if (token.kind === "overdue") {
@@ -189,6 +193,8 @@ function filtersIn({
     }
     if (word.startsWith("!") && word.length > 1) {
       filters.stages.push(word.slice(1).toLowerCase());
+    } else if (word.startsWith(":") && word.length > 1) {
+      filters.states.push(word.slice(1).toLowerCase());
     } else {
       filters.terms.push(word.toLowerCase());
     }
@@ -205,20 +211,26 @@ function isBlank(filters: Filters): boolean {
     filters.who.length === 0 &&
     filters.lists.length === 0 &&
     filters.stages.length === 0 &&
+    filters.states.length === 0 &&
     filters.phrases.length === 0 &&
     filters.terms.length === 0
   );
 }
 
-function isOverdue(task: Task, today: string): boolean {
+function isOverdue(task: CreatedTask, today: string): boolean {
   return task.dueDate !== null && task.dueDate < today;
 }
 
-function tagsOf(task: Task): string[] {
+function standingOf(task: CreatedTask): string[] {
+  const states = [spaced(task.state)];
+  return task.archivedAt === null ? states : [...states, "archived"];
+}
+
+function tagsOf(task: CreatedTask): string[] {
   return task.tags.map((tag) => tag.toLowerCase());
 }
 
-function writtenIn(task: Task): string {
+function writtenIn(task: CreatedTask): string {
   return `${task.title} ${task.note ?? ""}`.toLowerCase();
 }
 
@@ -228,50 +240,46 @@ function anyContains(values: string[], wanted: string[]): boolean {
   );
 }
 
+function matchedOn({
+  task,
+  filters,
+  today,
+}: {
+  task: CreatedTask;
+  filters: Filters;
+  today: string;
+}): (boolean | null)[] {
+  return [
+    filters.overdue ? isOverdue(task, today) : null,
+    filters.noDueDate ? task.dueDate === null : null,
+    asked(tagsOf(task), filters.tags),
+    asked([(task.who ?? "").toLowerCase()], filters.who),
+    asked([task.list.toLowerCase()], filters.lists),
+    asked([spaced(task.stage ?? "")], filters.stages.map(spaced)),
+    asked(standingOf(task), filters.states.map(spaced)),
+  ];
+}
+
+function asked(values: string[], wanted: string[]): boolean | null {
+  return wanted.length === 0 ? null : anyContains(values, wanted);
+}
+
 function fits({
   task,
   filters,
   today,
 }: {
-  task: Task;
+  task: CreatedTask;
   filters: Filters;
   today: string;
 }): boolean {
-  if (filters.overdue && !isOverdue(task, today)) {
-    return false;
-  }
-  if (filters.noDueDate && task.dueDate !== null) {
-    return false;
-  }
-  if (
-    filters.tags.length > 0 &&
-    !anyContains(tagsOf(task), filters.tags)
-  ) {
-    return false;
-  }
-  if (
-    filters.who.length > 0 &&
-    !anyContains([(task.who ?? "").toLowerCase()], filters.who)
-  ) {
-    return false;
-  }
-  if (
-    filters.lists.length > 0 &&
-    !anyContains([task.list.toLowerCase()], filters.lists)
-  ) {
-    return false;
-  }
-  if (
-    filters.stages.length > 0 &&
-    !anyContains(
-      [spaced(task.stage ?? "")],
-      filters.stages.map(spaced),
+  return (
+    matchedOn({ task: task, filters: filters, today: today }).every(
+      (matched) => matched !== false,
+    ) &&
+    filters.phrases.every((phrase) =>
+      writtenIn(task).includes(phrase),
     )
-  ) {
-    return false;
-  }
-  return filters.phrases.every((phrase) =>
-    writtenIn(task).includes(phrase),
   );
 }
 
@@ -280,35 +288,15 @@ function hits({
   filters,
   today,
 }: {
-  task: Task;
+  task: CreatedTask;
   filters: Filters;
   today: string;
 }): boolean {
-  if (filters.overdue && isOverdue(task, today)) {
-    return true;
-  }
-  if (filters.noDueDate && task.dueDate === null) {
-    return true;
-  }
-  if (anyContains(tagsOf(task), filters.tags)) {
-    return true;
-  }
-  if (anyContains([(task.who ?? "").toLowerCase()], filters.who)) {
-    return true;
-  }
-  if (anyContains([task.list.toLowerCase()], filters.lists)) {
-    return true;
-  }
-  if (
-    anyContains(
-      [spaced(task.stage ?? "")],
-      filters.stages.map(spaced),
-    )
-  ) {
-    return true;
-  }
-  return filters.phrases.some((phrase) =>
-    writtenIn(task).includes(phrase),
+  return (
+    matchedOn({ task: task, filters: filters, today: today }).some(
+      (matched) => matched === true,
+    ) ||
+    filters.phrases.some((phrase) => writtenIn(task).includes(phrase))
   );
 }
 

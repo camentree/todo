@@ -23,14 +23,13 @@ export function useShortcuts(
       const inSearch =
         active instanceof HTMLElement &&
         active.hasAttribute("data-search-field");
-      const leavingSearch = event.key === "Escape" && inSearch;
       const movingResults =
         inSearch &&
         (chord ||
           event.key === "ArrowDown" ||
           event.key === "ArrowUp") &&
-        document.querySelector(".search-suggestions") === null;
-      if (typing && !leavingSearch && !movingResults) {
+        document.querySelector(".suggestions") === null;
+      if (typing && !movingResults) {
         return;
       }
       if (document.querySelector("[role=dialog]")) {
