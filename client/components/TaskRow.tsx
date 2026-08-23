@@ -1,14 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, ReactNode, RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { Chevron, InfoIcon } from "./icons.tsx";
+import { ParseableTitle } from "./ParseableTitle.tsx";
 import {
   AttributeChips,
   attributesOf,
   withoutAttribute,
 } from "./TaskAttributes.tsx";
-import { api } from "../api.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
@@ -16,13 +16,10 @@ import type { Task } from "@shared/types.ts";
 
 const LONG_PRESS_MILLISECONDS = 400;
 const SWIPE_FRACTION = 0.4;
-const MOST_SUGGESTIONS = 5;
 const SCROLL_BREATHING_ROOM = 96;
 const SCROLL_MILLISECONDS = 900;
 
-export type RowTask = Omit<Task, "id"> & { id: number | null };
-
-export interface MetaOmission {
+export interface AttributeOmission {
   field: Attribute;
   label: string;
 }
@@ -46,8 +43,10 @@ export function TaskRow({
   omitAttributes = [],
   inputRef,
   subtasks,
+  showSubtasks = false,
+  onShowSubtasksChange,
 }: {
-  task: RowTask;
+  task: Task;
   isEditing: boolean;
   onEditingChange: (editing: boolean) => void;
   onCommit: (changes: Partial<Task>) => void;
@@ -57,13 +56,14 @@ export function TaskRow({
   onLongPress?: (pointerX: number, pointerY: number) => void;
   flickingTo?: "left" | "right" | null;
   showAttributes: boolean;
-  omitAttributes?: MetaOmission[];
+  omitAttributes?: AttributeOmission[];
   inputRef?: RefObject<HTMLInputElement | null>;
   subtasks?: ReactNode;
+  showSubtasks?: boolean;
+  onShowSubtasksChange?: (open: boolean) => void;
 }) {
   const [draft, setDraft] = useState(task.title);
   const [edits, setEdits] = useState<Partial<Task>>({});
-  const [showSubtasks, setShowSubtasks] = useState(false);
   const [hasFocus, setHasFocus] = useState(false);
   const ownRef = useRef<HTMLInputElement>(null);
   const titleRef = inputRef ?? ownRef;
@@ -76,7 +76,7 @@ export function TaskRow({
     }
   }, [isEditing, task.title]);
 
-  const uncommitted: RowTask = {
+  const uncommitted: Task = {
     ...task,
     ...renameChanges(draft),
     ...edits,
@@ -107,7 +107,7 @@ export function TaskRow({
       stopEditing();
       return;
     }
-    onCommit(changes);
+    onCommit(unsaved ? uncommitted : changes);
     if (unsaved) {
       setDraft("");
       setEdits({});
@@ -181,7 +181,7 @@ export function TaskRow({
             <TitleField
               value={draft}
               onChange={setDraft}
-              list={uncommitted.list}
+              list={uncommitted.list ?? ""}
               inputRef={titleRef}
               takeFocus={!unsaved}
               onEnter={commit}
@@ -231,7 +231,7 @@ export function TaskRow({
               aria-label="Show subtasks"
               onClick={(event) => {
                 event.stopPropagation();
-                setShowSubtasks(!showSubtasks);
+                onShowSubtasksChange?.(!showSubtasks);
               }}
             >
               <span className="subtask-count">
@@ -257,7 +257,7 @@ export function TaskRow({
           />
         ) : (
           showAttributes && (
-            <Meta
+            <Attributes
               task={task}
               omit={omitAttributes}
               travelled={gesture.travelled}
@@ -294,150 +294,43 @@ function TitleField({
   onEnter: () => void;
   onEscape: () => void;
 }) {
-  const [caret, setCaret] = useState(value.length);
-  const [highlighted, setHighlighted] = useState(0);
-  const [suppressed, setSuppressed] = useState(false);
-  const [pendingCaret, setPendingCaret] = useState<number | null>(
-    null,
-  );
-
-  const { data: lists = [] } = useQuery({
-    queryKey: ["lists"],
-    queryFn: api.lists,
-  });
-  const { data: knownTags = [] } = useQuery({
-    queryKey: ["tags", list],
-    queryFn: () => api.tags(list || undefined),
-  });
-  const { data: knownWho = [] } = useQuery({
-    queryKey: ["who", list],
-    queryFn: () => api.knownWho(list || undefined),
-  });
-  const { data: stages = [] } = useQuery({
-    queryKey: ["stages"],
-    queryFn: api.stages,
-  });
-
-  const opening = suppressed
-    ? null
-    : sigilBefore({ input: value, caret: caret });
-  const matches = suggestionsFor({
-    opening: opening,
-    lists: lists,
-    knownTags: knownTags,
-    knownWho: knownWho,
-    stages: stages,
-  });
-
-  useEffect(() => {
-    if (pendingCaret === null) {
-      return;
-    }
-    inputRef.current?.setSelectionRange(pendingCaret, pendingCaret);
-    setPendingCaret(null);
-  }, [pendingCaret, inputRef]);
-
   useEffect(() => {
     if (takeFocus) {
       inputRef.current?.focus({ preventScroll: true });
     }
   }, [takeFocus, inputRef]);
 
-  function pick(candidate: string): void {
-    if (!opening) {
-      return;
-    }
-    const head = `${value.slice(0, opening.start)}${opening.sigil}${candidate} `;
-    onChange(`${head}${value.slice(caret)}`);
-    setCaret(head.length);
-    setPendingCaret(head.length);
-    setHighlighted(0);
-  }
-
   return (
-    <>
-      <input
-        ref={inputRef}
-        className="task-title editing"
-        value={value}
-        aria-label="Title"
-        enterKeyHint="done"
-        onFocus={(event) => {
+    <ParseableTitle
+      value={value}
+      onChange={onChange}
+      inputRef={inputRef}
+      list={list}
+      at="row"
+      onDone={onEnter}
+      onCancel={onEscape}
+      input={{
+        className: "task-title editing",
+        "aria-label": "Title",
+        enterKeyHint: "done",
+        onFocus: (event) => {
           const row = event.currentTarget.closest(".task");
           if (row) {
             easeToTop(row);
           }
-        }}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setCaret(event.target.selectionStart ?? 0);
-          setSuppressed(false);
-          setHighlighted(0);
-        }}
-        onSelect={(event) =>
-          setCaret(event.currentTarget.selectionStart ?? 0)
-        }
-        onKeyDown={(event) => {
-          if (matches.length > 0) {
-            const step = suggestionStep(event);
-            if (step !== 0) {
-              event.preventDefault();
-              setHighlighted(
-                (highlighted + step + matches.length) %
-                  matches.length,
-              );
-              return;
-            }
-            if (event.key === "Enter") {
-              event.preventDefault();
-              pick(matches[highlighted] ?? "");
-              return;
-            }
-            if (event.key === "Escape") {
-              setSuppressed(true);
-              return;
-            }
-          }
-          if (event.key === "Enter") {
-            event.preventDefault();
-            onEnter();
-            return;
-          }
-          if (event.key === "Escape") {
-            onEscape();
-          }
-        }}
-      />
-
-      {matches.length > 0 && (
-        <div className="capture-suggestions">
-          {matches.map((candidate, index) => (
-            <button
-              type="button"
-              key={candidate}
-              tabIndex={-1}
-              className="capture-suggestion"
-              data-on={index === highlighted}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => pick(candidate)}
-            >
-              {opening?.sigil}
-              {candidate}
-            </button>
-          ))}
-        </div>
-      )}
-    </>
+        },
+      }}
+    />
   );
 }
 
-function Meta({
+function Attributes({
   task,
   omit,
   travelled,
 }: {
-  task: RowTask;
-  omit: MetaOmission[];
+  task: Task;
+  omit: AttributeOmission[];
   travelled: () => boolean;
 }) {
   const navigate = useNavigate();
@@ -477,55 +370,6 @@ function Meta({
   );
 }
 
-function InfoIcon() {
-  return (
-    <svg
-      width="19"
-      height="19"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        cx="10"
-        cy="10"
-        r="7.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M10 9v4.4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <circle cx="10" cy="6.4" r="0.95" fill="currentColor" />
-    </svg>
-  );
-}
-
-export function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      className="chevron"
-      data-open={open}
-      width="13"
-      height="13"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M6 3.5 10.5 8 6 12.5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function easeToTop(row: Element): void {
   const from = window.scrollY;
   const to = Math.max(
@@ -557,91 +401,6 @@ function dismissKeyboard(): void {
   if (focused instanceof HTMLElement) {
     focused.blur();
   }
-}
-
-function suggestionStep(
-  event: KeyboardEvent<HTMLInputElement>,
-): number {
-  if (event.ctrlKey) {
-    if (event.key === "n") {
-      return 1;
-    }
-    if (event.key === "p") {
-      return -1;
-    }
-    return 0;
-  }
-  if (event.key === "ArrowDown") {
-    return 1;
-  }
-  if (event.key === "ArrowUp") {
-    return -1;
-  }
-  if (event.key === "Tab") {
-    return event.shiftKey ? -1 : 1;
-  }
-  return 0;
-}
-
-interface Opening {
-  sigil: string;
-  typed: string;
-  start: number;
-}
-
-function sigilBefore({
-  input,
-  caret,
-}: {
-  input: string;
-  caret: number;
-}): Opening | null {
-  const before = input.slice(0, caret);
-  const found = before.match(/(?:^|\s)([#@/!])(\S*)$/);
-  const sigil = found?.[1];
-  const typed = found?.[2];
-  if (!sigil || typed === undefined) {
-    return null;
-  }
-  return {
-    sigil: sigil,
-    typed: typed.toLowerCase(),
-    start: before.length - typed.length - 1,
-  };
-}
-
-function suggestionsFor({
-  opening,
-  lists,
-  knownTags,
-  knownWho,
-  stages,
-}: {
-  opening: Opening | null;
-  lists: string[];
-  knownTags: string[];
-  knownWho: string[];
-  stages: string[];
-}): string[] {
-  if (!opening) {
-    return [];
-  }
-  const candidates =
-    opening.sigil === "/"
-      ? lists
-      : opening.sigil === "#"
-        ? knownTags
-        : opening.sigil === "!"
-          ? stages
-          : knownWho;
-
-  return candidates
-    .filter(
-      (candidate) =>
-        candidate.toLowerCase().startsWith(opening.typed) &&
-        candidate.toLowerCase() !== opening.typed,
-    )
-    .slice(0, MOST_SUGGESTIONS);
 }
 
 function useRowGesture({

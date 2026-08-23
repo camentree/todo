@@ -4,15 +4,17 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
+import { Chevron, TickIcon } from "./icons.tsx";
+import { ParseableTitle } from "./ParseableTitle.tsx";
 import {
   AttributeChips,
   AttributeText,
   asRenamed,
   withoutAttribute,
 } from "./TaskAttributes.tsx";
-import { Chevron, TaskRow } from "./TaskRow.tsx";
-import type { RowTask } from "./TaskRow.tsx";
+import { TaskRow } from "./TaskRow.tsx";
 import { api } from "../api.ts";
 import { formatWhen } from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
@@ -21,7 +23,12 @@ import { canonicalName } from "@shared/names.ts";
 import { toDateString } from "@shared/recurrence.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
-import type { Frequency, Schedule, Task } from "@shared/types.ts";
+import type {
+  CreatedTask,
+  Frequency,
+  Schedule,
+  Task,
+} from "@shared/types.ts";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -37,13 +44,9 @@ const DRAG_TO_CLOSE = 110;
 const INDENT = "  ";
 
 type InfoSection =
-  | "metadata"
-  | "timing"
-  | "subtasks"
-  | "note"
-  | "comments";
+  "metadata" | "timing" | "subtasks" | "note" | "comments";
 
-function sectionsHoldingSomething(task: Task): InfoSection[] {
+function sectionsHoldingSomething(task: CreatedTask): InfoSection[] {
   const sections: InfoSection[] = [];
   if (task.dueDate || task.dueTime || task.schedule) {
     sections.push("timing");
@@ -72,6 +75,7 @@ export function TaskInfo({
   const [note, setNote] = useState("");
   const [newTag, setNewTag] = useState("");
   const [titleFocused, setTitleFocused] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -98,8 +102,8 @@ export function TaskInfo({
   const commentsOpen = openSections.includes("comments");
   const hasTiming = Boolean(
     editedTask?.dueDate ||
-      editedTask?.dueTime ||
-      editedTask?.schedule,
+    editedTask?.dueTime ||
+    editedTask?.schedule,
   );
 
   useEffect(() => {
@@ -168,7 +172,7 @@ export function TaskInfo({
     onSuccess: refresh,
   });
   const toggleSubtask = useMutation({
-    mutationFn: (subtask: Task) =>
+    mutationFn: (subtask: CreatedTask) =>
       api.setState(
         subtask.id,
         subtask.state === "complete" ? "to_do" : "complete",
@@ -180,13 +184,13 @@ export function TaskInfo({
       subtask,
       title,
     }: {
-      subtask: Task;
+      subtask: CreatedTask;
       title: string;
     }) => api.updateTask(subtask.id, { title: title }),
     onSuccess: refresh,
   });
   const deleteSubtask = useMutation({
-    mutationFn: (subtask: Task) => api.deleteTask(subtask.id),
+    mutationFn: (subtask: CreatedTask) => api.deleteTask(subtask.id),
     onSuccess: refresh,
   });
   const comment = useMutation({
@@ -253,7 +257,7 @@ export function TaskInfo({
     return null;
   }
 
-  const uncommittedTask: Task = editedTask;
+  const uncommittedTask = editedTask;
   const subtasks = task.subtasks ?? [];
   const schedule = uncommittedTask.schedule;
   const repeats = schedule !== null;
@@ -312,22 +316,24 @@ export function TaskInfo({
           <TickIcon />
         </button>
         <div className="info-body" ref={bodyRef}>
-          <input
-            className="info-title"
+          <ParseableTitle
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            onFocus={() => setTitleFocused(true)}
-            onBlur={() => {
-              setTitleFocused(false);
-              commitTitle();
+            onChange={setTitle}
+            inputRef={titleRef}
+            list={uncommittedTask.list ?? ""}
+            at="sheet"
+            onDone={(event: ReactKeyboardEvent<HTMLInputElement>) =>
+              event.currentTarget.blur()
+            }
+            input={{
+              className: "info-title",
+              "aria-label": "Title",
+              onFocus: () => setTitleFocused(true),
+              onBlur: () => {
+                setTitleFocused(false);
+                commitTitle();
+              },
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                event.currentTarget.blur();
-              }
-            }}
-            aria-label="Title"
           />
 
           <div className="info-attributes">
@@ -363,7 +369,7 @@ export function TaskInfo({
               <input
                 list="known-lists"
                 key={uncommittedTask.list}
-                defaultValue={uncommittedTask.list}
+                defaultValue={uncommittedTask.list ?? ""}
                 onBlur={(event) => {
                   const next = canonicalName(event.target.value);
                   if (next && next !== uncommittedTask.list) {
@@ -919,26 +925,6 @@ function useDragDown({
   };
 }
 
-function TickIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M4.5 10.5l3.8 3.8L15.5 6.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function withIndentation({
   textarea,
   removing,
@@ -974,7 +960,7 @@ function SheetSubtask({
   onDelete,
   blank = false,
 }: {
-  subtask: RowTask;
+  subtask: Task;
   onCommit: (changes: Partial<Task>) => void;
   onDelete: () => void;
   blank?: boolean;

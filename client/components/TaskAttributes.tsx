@@ -60,13 +60,11 @@ export function attributesOf(task: DescribedTask): TaskAttribute[] {
           to: `/list/${encodeURIComponent(task.list)}`,
         }
       : null,
-    ...task.tags.map(
-      (tag): TaskAttribute => ({
-        field: "tag",
-        text: tag,
-        to: `/tag/${encodeURIComponent(tag)}`,
-      }),
-    ),
+    ...task.tags.map((tag): TaskAttribute => ({
+      field: "tag",
+      text: tag,
+      to: `/tag/${encodeURIComponent(tag)}`,
+    })),
     task.who
       ? {
           field: "who",

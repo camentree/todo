@@ -1,21 +1,14 @@
-import { useCallback, useState } from "react";
-
-export type Theme = "system" | "light" | "dark";
-
-const STORAGE_KEY = "theme";
+import {
+  changeGlobal,
+  currentGlobal,
+  useGlobalSettings,
+} from "./settings.ts";
+import type { Theme } from "./settings.ts";
 
 const GROUND = {
   light: "#f5f8f6",
   dark: "#1c1a1e",
 };
-
-export function readTheme(): Theme {
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") {
-    return stored;
-  }
-  return "system";
-}
 
 export function applyTheme(theme: Theme): void {
   const resolved = theme === "system" ? systemTheme() : theme;
@@ -31,22 +24,20 @@ export function followSystemTheme(): void {
   window
     .matchMedia("(prefers-color-scheme: dark)")
     .addEventListener("change", () => {
-      if (readTheme() === "system") {
-        applyTheme("system");
-      }
+      applyTheme(currentGlobal().theme);
     });
 }
 
 export function useTheme(): [Theme, (next: Theme) => void] {
-  const [theme, setTheme] = useState<Theme>(() => readTheme());
+  const { theme } = useGlobalSettings();
 
-  const change = useCallback((next: Theme) => {
-    window.localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next);
-    setTheme(next);
-  }, []);
-
-  return [theme, change];
+  return [
+    theme,
+    (next: Theme) => {
+      changeGlobal({ theme: next });
+      applyTheme(next);
+    },
+  ];
 }
 
 function systemTheme(): "light" | "dark" {

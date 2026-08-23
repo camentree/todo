@@ -146,6 +146,28 @@ describe("parse", () => {
     ]);
   });
 
+  test("a colon names a state, capturing and searching alike", () => {
+    expect(tokensOf(":complete")).toEqual([
+      { kind: "state", text: ":complete", value: "complete" },
+    ]);
+    expect(tokensOf(":to-do")).toEqual([
+      { kind: "state", text: ":to-do", value: "to_do" },
+    ]);
+    expect(tokensOf(":archived")).toEqual([
+      { kind: "state", text: ":archived", value: "archived" },
+    ]);
+    expect(searchTokensOf(":skipped")).toEqual([
+      { kind: "state", text: ":skipped", value: "skipped" },
+    ]);
+    expect(titleOf("File the form :complete")).toBe("File the form");
+  });
+
+  test("a colon that names nothing stays in the title", () => {
+    expect(tokensOf(":nonsense")).toEqual([]);
+    expect(titleOf("Note: buy milk")).toBe("Note: buy milk");
+    expect(titleOf("Meet at 9:30")).toBe("Meet");
+  });
+
   test("reads the search-only flags and quoted phrases", () => {
     expect(searchTokensOf("overdue")).toEqual([
       { kind: "overdue", text: "overdue" },

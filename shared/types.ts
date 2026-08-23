@@ -14,8 +14,8 @@ export interface Schedule {
 }
 
 export interface Task {
-  id: number;
-  list: string;
+  id: number | null;
+  list: string | null;
   parentId: number | null;
   recurringTaskId: number | null;
   title: string;
@@ -35,7 +35,12 @@ export interface Task {
   unseenCommentCount: number;
   lastCommentFromOthers: boolean;
   schedule: Schedule | null;
-  subtasks?: Task[];
+  subtasks?: CreatedTask[];
+}
+
+export interface CreatedTask extends Task {
+  id: number;
+  list: string;
 }
 
 export interface Comment {
@@ -68,15 +73,11 @@ export interface Event {
 }
 
 export type BreakUpField =
-  | "none"
-  | "list"
-  | "stage"
-  | "tag"
-  | "due_date"
-  | "who";
+  "none" | "list" | "stage" | "tag" | "due_date" | "who";
 
 export type SortField =
   | "manual"
+  | "relevance"
   | "due_date"
   | "title"
   | "created_at"

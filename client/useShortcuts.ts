@@ -20,11 +20,16 @@ export function useShortcuts(
       const typing =
         active instanceof HTMLElement &&
         active.closest("input, textarea, select");
-      const leavingSearch =
-        event.key === "Escape" &&
+      const inSearch =
         active instanceof HTMLElement &&
         active.hasAttribute("data-search-field");
-      if (typing && !leavingSearch) {
+      const movingResults =
+        inSearch &&
+        (chord ||
+          event.key === "ArrowDown" ||
+          event.key === "ArrowUp") &&
+        document.querySelector(".suggestions") === null;
+      if (typing && !movingResults) {
         return;
       }
       if (document.querySelector("[role=dialog]")) {
