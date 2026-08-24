@@ -16,6 +16,11 @@ import {
 } from "./TaskAttributes.tsx";
 import { TaskRow } from "./TaskRow.tsx";
 import { api } from "../api.ts";
+import {
+  recordDeletion,
+  recordEdit,
+  recordStateChange,
+} from "../history.ts";
 import { formatWhen } from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import { useLockedScroll } from "../useLockedScroll.ts";
@@ -84,6 +89,9 @@ export function TaskInfo({
   const [editingSubtaskId, setEditingSubtaskId] = useState<
     number | null
   >(null);
+  const [expandedSubtasks, setExpandedSubtasks] = useState<
+    Set<number>
+  >(new Set());
   const [titleFocused, setTitleFocused] = useState(false);
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
@@ -162,6 +170,11 @@ export function TaskInfo({
   const save = useMutation({
     mutationFn: (changes: Partial<Task>) =>
       api.updateTask(taskId, changes),
+    onMutate: (changes: Partial<Task>) => {
+      if (task) {
+        recordEdit({ task: task, changes: changes });
+      }
+    },
     onSuccess: refresh,
   });
   const addSubtask = useMutation({
@@ -179,6 +192,11 @@ export function TaskInfo({
         subtask.id,
         subtask.state === "complete" ? "to_do" : "complete",
       ),
+    onMutate: (subtask: CreatedTask) =>
+      recordStateChange({
+        task: subtask,
+        next: subtask.state === "complete" ? "to_do" : "complete",
+      }),
     onSuccess: refresh,
   });
   const renameSubtask = useMutation({
@@ -189,10 +207,13 @@ export function TaskInfo({
       subtask: CreatedTask;
       title: string;
     }) => api.updateTask(subtask.id, { title: title }),
+    onMutate: ({ subtask, title }) =>
+      recordEdit({ task: subtask, changes: { title: title } }),
     onSuccess: refresh,
   });
   const deleteSubtask = useMutation({
     mutationFn: (subtask: CreatedTask) => api.deleteTask(subtask.id),
+    onMutate: (subtask: CreatedTask) => recordDeletion(subtask),
     onSuccess: refresh,
   });
   const comment = useMutation({
@@ -296,6 +317,18 @@ export function TaskInfo({
       isEditing={editingSubtaskId === subtask.id}
       onEditingChange={(editing) =>
         setEditingSubtaskId(editing ? subtask.id : null)
+      }
+      expanded={expandedSubtasks.has(subtask.id)}
+      onExpandedChange={(open) =>
+        setExpandedSubtasks((current) => {
+          const next = new Set(current);
+          if (open) {
+            next.add(subtask.id);
+          } else {
+            next.delete(subtask.id);
+          }
+          return next;
+        })
       }
       onCommit={(changes) =>
         "state" in changes

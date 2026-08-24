@@ -3,6 +3,16 @@ import { useRef, useState } from "react";
 
 import { api } from "./api.ts";
 import { recordFailure } from "./failures.ts";
+import {
+  recordArchiving,
+  recordDeferral,
+  recordDeletion,
+  recordEdit,
+  recordHiding,
+  recordStateChange,
+  redo as redoLast,
+  undo as undoLast,
+} from "./history.ts";
 import { isDueToday } from "./format.ts";
 import type { Landing } from "./components/TaskBoard.tsx";
 import { reassignSlots } from "@shared/ordering.ts";
@@ -35,6 +45,27 @@ function rememberList(list: string): void {
 
 function lastUsedList(): string | null {
   return window.localStorage.getItem(LAST_LIST_KEY);
+}
+
+type SwipeRightOutcome =
+  "deleted" | "unhidden" | "deferred" | "hidden";
+
+function recordSwipeRight({
+  task,
+  outcome,
+}: {
+  task: CreatedTask;
+  outcome: SwipeRightOutcome;
+}): void {
+  if (outcome === "deleted") {
+    recordDeletion(task);
+    return;
+  }
+  if (outcome === "deferred") {
+    recordDeferral(task);
+    return;
+  }
+  recordHiding({ task: task, hiding: outcome === "hidden" });
 }
 
 interface QueuedMove {
@@ -205,6 +236,7 @@ export function useTaskActions(
           });
           if (updated) {
             patchEverywhere(updated.id, updated);
+            recordStateChange({ task: task, next: next });
             return;
           }
           report("tick that off")(error);
@@ -244,6 +276,7 @@ export function useTaskActions(
       changes: Partial<Task>;
     }) => api.updateTask(task.id, changes),
     onMutate: ({ task, changes }) => {
+      recordEdit({ task: task, changes: changes });
       patchEverywhere(task.id, changes);
     },
     onSuccess: (written: CreatedTask) =>
@@ -256,7 +289,10 @@ export function useTaskActions(
 
   const remove = useMutation({
     mutationFn: (task: CreatedTask) => api.deleteTask(task.id),
-    onSuccess: ({ removed }) => takeBack(removed),
+    onSuccess: ({ removed }, task: CreatedTask) => {
+      takeBack(removed);
+      recordDeletion(task);
+    },
     onError: report("delete that task"),
   });
 
@@ -265,26 +301,49 @@ export function useTaskActions(
       task.archivedAt
         ? api.unarchiveTasks([task.id])
         : api.archiveTasks([task.id]),
-    onSuccess: landed,
+    onSuccess: (written: CreatedTask[], task: CreatedTask) => {
+      landed(written);
+      recordArchiving({
+        task: task,
+        archiving: task.archivedAt === null,
+      });
+    },
     onError: report("archive that task"),
   });
 
   const swipeRight = useMutation({
-    mutationFn: (task: CreatedTask) => {
+    mutationFn: async (
+      task: CreatedTask,
+    ): Promise<{
+      outcome: SwipeRightOutcome;
+      written: CreatedTask[];
+    }> => {
       if (task.archivedAt) {
-        return api.deleteTask(task.id).then(({ removed }) => {
-          takeBack(removed);
-          return [];
-        });
+        const { removed } = await api.deleteTask(task.id);
+        takeBack(removed);
+        return { outcome: "deleted", written: [] };
       }
       if (task.state === "hidden") {
-        return api.unhideTask(task.id);
+        return {
+          outcome: "unhidden",
+          written: await api.unhideTask(task.id),
+        };
       }
-      return task.recurringTaskId || isDueToday(task.dueDate)
-        ? api.deferTask(task.id)
-        : api.hideTask(task.id);
+      if (task.recurringTaskId || isDueToday(task.dueDate)) {
+        return {
+          outcome: "deferred",
+          written: await api.deferTask(task.id),
+        };
+      }
+      return {
+        outcome: "hidden",
+        written: await api.hideTask(task.id),
+      };
     },
-    onSuccess: landed,
+    onSuccess: ({ outcome, written }, task: CreatedTask) => {
+      landed(written);
+      recordSwipeRight({ task: task, outcome: outcome });
+    },
     onError: report("put that task away"),
   });
 
@@ -378,6 +437,16 @@ export function useTaskActions(
 
   return {
     justToggled: justToggled,
+    undo: async () => {
+      if (await undoLast()) {
+        void queryClient.invalidateQueries();
+      }
+    },
+    redo: async () => {
+      if (await redoLast()) {
+        void queryClient.invalidateQueries();
+      }
+    },
     toggleTask: toggleState,
     rename: (task: CreatedTask, changes: Partial<Task>) =>
       rename.mutate({ task: task, changes: changes }),

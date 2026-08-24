@@ -39,6 +39,7 @@ export function TaskRow({
   onCommit,
   onInfoOpen,
   onFocusNext,
+  onAddSubtask,
   swipeLeft,
   swipeRight,
   onLongPress,
@@ -50,6 +51,7 @@ export function TaskRow({
   renderNewSubtask,
   expanded = false,
   onExpandedChange,
+  onTab,
 }: {
   task: Task;
   isEditing: boolean;
@@ -58,6 +60,7 @@ export function TaskRow({
   onCommit: (changes: Partial<Task>) => void;
   onInfoOpen?: () => void;
   onFocusNext?: () => void;
+  onAddSubtask?: () => void;
   swipeLeft?: SwipeAction;
   swipeRight?: SwipeAction;
   onLongPress?: (pointerX: number, pointerY: number) => void;
@@ -69,6 +72,7 @@ export function TaskRow({
   renderNewSubtask?: (parent: Task) => ReactNode;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
+  onTab?: (backwards: boolean) => void;
 }) {
   const [draft, setDraft] = useState(task.title);
   const [edits, setEdits] = useState<Partial<Task>>({});
@@ -112,7 +116,8 @@ export function TaskRow({
     isTerminal(child.state),
   ).length;
   const note = (task.note ?? "").trim();
-  const expandable = children.length > 0 || note.length > 0;
+  const expandable =
+    children.length > 0 || note.length > 0 || expanded;
 
   const flickTravel =
     flickingTo === "left"
@@ -122,6 +127,30 @@ export function TaskRow({
     flickingTo === null ? `${gesture.offset}px` : `${flickTravel}%`;
 
   useShortcuts((event) => {
+    if (
+      event.key === "ArrowRight" &&
+      onExpandedChange &&
+      expandable
+    ) {
+      event.preventDefault();
+      onExpandedChange(true);
+      return;
+    }
+    if (event.key === "ArrowLeft" && onExpandedChange && expanded) {
+      event.preventDefault();
+      onExpandedChange(false);
+      return;
+    }
+    if (event.key === "o" && onExpandedChange && expandable) {
+      event.preventDefault();
+      onExpandedChange(!expanded);
+      return;
+    }
+    if (event.key === "+" && onAddSubtask) {
+      event.preventDefault();
+      onAddSubtask();
+      return;
+    }
     if (event.key === "Enter") {
       event.preventDefault();
       onEditingChange(true);
@@ -152,7 +181,7 @@ export function TaskRow({
     }
   }, isFocused && !isEditing);
 
-  function commit(): void {
+  function commit(movingOn = false): void {
     const changes = { ...titleChanges, ...edits };
     if ((changes.title ?? "").trim().length === 0) {
       stopEditing();
@@ -164,12 +193,20 @@ export function TaskRow({
       setEdits({});
       return;
     }
-    onEditingChange(false);
+    if (!movingOn) {
+      onEditingChange(false);
+    }
+  }
+
+  function moveOn(backwards: boolean): void {
+    commit(true);
+    onTab?.(backwards);
   }
 
   function stopEditing(): void {
     setDraft(unsaved ? "" : task.title);
     setEdits({});
+    titleRef.current?.blur();
     onEditingChange(false);
   }
 
@@ -244,6 +281,7 @@ export function TaskRow({
                 takeFocus={!unsaved || focusOnMount}
                 onEnter={commit}
                 onEscape={stopEditing}
+                onTab={onTab && moveOn}
               />
             ) : (
               <button
@@ -330,9 +368,9 @@ export function TaskRow({
                 onCommit={(next) => onCommit({ note: next })}
               />
             )}
-            {renderSubtask && children.length > 0 && (
+            {(renderSubtask || renderNewSubtask) && (
               <div className="subtasks">
-                {children.map((child) => renderSubtask(child))}
+                {children.map((child) => renderSubtask?.(child))}
                 {renderNewSubtask?.(task)}
               </div>
             )}
@@ -423,6 +461,7 @@ function TitleField({
   takeFocus,
   onEnter,
   onEscape,
+  onTab,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -433,6 +472,7 @@ function TitleField({
   takeFocus: boolean;
   onEnter: () => void;
   onEscape: () => void;
+  onTab?: (backwards: boolean) => void;
 }) {
   useEffect(() => {
     if (!takeFocus) {
@@ -455,6 +495,7 @@ function TitleField({
       multiline
       onDone={onEnter}
       onCancel={onEscape}
+      onTab={onTab}
       input={{
         className: "task-title editing",
         "aria-label": "Title",

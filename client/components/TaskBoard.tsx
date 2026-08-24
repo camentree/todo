@@ -65,6 +65,8 @@ export interface RowActions {
   remove: (task: CreatedTask) => void;
   swipeLeft: (task: CreatedTask) => void;
   swipeRight: (task: CreatedTask) => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 export interface TaskBoardProps {
@@ -122,6 +124,9 @@ export function TaskBoard({
     new Set([HIDDEN_GROUP]),
   );
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [addingSubtaskTo, setAddingSubtaskTo] = useState<
+    number | null
+  >(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const { lift, startLift } = useDragToReorder({
     groups: groups,
@@ -132,18 +137,88 @@ export function TaskBoard({
   const shown = groups
     .filter((group) => !collapsed.has(group.key))
     .flatMap((group) => group.tasks);
-  const { focusedId, focusedIndex, focusAt, focusOn, land } =
+  const { focusedId, focusAt, focusStep, focusOn, hoverOn, land } =
     useRowFocus({ shown: shown, boardRef: boardRef });
+  useEffect(() => {
+    if (addingSubtaskTo === null) {
+      return;
+    }
+    const fields =
+      boardRef.current?.querySelectorAll<HTMLTextAreaElement>(
+        `[data-task="${addingSubtaskTo}"] .subtasks textarea`,
+      );
+    const blank = fields?.[fields.length - 1];
+    if (!blank) {
+      return;
+    }
+    blank.focus();
+    blank.scrollIntoView({ block: "center", behavior: "smooth" });
+    setAddingSubtaskTo(null);
+  }, [addingSubtaskTo, expanded]);
+
+  function expand(taskId: number, open: boolean): void {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (open) {
+        next.add(taskId);
+      } else {
+        next.delete(taskId);
+      }
+      return next;
+    });
+  }
+
+  function addSubtaskTo(taskId: number): void {
+    expand(taskId, true);
+    setAddingSubtaskTo(taskId);
+  }
+
+  const walk = shown.flatMap((task) => [
+    task.id,
+    ...(expanded.has(task.id)
+      ? (task.subtasks ?? []).map((subtask) => subtask.id)
+      : []),
+  ]);
+
+  function editBeside(taskId: number, step: number): void {
+    const here = walk.indexOf(taskId);
+    const next = here === -1 ? undefined : walk[here + step];
+    if (next === undefined) {
+      return;
+    }
+    setEditingId(next);
+    if (shown.some((task) => task.id === next)) {
+      focusOn(next);
+    }
+    boardRef.current
+      ?.querySelector(`[data-task="${next}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }
 
   useShortcuts((event) => {
     if (event.key === "Escape") {
       focusOn(null);
       return;
     }
+    if (event.key === "Tab" && focusedId !== null) {
+      event.preventDefault();
+      editBeside(focusedId, event.shiftKey ? -1 : 1);
+      return;
+    }
+    if (event.key === "z") {
+      event.preventDefault();
+      void actions.undo();
+      return;
+    }
+    if (event.key === "r") {
+      event.preventDefault();
+      void actions.redo();
+      return;
+    }
     const step = movement(event);
     if (step !== 0) {
       event.preventDefault();
-      focusAt(focusedIndex + step);
+      focusStep(step);
     }
   });
 
@@ -162,6 +237,9 @@ export function TaskBoard({
             changes: changes,
             actions: actions,
           })
+        }
+        onTab={(backwards) =>
+          editBeside(subtask.id, backwards ? -1 : 1)
         }
         swipeLeft={{
           name: "Delete",
@@ -205,8 +283,8 @@ export function TaskBoard({
         data-index={index}
         data-lifting={lift?.taskId === task.id}
         data-focused={focusedId === task.id}
-        onMouseEnter={() => focusOn(task.id)}
-        onMouseLeave={() => focusOn(null)}
+        onMouseEnter={() => hoverOn(task.id)}
+        onMouseLeave={() => hoverOn(null)}
       >
         <TaskRow
           task={showing({ task: task, justToggled: justToggled })}
@@ -227,6 +305,10 @@ export function TaskBoard({
           onFocusNext={() =>
             focusAt(shown.findIndex((row) => row.id === task.id) + 1)
           }
+          onTab={(backwards) =>
+            editBeside(task.id, backwards ? -1 : 1)
+          }
+          onAddSubtask={() => addSubtaskTo(task.id)}
           swipeLeft={{
             name: leftSwipeLabel(task),
             action: () => actions.swipeLeft(task),
@@ -246,7 +328,7 @@ export function TaskBoard({
           showAttributes={true}
           omitAttributes={group.omitAttributes}
           expanded={expanded.has(task.id)}
-          onExpandedChange={(open) => changeExpanded(task.id, open)}
+          onExpandedChange={(open) => expand(task.id, open)}
           renderSubtask={subtaskRow}
           renderNewSubtask={newSubtaskRow}
         />
@@ -279,18 +361,6 @@ export function TaskBoard({
         showAttributes={false}
       />
     );
-  }
-
-  function changeExpanded(taskId: number, open: boolean): void {
-    setExpanded((current) => {
-      const next = new Set(current);
-      if (open) {
-        next.add(taskId);
-      } else {
-        next.delete(taskId);
-      }
-      return next;
-    });
   }
 
   const lastGroupKey = groups
@@ -701,13 +771,18 @@ function useRowFocus({
   boardRef: RefObject<HTMLDivElement | null>;
 }): {
   focusedId: number | null;
-  focusedIndex: number;
   focusAt: (index: number) => void;
+  focusStep: (step: number) => void;
   focusOn: (taskId: number | null) => void;
+  hoverOn: (taskId: number | null) => void;
   land: (taskId: number) => void;
 } {
   const [focusedId, setFocusedId] = useState<number | null>(null);
   const [landingId, setLandingId] = useState<number | null>(null);
+  const lastFocusedId = useRef<number | null>(null);
+  const followingPointer = useRef(true);
+  const pointerX = useRef<number | null>(null);
+  const pointerY = useRef<number | null>(null);
 
   const focusedIndex = shown.findIndex(
     (task) => task.id === focusedId,
@@ -729,23 +804,72 @@ function useRowFocus({
     );
   }, [landingId, shown, boardRef]);
 
+  useEffect(() => {
+    function pressed(): void {
+      followingPointer.current = false;
+    }
+    function moved(event: PointerEvent): void {
+      if (
+        event.clientX === pointerX.current &&
+        event.clientY === pointerY.current
+      ) {
+        return;
+      }
+      pointerX.current = event.clientX;
+      pointerY.current = event.clientY;
+      followingPointer.current = true;
+    }
+    window.addEventListener("keydown", pressed);
+    window.addEventListener("pointermove", moved);
+    return () => {
+      window.removeEventListener("keydown", pressed);
+      window.removeEventListener("pointermove", moved);
+    };
+  }, []);
+
+  function focusOn(taskId: number | null): void {
+    if (taskId !== null) {
+      lastFocusedId.current = taskId;
+    }
+    setFocusedId(taskId);
+  }
+
+  function hoverOn(taskId: number | null): void {
+    if (!followingPointer.current) {
+      return;
+    }
+    focusOn(taskId);
+  }
+
   function focusAt(index: number): void {
     const task =
       shown[Math.min(Math.max(index, 0), shown.length - 1)];
     if (!task) {
       return;
     }
-    setFocusedId(task.id);
+    focusOn(task.id);
     boardRef.current
       ?.querySelector(`[data-task="${task.id}"]`)
       ?.scrollIntoView({ block: "nearest" });
   }
 
+  function focusStep(step: number): void {
+    if (focusedId !== null) {
+      focusAt(focusedIndex + step);
+      return;
+    }
+    const resuming = shown.findIndex(
+      (task) => task.id === lastFocusedId.current,
+    );
+    focusAt(resuming === -1 ? 0 : resuming);
+  }
+
   return {
     focusedId: focusedId,
-    focusedIndex: focusedIndex,
     focusAt: focusAt,
-    focusOn: setFocusedId,
+    focusStep: focusStep,
+    focusOn: focusOn,
+    hoverOn: hoverOn,
     land: setLandingId,
   };
 }
