@@ -110,9 +110,10 @@ export function TaskInfo({
     onRelease: () => closeSlowly(),
   });
 
-  const { data: task } = useQuery({
+  const { data: task, isError } = useQuery({
     queryKey: ["task", taskId],
     queryFn: () => api.task(taskId),
+    retry: false,
   });
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],
@@ -122,8 +123,8 @@ export function TaskInfo({
   const commentsOpen = openSections.includes("comments");
   const hasTiming = Boolean(
     editedTask?.dueDate ||
-    editedTask?.dueTime ||
-    editedTask?.schedule,
+      editedTask?.dueTime ||
+      editedTask?.schedule,
   );
 
   useEffect(() => {
@@ -286,6 +287,10 @@ export function TaskInfo({
     drag.slideOut();
     setClosing(true);
     setTimeout(onClose, CLOSE_MILLISECONDS);
+  }
+
+  if (isError) {
+    return <MissingTask onClose={onClose} />;
   }
 
   if (!task || !editedTask) {
@@ -907,6 +912,34 @@ export function TaskInfo({
           </div>
         </>
       )}
+    </>
+  );
+}
+
+function MissingTask({ onClose }: { onClose: () => void }) {
+  useLockedScroll();
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose} />
+      <div className="info" role="dialog" aria-label="No such task">
+        <div className="info-handle">
+          <div className="info-grabber" />
+        </div>
+
+        <button
+          type="button"
+          className="info-discard"
+          aria-label="Close"
+          onClick={onClose}
+        >
+          ×
+        </button>
+
+        <div className="info-body">
+          <p className="empty">That task is not here any more.</p>
+        </div>
+      </div>
     </>
   );
 }

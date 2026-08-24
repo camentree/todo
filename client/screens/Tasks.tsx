@@ -50,10 +50,11 @@ export function Tasks() {
   const openTaskId = parameters.taskId
     ? Number(parameters.taskId)
     : null;
-  const behind =
-    (location.state as { from?: string } | null)?.from ?? "/";
-  const pathname = openTaskId === null ? location.pathname : behind;
-  const [, field, value] = pathname.split("/");
+  const segments = location.pathname.split("/").filter(Boolean);
+  const screen =
+    openTaskId === null ? segments : segments.slice(0, -1);
+  const pathname = `/${screen.join("/")}`;
+  const [field, value] = screen;
 
   const scope: Scope =
     pathname === "/today"
@@ -186,9 +187,7 @@ export function Tasks() {
         actions={{
           toggle: actions.toggleTask,
           open: (task) =>
-            navigate(`/task/${task.id}`, {
-              state: { from: location.pathname },
-            }),
+            navigate(`/${[...screen, task.id].join("/")}`),
           rename: actions.rename,
           create: actions.create,
           remove: actions.remove,
@@ -207,7 +206,7 @@ export function Tasks() {
       {openTaskId !== null && (
         <TaskInfo
           taskId={openTaskId}
-          onClose={() => navigate(behind)}
+          onClose={() => navigate(pathname)}
         />
       )}
 
