@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 import { api } from "../api.ts";
 import { SearchField } from "../components/SearchField.tsx";
@@ -40,7 +44,18 @@ export interface Scope {
 
 export function Tasks() {
   const parameters = useParams();
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const openTaskId = parameters.taskId
+    ? Number(parameters.taskId)
+    : null;
+  const segments = location.pathname.split("/").filter(Boolean);
+  const screen =
+    openTaskId === null ? segments : segments.slice(0, -1);
+  const pathname = `/${screen.join("/")}`;
+  const [field, value] = screen;
+
   const scope: Scope =
     pathname === "/today"
       ? {
@@ -49,9 +64,9 @@ export function Tasks() {
           today: true,
         }
       : {
-          field: asAttribute(parameters.field),
-          value: parameters.value
-            ? canonicalName(decodeURIComponent(parameters.value))
+          field: asAttribute(field),
+          value: value
+            ? canonicalName(decodeURIComponent(value))
             : "",
           today: false,
         };
@@ -60,7 +75,6 @@ export function Tasks() {
   const finished =
     scope.field === "state" && scope.value === "complete";
 
-  const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [helping, setHelping] = useState(false);
@@ -172,7 +186,8 @@ export function Tasks() {
         onCapturingChange={setCapturing}
         actions={{
           toggle: actions.toggleTask,
-          open: (task) => setOpenTaskId(task.id),
+          open: (task) =>
+            navigate(`/${[...screen, task.id].join("/")}`),
           rename: actions.rename,
           create: actions.create,
           remove: actions.remove,
@@ -191,7 +206,7 @@ export function Tasks() {
       {openTaskId !== null && (
         <TaskInfo
           taskId={openTaskId}
-          onClose={() => setOpenTaskId(null)}
+          onClose={() => navigate(pathname)}
         />
       )}
 
