@@ -127,9 +127,23 @@ export function TaskRow({
     flickingTo === null ? `${gesture.offset}px` : `${flickTravel}%`;
 
   useShortcuts((event) => {
-    if (event.key === "Tab" && onTab) {
+    if (
+      event.key === "ArrowRight" &&
+      onExpandedChange &&
+      expandable
+    ) {
       event.preventDefault();
-      onTab(event.shiftKey);
+      onExpandedChange(true);
+      return;
+    }
+    if (event.key === "ArrowLeft" && onExpandedChange && expanded) {
+      event.preventDefault();
+      onExpandedChange(false);
+      return;
+    }
+    if (event.key === "o" && onExpandedChange && expandable) {
+      event.preventDefault();
+      onExpandedChange(!expanded);
       return;
     }
     if (event.key === "+" && onAddSubtask) {
@@ -192,6 +206,7 @@ export function TaskRow({
   function stopEditing(): void {
     setDraft(unsaved ? "" : task.title);
     setEdits({});
+    titleRef.current?.blur();
     onEditingChange(false);
   }
 
@@ -264,7 +279,7 @@ export function TaskRow({
                 suggest={parseAttributes}
                 caretAt={caretAt}
                 takeFocus={!unsaved || focusOnMount}
-                onEnter={onTab ? () => moveOn(false) : commit}
+                onEnter={commit}
                 onEscape={stopEditing}
                 onTab={onTab && moveOn}
               />

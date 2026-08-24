@@ -3,7 +3,16 @@ import { useRef, useState } from "react";
 
 import { api } from "./api.ts";
 import { recordFailure } from "./failures.ts";
-import { useHistory, type HistoryEntry } from "./useHistory.ts";
+import {
+  recordArchiving,
+  recordDeferral,
+  recordDeletion,
+  recordEdit,
+  recordHiding,
+  recordStateChange,
+  redo as redoLast,
+  undo as undoLast,
+} from "./history.ts";
 import { isDueToday } from "./format.ts";
 import type { Landing } from "./components/TaskBoard.tsx";
 import { reassignSlots } from "@shared/ordering.ts";
@@ -41,61 +50,22 @@ function lastUsedList(): string | null {
 type SwipeRightOutcome =
   "deleted" | "unhidden" | "deferred" | "hidden";
 
-function fieldsOf(task: CreatedTask): Partial<Task> & {
-  list: string;
-  title: string;
-} {
-  return {
-    list: task.list,
-    title: task.title,
-    note: task.note,
-    parentId: task.parentId,
-    stage: task.stage,
-    tags: task.tags,
-    who: task.who,
-    dueDate: task.dueDate,
-    dueTime: task.dueTime,
-  };
-}
-
-function deletionOf(task: CreatedTask): HistoryEntry {
-  let living = task;
-  return {
-    undo: async () => {
-      living = await api.createTask(fieldsOf(living));
-    },
-    redo: async () => {
-      await api.deleteTask(living.id);
-    },
-  };
-}
-
-function swipeRightReversal(
-  task: CreatedTask,
-  outcome: SwipeRightOutcome,
-): HistoryEntry {
+function recordSwipeRight({
+  task,
+  outcome,
+}: {
+  task: CreatedTask;
+  outcome: SwipeRightOutcome;
+}): void {
   if (outcome === "deleted") {
-    return deletionOf(task);
-  }
-  if (outcome === "unhidden") {
-    return {
-      undo: async () => void (await api.hideTask(task.id)),
-      redo: async () => void (await api.unhideTask(task.id)),
-    };
+    recordDeletion(task);
+    return;
   }
   if (outcome === "deferred") {
-    return {
-      undo: async () =>
-        void (await api.updateTask(task.id, {
-          dueDate: task.dueDate,
-        })),
-      redo: async () => void (await api.deferTask(task.id)),
-    };
+    recordDeferral(task);
+    return;
   }
-  return {
-    undo: async () => void (await api.unhideTask(task.id)),
-    redo: async () => void (await api.hideTask(task.id)),
-  };
+  recordHiding({ task: task, hiding: outcome === "hidden" });
 }
 
 interface QueuedMove {
@@ -191,7 +161,6 @@ export function useTaskActions(
   onManualOrder?: (changes: Partial<ViewPreference>) => void,
 ) {
   const queryClient = useQueryClient();
-  const history = useHistory();
   const [justToggled, setJustToggled] = useState<
     Map<number, TaskState>
   >(new Map());
@@ -267,12 +236,7 @@ export function useTaskActions(
           });
           if (updated) {
             patchEverywhere(updated.id, updated);
-            history.record({
-              undo: async () =>
-                void (await api.setState(task.id, task.state)),
-              redo: async () =>
-                void (await api.setState(task.id, next)),
-            });
+            recordStateChange({ task: task, next: next });
             return;
           }
           report("tick that off")(error);
@@ -312,6 +276,7 @@ export function useTaskActions(
       changes: Partial<Task>;
     }) => api.updateTask(task.id, changes),
     onMutate: ({ task, changes }) => {
+      recordEdit({ task: task, changes: changes });
       patchEverywhere(task.id, changes);
     },
     onSuccess: (written: CreatedTask) =>
@@ -326,7 +291,7 @@ export function useTaskActions(
     mutationFn: (task: CreatedTask) => api.deleteTask(task.id),
     onSuccess: ({ removed }, task: CreatedTask) => {
       takeBack(removed);
-      history.record(deletionOf(task));
+      recordDeletion(task);
     },
     onError: report("delete that task"),
   });
@@ -338,14 +303,9 @@ export function useTaskActions(
         : api.archiveTasks([task.id]),
     onSuccess: (written: CreatedTask[], task: CreatedTask) => {
       landed(written);
-      const away = () => api.archiveTasks([task.id]);
-      const back = () => api.unarchiveTasks([task.id]);
-      const [undo, redo] = task.archivedAt
-        ? [away, back]
-        : [back, away];
-      history.record({
-        undo: async () => void (await undo()),
-        redo: async () => void (await redo()),
+      recordArchiving({
+        task: task,
+        archiving: task.archivedAt === null,
       });
     },
     onError: report("archive that task"),
@@ -382,7 +342,7 @@ export function useTaskActions(
     },
     onSuccess: ({ outcome, written }, task: CreatedTask) => {
       landed(written);
-      history.record(swipeRightReversal(task, outcome));
+      recordSwipeRight({ task: task, outcome: outcome });
     },
     onError: report("put that task away"),
   });
@@ -478,12 +438,12 @@ export function useTaskActions(
   return {
     justToggled: justToggled,
     undo: async () => {
-      if (await history.undo()) {
+      if (await undoLast()) {
         void queryClient.invalidateQueries();
       }
     },
     redo: async () => {
-      if (await history.redo()) {
+      if (await redoLast()) {
         void queryClient.invalidateQueries();
       }
     },

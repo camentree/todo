@@ -5,7 +5,8 @@ import { useLockedScroll } from "../useLockedScroll.ts";
 const KEYS = [
   { keys: ["j", "↓", "⌃n"], does: "next" },
   { keys: ["k", "↑", "⌃p"], does: "previous" },
-  { keys: ["tab", "⇧tab"], does: "next/previous while typing" },
+  { keys: ["→", "←", "o"], does: "expand/collapse" },
+  { keys: ["tab", "⇧tab"], does: "next/previous and rename" },
   { keys: ["space"], does: "toggle complete" },
   { keys: ["enter"], does: "rename" },
   { keys: ["i"], does: "info" },
@@ -15,7 +16,7 @@ const KEYS = [
   { keys: ["z"], does: "undo" },
   { keys: ["r"], does: "redo" },
   { keys: ["c"], does: "add" },
-  { keys: ["f"], does: "search" },
+  { keys: ["f", "F"], does: "open/close search" },
   { keys: ["esc"], does: "blur" },
   { keys: ["?"], does: "help" },
 ];

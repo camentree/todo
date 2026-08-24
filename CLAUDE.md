@@ -6,10 +6,8 @@ same lists on the same screens. It is a web app added to a phone's home screen,
 served publicly behind Cloudflare Access, running on the same machine and
 Postgres server as Parallax.
 
-`design.md` is the original intent, including the reasoning behind decisions
-that look arbitrary. Read the sections that touch what you are changing before
-changing it. The principles below are deliberate and several of them look like
-bugs if you have not read them.
+The principles below are deliberate and several of them look like bugs if you
+have not read them.
 
 ## Principles
 
