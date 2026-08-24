@@ -421,15 +421,14 @@ function EventRow({
   const swipe = useSwipe({
     onRight: onSeen,
   });
-  const shift = Math.max(0, swipe.offset);
 
   return (
     <div className="event-track">
-      {shift > 0 && <div className="event-action">Seen</div>}
+      {swipe.swiping && <div className="event-action">Seen</div>}
       <div
         className="event"
         ref={swipe.ref}
-        style={{ transform: `translateX(${shift}px)` }}
+        style={{ transform: `translateX(${swipe.offset}px)` }}
         data-swiping={swipe.swiping}
         onPointerDown={swipe.down}
         onPointerMove={swipe.move}

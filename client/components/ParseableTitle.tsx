@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type {
+  ChangeEvent,
   InputHTMLAttributes,
   KeyboardEvent,
   RefObject,
+  SyntheticEvent,
 } from "react";
 
 import { api } from "../api.ts";
@@ -14,6 +16,8 @@ import {
 } from "../suggestions.ts";
 import { SEARCHABLE_STATES } from "@shared/states.ts";
 
+type TitleElement = HTMLInputElement | HTMLTextAreaElement;
+
 export function ParseableTitle({
   value,
   onChange,
@@ -21,19 +25,21 @@ export function ParseableTitle({
   list = "",
   at,
   suggest = true,
+  multiline = false,
   onDone,
   onCancel,
   input,
 }: {
   value: string;
   onChange: (next: string) => void;
-  inputRef: RefObject<HTMLInputElement | null>;
+  inputRef: RefObject<TitleElement | null>;
   list?: string;
   at: "row" | "search" | "sheet";
   suggest?: boolean;
-  onDone?: (event: KeyboardEvent<HTMLInputElement>) => void;
-  onCancel?: (event: KeyboardEvent<HTMLInputElement>) => void;
-  input: InputHTMLAttributes<HTMLInputElement> &
+  multiline?: boolean;
+  onDone?: () => void;
+  onCancel?: (event: KeyboardEvent<TitleElement>) => void;
+  input: InputHTMLAttributes<TitleElement> &
     Partial<Record<`data-${string}`, boolean>>;
 }) {
   const [caret, setCaret] = useState(value.length);
@@ -74,6 +80,15 @@ export function ParseableTitle({
   });
 
   useEffect(() => {
+    const field = inputRef.current;
+    if (!multiline || !field) {
+      return;
+    }
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  }, [value, multiline, inputRef]);
+
+  useEffect(() => {
     if (pendingCaret === null) {
       return;
     }
@@ -92,53 +107,81 @@ export function ParseableTitle({
     setHighlighted(0);
   }
 
+  function typed(event: ChangeEvent<TitleElement>): void {
+    const next = event.target.value;
+    if (next.includes("\n")) {
+      onChange(next.replace(/\n/g, ""));
+      if (matches.length > 0) {
+        pick(matches[highlighted] ?? "");
+        return;
+      }
+      onDone?.();
+      return;
+    }
+    onChange(next);
+    setCaret(event.target.selectionStart ?? 0);
+    setSuppressed(false);
+    setHighlighted(0);
+  }
+
+  function moved(event: SyntheticEvent<TitleElement>): void {
+    setCaret(event.currentTarget.selectionStart ?? 0);
+  }
+
+  function pressed(event: KeyboardEvent<TitleElement>): void {
+    if (matches.length > 0) {
+      const step = suggestionStep(event);
+      if (step !== 0) {
+        event.preventDefault();
+        setHighlighted(
+          (highlighted + step + matches.length) % matches.length,
+        );
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        pick(matches[highlighted] ?? "");
+        return;
+      }
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setSuppressed(true);
+        return;
+      }
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      onDone?.();
+      return;
+    }
+    if (event.key === "Escape") {
+      onCancel?.(event);
+    }
+  }
+
   return (
     <>
-      <input
-        {...input}
-        ref={inputRef}
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setCaret(event.target.selectionStart ?? 0);
-          setSuppressed(false);
-          setHighlighted(0);
-        }}
-        onSelect={(event) =>
-          setCaret(event.currentTarget.selectionStart ?? 0)
-        }
-        onKeyDown={(event) => {
-          if (matches.length > 0) {
-            const step = suggestionStep(event);
-            if (step !== 0) {
-              event.preventDefault();
-              setHighlighted(
-                (highlighted + step + matches.length) %
-                  matches.length,
-              );
-              return;
-            }
-            if (event.key === "Enter") {
-              event.preventDefault();
-              pick(matches[highlighted] ?? "");
-              return;
-            }
-            if (event.key === "Escape") {
-              event.stopPropagation();
-              setSuppressed(true);
-              return;
-            }
-          }
-          if (event.key === "Enter") {
-            event.preventDefault();
-            onDone?.(event);
-            return;
-          }
-          if (event.key === "Escape") {
-            onCancel?.(event);
-          }
-        }}
-      />
+      {multiline ? (
+        <textarea
+          {...input}
+          ref={inputRef as RefObject<HTMLTextAreaElement>}
+          rows={1}
+          value={value}
+          onChange={typed}
+          onSelect={moved}
+          onKeyDown={pressed}
+        />
+      ) : (
+        <input
+          {...input}
+          ref={inputRef as RefObject<HTMLInputElement>}
+          value={value}
+          onChange={typed}
+          onSelect={moved}
+          onKeyDown={pressed}
+        />
+      )}
 
       {matches.length > 0 && (
         <div className="suggestions" data-at={at}>

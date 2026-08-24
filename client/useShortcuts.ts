@@ -2,8 +2,12 @@ import { useEffect } from "react";
 
 export function useShortcuts(
   handle: (event: KeyboardEvent) => void,
+  listening: boolean = true,
 ): void {
   useEffect(() => {
+    if (!listening) {
+      return;
+    }
     function onKeyDown(event: KeyboardEvent): void {
       const chord =
         event.ctrlKey &&

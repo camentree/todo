@@ -65,7 +65,7 @@ export function suggestionsFor({
 }
 
 export function suggestionStep(
-  event: KeyboardEvent<HTMLInputElement>,
+  event: KeyboardEvent<HTMLElement>,
 ): number {
   if (event.ctrlKey) {
     if (event.key === "n") {

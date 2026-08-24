@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 
 import { Chevron } from "./icons.tsx";
 import { TaskRow } from "./TaskRow.tsx";
@@ -8,15 +8,12 @@ import { isDueToday } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
 import { useShortcuts } from "../useShortcuts.ts";
 import type { TaskStage } from "@shared/stages.ts";
-import { isTerminal } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
 import type {
   CreatedTask,
   Task,
   ViewPreference,
 } from "@shared/types.ts";
-
-const FLICK_MILLISECONDS = 500;
 
 const BLANK_TASK: Task = {
   id: null,
@@ -134,18 +131,9 @@ export function TaskBoard({
 
   const shown = groups
     .filter((group) => !collapsed.has(group.key))
-    .flatMap((group) => group.tasks)
-    .flatMap((task) =>
-      expanded.has(task.id)
-        ? [task, ...(task.subtasks ?? [])]
-        : [task],
-    );
+    .flatMap((group) => group.tasks);
   const { focusedId, focusedIndex, focusAt, focusOn, land } =
     useRowFocus({ shown: shown, boardRef: boardRef });
-  const { flick, flickAway } = useFlickAway({
-    swipeLeft: actions.swipeLeft,
-    swipeRight: actions.swipeRight,
-  });
 
   useShortcuts((event) => {
     if (event.key === "Escape") {
@@ -156,40 +144,135 @@ export function TaskBoard({
     if (step !== 0) {
       event.preventDefault();
       focusAt(focusedIndex + step);
-      return;
-    }
-
-    const task = shown[focusedIndex];
-    if (!task) {
-      return;
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      setEditingId(task.id);
-      return;
-    }
-    if (event.key === " ") {
-      event.preventDefault();
-      actions.toggle(task);
-      return;
-    }
-    if (event.key === "i") {
-      event.preventDefault();
-      actions.open(task);
-      return;
-    }
-    if (isTerminal(task.state)) {
-      return;
-    }
-    if (event.key === "a") {
-      focusAt(focusedIndex + 1);
-      flickAway(task, "left");
-    }
-    if (event.key === "h" && task.archivedAt === null) {
-      focusAt(focusedIndex + 1);
-      flickAway(task, "right");
     }
   });
+
+  function subtaskRow(subtask: CreatedTask): ReactNode {
+    return (
+      <TaskRow
+        key={subtask.id}
+        task={showing({ task: subtask, justToggled: justToggled })}
+        isEditing={editingId === subtask.id}
+        onEditingChange={(editing) =>
+          setEditingId(editing ? subtask.id : null)
+        }
+        onCommit={(changes) =>
+          saveTask({
+            task: subtask,
+            changes: changes,
+            actions: actions,
+          })
+        }
+        swipeLeft={{
+          name: "Delete",
+          action: () => actions.remove(subtask),
+        }}
+        showAttributes={false}
+        parseAttributes={false}
+      />
+    );
+  }
+
+  function taskRow(
+    task: CreatedTask,
+    group: BoardGroup,
+    index: number,
+  ): ReactNode {
+    return (
+      <div
+        className="task-shell"
+        data-row="true"
+        data-task={task.id}
+        data-group={group.key}
+        data-index={index}
+        data-lifting={lift?.taskId === task.id}
+        data-focused={focusedId === task.id}
+        onMouseEnter={() => focusOn(task.id)}
+        onMouseLeave={() => focusOn(null)}
+      >
+        <TaskRow
+          task={showing({ task: task, justToggled: justToggled })}
+          isEditing={editingId === task.id}
+          isFocused={focusedId === task.id}
+          onEditingChange={(editing) =>
+            setEditingId(editing ? task.id : null)
+          }
+          onCommit={(changes) => {
+            saveTask({
+              task: task,
+              changes: changes,
+              actions: actions,
+            });
+            land(task.id);
+          }}
+          onInfoOpen={() => actions.open(task)}
+          onFocusNext={() =>
+            focusAt(shown.findIndex((row) => row.id === task.id) + 1)
+          }
+          swipeLeft={{
+            name: leftSwipeLabel(task),
+            action: () => actions.swipeLeft(task),
+          }}
+          swipeRight={{
+            name: rightSwipeLabel(task),
+            action: () => actions.swipeRight(task),
+          }}
+          onLongPress={(pointerX, pointerY) =>
+            startLift({
+              taskId: task.id,
+              fromKey: group.key,
+              pointerX: pointerX,
+              pointerY: pointerY,
+            })
+          }
+          showAttributes={true}
+          omitAttributes={group.omitAttributes}
+          expanded={expanded.has(task.id)}
+          onExpandedChange={(open) => changeExpanded(task.id, open)}
+          renderSubtask={subtaskRow}
+        />
+      </div>
+    );
+  }
+
+  function captureRow({
+    seed,
+    onCreated,
+    onDismiss,
+  }: {
+    seed: Partial<Task>;
+    onCreated?: (taskId: number) => void;
+    onDismiss?: () => void;
+  }): ReactNode {
+    return (
+      <TaskRow
+        task={{ ...BLANK_TASK, ...seed }}
+        isEditing={true}
+        focusOnMount={true}
+        onEditingChange={(editing) => {
+          if (!editing) {
+            onDismiss?.();
+          }
+        }}
+        onCommit={(changes) =>
+          actions.create(changes).then((made) => onCreated?.(made.id))
+        }
+        showAttributes={false}
+      />
+    );
+  }
+
+  function changeExpanded(taskId: number, open: boolean): void {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (open) {
+        next.add(taskId);
+      } else {
+        next.delete(taskId);
+      }
+      return next;
+    });
+  }
 
   const lastGroupKey = groups
     .filter((group) => group.key !== HIDDEN_GROUP)
@@ -213,8 +296,10 @@ export function TaskBoard({
         <Group
           key={group.key}
           group={group}
-          actions={actions}
-          captureSeed={captureSeed}
+          renderTask={taskRow}
+          renderCapture={captureRow}
+          canCapture={captureSeed !== null}
+          seed={{ ...captureSeed, ...group.seed }}
           capturingHere={capturingGroup === group.key}
           capturingUnseeded={capturing && group.key === lastGroupKey}
           onLanded={land}
@@ -223,23 +308,6 @@ export function TaskBoard({
             setCapturingGroup(open ? group.key : null);
           }}
           onCaptureDone={() => onCapturingChange(false)}
-          editingId={editingId}
-          onEditingIdChange={setEditingId}
-          focusedId={focusedId}
-          onFocusedIdChange={focusOn}
-          justToggled={justToggled}
-          expanded={expanded}
-          onExpandedChange={(taskId, open) =>
-            setExpanded((current) => {
-              const next = new Set(current);
-              if (open) {
-                next.add(taskId);
-              } else {
-                next.delete(taskId);
-              }
-              return next;
-            })
-          }
           collapsed={collapsed.has(group.key)}
           onToggleCollapsed={() =>
             setCollapsed((current) => {
@@ -253,26 +321,15 @@ export function TaskBoard({
             })
           }
           lift={lift}
-          flick={flick}
-          onLongPress={(taskId, pointerX, pointerY) =>
-            startLift({
-              taskId: taskId,
-              fromKey: group.key,
-              pointerX: pointerX,
-              pointerY: pointerY,
-            })
-          }
         />
       ))}
 
       {captureSeed !== null && groups.length === 0 && (
         <div className="tasks board-capture">
-          <CaptureRow
-            seed={capturing ? {} : (captureSeed ?? {})}
-            actions={actions}
-            focusOnMount={capturing}
-            onDismiss={() => onCapturingChange(false)}
-          />
+          {captureRow({
+            seed: capturing ? {} : (captureSeed ?? {}),
+            onDismiss: () => onCapturingChange(false),
+          })}
         </div>
       )}
     </div>
@@ -300,8 +357,10 @@ function movement(event: KeyboardEvent): number {
 
 function Group({
   group,
-  actions,
-  captureSeed,
+  renderTask,
+  renderCapture,
+  canCapture,
+  seed,
   capturingHere,
   capturingUnseeded,
   onCaptureHere,
@@ -310,19 +369,20 @@ function Group({
   collapsed,
   onToggleCollapsed,
   lift,
-  flick,
-  editingId,
-  onEditingIdChange,
-  focusedId,
-  onFocusedIdChange,
-  justToggled,
-  expanded,
-  onExpandedChange,
-  onLongPress,
 }: {
   group: BoardGroup;
-  actions: RowActions;
-  captureSeed: Partial<Task> | null;
+  renderTask: (
+    task: CreatedTask,
+    group: BoardGroup,
+    index: number,
+  ) => ReactNode;
+  renderCapture: (capture: {
+    seed: Partial<Task>;
+    onCreated?: (taskId: number) => void;
+    onDismiss?: () => void;
+  }) => ReactNode;
+  canCapture: boolean;
+  seed: Partial<Task>;
   capturingHere: boolean;
   capturingUnseeded: boolean;
   onCaptureHere: (open: boolean) => void;
@@ -331,23 +391,8 @@ function Group({
   collapsed: boolean;
   onToggleCollapsed: () => void;
   lift: Lift | null;
-  flick: Flick | null;
-  editingId: number | null;
-  onEditingIdChange: (taskId: number | null) => void;
-  focusedId: number | null;
-  onFocusedIdChange: (taskId: number | null) => void;
-  justToggled: ReadonlyMap<number, TaskState>;
-  expanded: Set<number>;
-  onExpandedChange: (taskId: number, open: boolean) => void;
-  onLongPress: (
-    taskId: number,
-    pointerX: number,
-    pointerY: number,
-  ) => void;
 }) {
-  const seed = { ...captureSeed, ...group.seed };
-  const canCapture =
-    captureSeed !== null && group.key !== HIDDEN_GROUP;
+  const capturable = canCapture && group.key !== HIDDEN_GROUP;
 
   return (
     <div className="group" data-group-key={group.key}>
@@ -374,96 +419,31 @@ function Group({
                   lift.index === index && (
                     <div className="drop-line" />
                   )}
-                <div
-                  className="task-shell"
-                  data-row="true"
-                  data-task={task.id}
-                  data-group={group.key}
-                  data-index={index}
-                  data-lifting={lift?.taskId === task.id}
-                  data-focused={focusedId === task.id}
-                  onMouseEnter={() => onFocusedIdChange(task.id)}
-                  onMouseLeave={() => onFocusedIdChange(null)}
-                >
-                  <TaskRow
-                    task={showing({
-                      task: task,
-                      justToggled: justToggled,
-                    })}
-                    isEditing={editingId === task.id}
-                    onEditingChange={(editing) =>
-                      onEditingIdChange(editing ? task.id : null)
-                    }
-                    onCommit={(changes) => {
-                      saveTask({
-                        task: task,
-                        changes: changes,
-                        actions: actions,
-                      });
-                      onLanded(task.id);
-                    }}
-                    onInfoOpen={() => actions.open(task)}
-                    swipeLeft={{
-                      name: leftSwipeLabel(task),
-                      action: () => actions.swipeLeft(task),
-                    }}
-                    swipeRight={{
-                      name: rightSwipeLabel(task),
-                      action: () => actions.swipeRight(task),
-                    }}
-                    onLongPress={(pointerX, pointerY) =>
-                      onLongPress(task.id, pointerX, pointerY)
-                    }
-                    flickingTo={
-                      flick?.taskId === task.id
-                        ? flick.direction
-                        : null
-                    }
-                    showAttributes={true}
-                    omitAttributes={group.omitAttributes}
-                    expanded={expanded.has(task.id)}
-                    onExpandedChange={(open) =>
-                      onExpandedChange(task.id, open)
-                    }
-                    subtasks={(task.subtasks ?? []).map((subtask) => (
-                      <SubtaskRow
-                        key={subtask.id}
-                        subtask={subtask}
-                        focused={focusedId === subtask.id}
-                        onFocusedIdChange={onFocusedIdChange}
-                        justToggled={justToggled}
-                        actions={actions}
-                      />
-                    ))}
-                  />
-                </div>
+                {renderTask(task, group, index)}
               </div>
             ))}
             {lift?.toKey === group.key &&
               lift.index >= group.tasks.length && (
                 <div className="drop-line" />
               )}
-            {canCapture && capturingUnseeded && (
-              <CaptureRow
-                seed={{}}
-                actions={actions}
-                focusOnMount={true}
-                onCreated={onLanded}
-                onDismiss={onCaptureDone}
-              />
-            )}
+            {capturable &&
+              capturingUnseeded &&
+              renderCapture({
+                seed: {},
+                onCreated: onLanded,
+                onDismiss: onCaptureDone,
+              })}
 
-            {canCapture && !capturingUnseeded && capturingHere && (
-              <CaptureRow
-                seed={seed}
-                actions={actions}
-                focusOnMount={true}
-                onCreated={onLanded}
-                onDismiss={() => onCaptureHere(false)}
-              />
-            )}
+            {capturable &&
+              !capturingUnseeded &&
+              capturingHere &&
+              renderCapture({
+                seed: seed,
+                onCreated: onLanded,
+                onDismiss: () => onCaptureHere(false),
+              })}
 
-            {canCapture && !capturingUnseeded && !capturingHere && (
+            {capturable && !capturingUnseeded && !capturingHere && (
               <button
                 type="button"
                 className="capture-space"
@@ -492,91 +472,6 @@ export function rightSwipeLabel(task: CreatedTask): string {
 
 export function leftSwipeLabel(task: CreatedTask): string {
   return task.archivedAt ? "Unarchive" : "Archive";
-}
-
-function SubtaskRow({
-  subtask,
-  actions,
-  focused,
-  onFocusedIdChange,
-  justToggled,
-}: {
-  subtask: CreatedTask;
-  actions: RowActions;
-  focused: boolean;
-  onFocusedIdChange: (taskId: number | null) => void;
-  justToggled: ReadonlyMap<number, TaskState>;
-}) {
-  const [editing, setEditing] = useState(false);
-
-  return (
-    <div
-      data-task={subtask.id}
-      data-focused={focused}
-      onMouseEnter={() => onFocusedIdChange(subtask.id)}
-      onMouseLeave={() => onFocusedIdChange(null)}
-    >
-      <TaskRow
-        task={showing({ task: subtask, justToggled: justToggled })}
-        isEditing={editing}
-        onEditingChange={setEditing}
-        onCommit={(changes) =>
-          saveTask({
-            task: subtask,
-            changes: changes,
-            actions: actions,
-          })
-        }
-        onInfoOpen={() => actions.open(subtask)}
-        swipeLeft={{
-          name: "Delete",
-          action: () => actions.remove(subtask),
-        }}
-        showAttributes={false}
-        parseAttributes={false}
-      />
-    </div>
-  );
-}
-
-function CaptureRow({
-  seed,
-  actions,
-  focusOnMount = false,
-  onCreated,
-  onDismiss,
-}: {
-  seed: Partial<Task>;
-  actions: RowActions;
-  focusOnMount?: boolean;
-  onCreated?: (taskId: number) => void;
-  onDismiss?: () => void;
-}) {
-  const titleRef = useRef<HTMLInputElement>(null);
-  const blank: Task = { ...BLANK_TASK, ...seed };
-
-  useEffect(() => {
-    if (focusOnMount) {
-      titleRef.current?.focus({ preventScroll: true });
-    }
-  }, [focusOnMount]);
-
-  return (
-    <TaskRow
-      task={blank}
-      isEditing={true}
-      onEditingChange={(editing) => {
-        if (!editing) {
-          onDismiss?.();
-        }
-      }}
-      onCommit={(changes) =>
-        actions.create(changes).then((made) => onCreated?.(made.id))
-      }
-      showAttributes={false}
-      inputRef={titleRef}
-    />
-  );
 }
 
 function showing({
@@ -834,52 +729,4 @@ function useRowFocus({
     focusOn: setFocusedId,
     land: setLandingId,
   };
-}
-
-interface Flick {
-  taskId: number;
-  direction: "left" | "right";
-}
-
-function useFlickAway({
-  swipeLeft,
-  swipeRight,
-}: {
-  swipeLeft: (task: CreatedTask) => void;
-  swipeRight: (task: CreatedTask) => void;
-}): {
-  flick: Flick | null;
-  flickAway: (task: CreatedTask, direction: "left" | "right") => void;
-} {
-  const [flick, setFlick] = useState<Flick | null>(null);
-  const pending = useRef<{
-    timer: ReturnType<typeof setTimeout>;
-    act: () => void;
-  } | null>(null);
-
-  function settle(): void {
-    const current = pending.current;
-    if (!current) {
-      return;
-    }
-    clearTimeout(current.timer);
-    pending.current = null;
-    setFlick(null);
-    current.act();
-  }
-
-  function flickAway(
-    task: CreatedTask,
-    direction: "left" | "right",
-  ): void {
-    settle();
-    setFlick({ taskId: task.id, direction: direction });
-    pending.current = {
-      timer: setTimeout(settle, FLICK_MILLISECONDS),
-      act: () =>
-        direction === "left" ? swipeLeft(task) : swipeRight(task),
-    };
-  }
-
-  return { flick: flick, flickAway: flickAway };
 }

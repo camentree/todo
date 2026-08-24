@@ -22,10 +22,7 @@ export function SearchField({
         onChange={onChange}
         inputRef={fieldRef}
         at="search"
-        onDone={(event) => {
-          event.stopPropagation();
-          fieldRef.current?.blur();
-        }}
+        onDone={() => fieldRef.current?.blur()}
         onCancel={(event) => {
           event.stopPropagation();
           fieldRef.current?.blur();

@@ -84,8 +84,6 @@ export function useSwipe({
     }
   }
 
-  const swipeable = Boolean(onLeft || onRight);
-
   return {
     ref: element,
     offset: offset,
@@ -121,18 +119,19 @@ export function useSwipe({
         return;
       }
 
-      if (!swipeable) {
-        return;
-      }
+      const hasAction =
+        acrossNow < 0 ? Boolean(onLeft) : Boolean(onRight);
+      const across = hasAction ? acrossNow : 0;
 
       if (
-        Math.abs(acrossNow) > CAPTURE_AFTER &&
+        hasAction &&
+        Math.abs(across) > CAPTURE_AFTER &&
         !event.currentTarget.hasPointerCapture(event.pointerId)
       ) {
         event.currentTarget.setPointerCapture(event.pointerId);
       }
-      sideways.current = acrossNow;
-      setOffset(acrossNow);
+      sideways.current = across;
+      setOffset(across);
     },
     up: () => end(),
     cancel: cancel,
