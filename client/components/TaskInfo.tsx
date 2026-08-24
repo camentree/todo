@@ -374,6 +374,7 @@ export function TaskInfo({
             input={{
               className: "info-title",
               "aria-label": "Title",
+              autoCapitalize: "none",
               onFocus: () => setTitleFocused(true),
               onBlur: () => {
                 setTitleFocused(false);

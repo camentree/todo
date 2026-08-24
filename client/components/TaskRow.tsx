@@ -47,6 +47,7 @@ export function TaskRow({
   omitAttributes = [],
   focusOnMount = false,
   renderSubtask,
+  renderNewSubtask,
   expanded = false,
   onExpandedChange,
 }: {
@@ -65,6 +66,7 @@ export function TaskRow({
   omitAttributes?: AttributeOmission[];
   focusOnMount?: boolean;
   renderSubtask?: (subtask: CreatedTask) => ReactNode;
+  renderNewSubtask?: (parent: Task) => ReactNode;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
 }) {
@@ -331,6 +333,7 @@ export function TaskRow({
             {renderSubtask && children.length > 0 && (
               <div className="subtasks">
                 {children.map((child) => renderSubtask(child))}
+                {renderNewSubtask?.(task)}
               </div>
             )}
           </div>
@@ -456,10 +459,16 @@ function TitleField({
         className: "task-title editing",
         "aria-label": "Title",
         enterKeyHint: "done",
+        autoCapitalize: "none",
         onFocus: (event) => {
           const row = event.currentTarget.closest(".task");
-          if (row) {
-            easeToTop(row);
+          const owner = row
+            ?.closest(".subtasks")
+            ?.closest(".swipe-track")
+            ?.querySelector(".task");
+          const anchor = owner ?? row;
+          if (anchor) {
+            easeToTop(anchor);
           }
         },
       }}
@@ -623,6 +632,7 @@ function useRowGesture({
   });
   const holding = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopWatching = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const node = swipe.ref.current;
@@ -645,10 +655,26 @@ function useRowGesture({
   }, []);
 
   function stopTimer(): void {
+    stopWatching.current?.();
     if (timer.current) {
       clearTimeout(timer.current);
       timer.current = null;
     }
+  }
+
+  function watchForRelease(pointerId: number): void {
+    function onRelease(event: PointerEvent): void {
+      if (event.pointerId === pointerId) {
+        stopTimer();
+      }
+    }
+    window.addEventListener("pointerup", onRelease);
+    window.addEventListener("pointercancel", onRelease);
+    stopWatching.current = () => {
+      window.removeEventListener("pointerup", onRelease);
+      window.removeEventListener("pointercancel", onRelease);
+      stopWatching.current = null;
+    };
   }
 
   return {
@@ -664,6 +690,7 @@ function useRowGesture({
       }
       const pointerX = event.clientX;
       const pointerY = event.clientY;
+      watchForRelease(event.pointerId);
       timer.current = setTimeout(() => {
         holding.current = true;
         onLongPress(pointerX, pointerY);

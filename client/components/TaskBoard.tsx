@@ -173,6 +173,24 @@ export function TaskBoard({
     );
   }
 
+  function newSubtaskRow(parent: Task): ReactNode {
+    return (
+      <TaskRow
+        task={{
+          ...BLANK_TASK,
+          parentId: parent.id,
+          list: parent.list,
+        }}
+        isEditing={true}
+        onEditingChange={() => {}}
+        onCommit={(changes) =>
+          actions.create({ ...changes, list: parent.list })
+        }
+        showAttributes={false}
+      />
+    );
+  }
+
   function taskRow(
     task: CreatedTask,
     group: BoardGroup,
@@ -230,6 +248,7 @@ export function TaskBoard({
           expanded={expanded.has(task.id)}
           onExpandedChange={(open) => changeExpanded(task.id, open)}
           renderSubtask={subtaskRow}
+          renderNewSubtask={newSubtaskRow}
         />
       </div>
     );
@@ -706,7 +725,7 @@ function useRowFocus({
     requestAnimationFrame(() =>
       boardRef.current
         ?.querySelector(`[data-task="${landingId}"]`)
-        ?.scrollIntoView({ block: "center", behavior: "smooth" }),
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
     );
   }, [landingId, shown, boardRef]);
 
