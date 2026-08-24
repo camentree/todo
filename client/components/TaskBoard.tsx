@@ -725,7 +725,7 @@ function useRowFocus({
     requestAnimationFrame(() =>
       boardRef.current
         ?.querySelector(`[data-task="${landingId}"]`)
-        ?.scrollIntoView({ block: "center", behavior: "smooth" }),
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
     );
   }, [landingId, shown, boardRef]);
 
