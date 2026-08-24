@@ -679,8 +679,7 @@ a {
   overflow: hidden;
 }
 
-.subtasks .task,
-.info-subtasks .task {
+.subtasks .task {
   padding: calc(var(--row-pad) + 0.35rem) 0.25rem;
 }
 
@@ -756,16 +755,59 @@ a {
 }
 
 .capture-chip.removable {
-  cursor: pointer;
+  position: relative;
+  margin-right: 0.35rem;
   transition:
     color var(--tap) linear,
     background var(--tap) linear;
 }
 
-.capture-chip.removable:hover {
+.capture-chip.removable:has(.chip-remove:hover) {
   background: var(--hairline);
   color: var(--dim);
   text-decoration: line-through;
+}
+
+.chip-remove {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.45rem;
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: var(--chip-text);
+  color: var(--ground);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.chip-remove::after {
+  content: "";
+  position: absolute;
+  inset: -0.5rem -0.5rem -0.25rem -0.25rem;
+}
+
+.task-meta:has(.capture-chip) {
+  margin-top: 0.5rem;
+}
+
+@media (hover: none) {
+  .task-meta:has(.capture-chip) {
+    margin-top: 0.75rem;
+  }
+
+  .capture-chip {
+    font-size: 0.72rem;
+    padding: 0.3rem 0.55rem;
+  }
+
+  .chip-remove {
+    width: 1.2rem;
+    height: 1.2rem;
+    font-size: 0.8rem;
+  }
 }
 
 .scrim {
@@ -1175,7 +1217,7 @@ a {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding: 0.8rem 1.25rem calc(2rem + env(safe-area-inset-bottom));
+  padding: 2rem 1.25rem calc(2rem + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -1183,6 +1225,10 @@ a {
   width: 100%;
   margin: 0 auto;
   touch-action: pan-y;
+}
+
+.info-body:has(.suggestions) {
+  padding-bottom: 14rem;
 }
 
 .info-body input,
@@ -1209,6 +1255,7 @@ a {
   border-radius: 0;
   padding: 0.2rem 0;
   width: 100%;
+  flex: none;
   resize: none;
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -1249,8 +1296,28 @@ a {
   display: flex;
 }
 
+.picker {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .info-input input {
   padding-right: 3.4rem;
+}
+
+.info-input[data-empty="true"] input::-webkit-datetime-edit {
+  opacity: 0;
+}
+
+.info-example {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--faint);
+  pointer-events: none;
 }
 
 .info-clear {
@@ -1294,8 +1361,11 @@ a {
   line-height: 1;
 }
 
-.info-tags .tag-input {
+.info-tags .picker {
   flex: 1 0 100%;
+}
+
+.info-tags .tag-input {
   height: 2.6rem;
   padding: 0 0.6rem;
   font-size: 1rem;
@@ -1375,15 +1445,10 @@ a {
   font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--dim);
-  margin-left: auto;
 }
 
 .info-section-head .chevron {
   margin-left: 0.1rem;
-}
-
-.info-section-head .info-count + .chevron {
-  margin-left: 0;
 }
 
 .info-section-body {
@@ -1393,7 +1458,8 @@ a {
   padding-bottom: 1rem;
 }
 
-.info-section-body textarea {
+.info-section-body > textarea,
+.comment-entry textarea {
   resize: none;
   min-height: 5rem;
   overflow: hidden;
@@ -1520,17 +1586,17 @@ a {
 
 .comment-entry textarea {
   width: 100%;
-  padding-right: 2.6rem;
+  padding-right: 4.4rem;
   resize: none;
 }
 
 .comment-send {
   position: absolute;
-  right: 0.5rem;
-  bottom: 0.55rem;
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 50%;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  width: 3.4rem;
+  height: 2rem;
+  border-radius: 999px;
   background: var(--chip-bg);
   color: var(--accent);
   display: grid;
@@ -1671,12 +1737,11 @@ a {
     cursor: text;
   }
 
-  .subtasks .task,
-  .info-subtasks .task {
+  .subtasks .task {
     padding: var(--row-pad) 0.25rem;
   }
 
-  .task-shell[data-focused="true"] .swipe-band > .task {
+  .task-shell[data-focused="true"] > .swipe-track > .swipe-band > .task {
     background: var(--hover);
     border-radius: 9px;
   }
@@ -1686,9 +1751,12 @@ a {
     visibility: hidden;
   }
 
-  .task-shell[data-focused="true"] .swipe-band > .task .task-info,
-  .task[data-editing="true"] .task-info {
+  .task-shell[data-focused="true"] > .swipe-track > .swipe-band > .task .task-info {
     visibility: visible;
+  }
+
+  .task[data-editing="true"] .task-info {
+    display: none;
   }
 
   .task-info:hover {

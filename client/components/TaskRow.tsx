@@ -9,12 +9,14 @@ import {
   attributesOf,
   withoutAttribute,
 } from "./TaskAttributes.tsx";
+import { useShortcuts } from "../useShortcuts.ts";
 import { SWIPE_FRACTION, useSwipe } from "../useSwipe.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
-import type { Task } from "@shared/types.ts";
+import type { CreatedTask, Task } from "@shared/types.ts";
 
+const FLICK_MILLISECONDS = 500;
 const LONG_PRESS_MILLISECONDS = 400;
 const SCROLL_BREATHING_ROOM = 96;
 const SCROLL_MILLISECONDS = 900;
@@ -32,35 +34,37 @@ export interface SwipeAction {
 export function TaskRow({
   task,
   isEditing,
+  isFocused = false,
   onEditingChange,
   onCommit,
   onInfoOpen,
+  onFocusNext,
   swipeLeft,
   swipeRight,
   onLongPress,
-  flickingTo = null,
   showAttributes,
   parseAttributes = true,
   omitAttributes = [],
-  inputRef,
-  subtasks,
+  focusOnMount = false,
+  renderSubtask,
   expanded = false,
   onExpandedChange,
 }: {
   task: Task;
   isEditing: boolean;
+  isFocused?: boolean;
   onEditingChange: (editing: boolean) => void;
   onCommit: (changes: Partial<Task>) => void;
   onInfoOpen?: () => void;
+  onFocusNext?: () => void;
   swipeLeft?: SwipeAction;
   swipeRight?: SwipeAction;
   onLongPress?: (pointerX: number, pointerY: number) => void;
-  flickingTo?: "left" | "right" | null;
   showAttributes: boolean;
   parseAttributes?: boolean;
   omitAttributes?: AttributeOmission[];
-  inputRef?: RefObject<HTMLTextAreaElement | null>;
-  subtasks?: ReactNode;
+  focusOnMount?: boolean;
+  renderSubtask?: (subtask: CreatedTask) => ReactNode;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
 }) {
@@ -68,8 +72,7 @@ export function TaskRow({
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [hasFocus, setHasFocus] = useState(false);
   const [caretAt, setCaretAt] = useState<number | null>(null);
-  const ownRef = useRef<HTMLTextAreaElement>(null);
-  const titleRef = inputRef ?? ownRef;
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   const unsaved = task.id === null;
 
   useEffect(() => {
@@ -95,7 +98,11 @@ export function TaskRow({
     onLeft: swipeLeft?.action,
     onRight: swipeRight?.action,
     onLongPress: onLongPress,
-    enabled: !isTerminal(task.state),
+    enabled: !isTerminal(task.state) && !isEditing,
+  });
+  const { flickingTo, flickAway } = useFlickAway({
+    swipeLeft: swipeLeft?.action,
+    swipeRight: swipeRight?.action,
   });
 
   const children = task.subtasks ?? [];
@@ -111,6 +118,37 @@ export function TaskRow({
       : SWIPE_FRACTION * 100;
   const shift =
     flickingTo === null ? `${gesture.offset}px` : `${flickTravel}%`;
+
+  useShortcuts((event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      onEditingChange(true);
+      return;
+    }
+    if (event.key === " ") {
+      event.preventDefault();
+      onCommit({
+        state: isTerminal(task.state) ? "to_do" : "complete",
+      });
+      return;
+    }
+    if (event.key === "i") {
+      event.preventDefault();
+      onInfoOpen?.();
+      return;
+    }
+    if (isTerminal(task.state)) {
+      return;
+    }
+    if (event.key === "a" && swipeLeft) {
+      onFocusNext?.();
+      flickAway("left");
+    }
+    if (event.key === "h" && swipeRight && task.archivedAt === null) {
+      onFocusNext?.();
+      flickAway("right");
+    }
+  }, isFocused && !isEditing);
 
   function commit(): void {
     const changes = { ...titleChanges, ...edits };
@@ -201,7 +239,7 @@ export function TaskRow({
                 inputRef={titleRef}
                 suggest={parseAttributes}
                 caretAt={caretAt}
-                takeFocus={!unsaved}
+                takeFocus={!unsaved || focusOnMount}
                 onEnter={commit}
                 onEscape={stopEditing}
               />
@@ -236,7 +274,7 @@ export function TaskRow({
               </button>
             )}
 
-            {expandable && (
+            {expandable && !isEditing && (
               <button
                 type="button"
                 className="subtask-toggle"
@@ -290,8 +328,10 @@ export function TaskRow({
                 onCommit={(next) => onCommit({ note: next })}
               />
             )}
-            {subtasks && children.length > 0 && (
-              <div className="subtasks">{subtasks}</div>
+            {renderSubtask && children.length > 0 && (
+              <div className="subtasks">
+                {children.map((child) => renderSubtask(child))}
+              </div>
             )}
           </div>
         </div>
@@ -516,6 +556,53 @@ function dismissKeyboard(): void {
   if (focused instanceof HTMLElement) {
     focused.blur();
   }
+}
+
+function useFlickAway({
+  swipeLeft,
+  swipeRight,
+}: {
+  swipeLeft?: () => void;
+  swipeRight?: () => void;
+}): {
+  flickingTo: "left" | "right" | null;
+  flickAway: (direction: "left" | "right") => void;
+} {
+  const [flickingTo, setFlickingTo] = useState<
+    "left" | "right" | null
+  >(null);
+  const pending = useRef<{
+    timer: ReturnType<typeof setTimeout>;
+    act: () => void;
+  } | null>(null);
+
+  function settle(): void {
+    const current = pending.current;
+    if (!current) {
+      return;
+    }
+    clearTimeout(current.timer);
+    pending.current = null;
+    setFlickingTo(null);
+    current.act();
+  }
+
+  useEffect(() => settle, []);
+
+  function flickAway(direction: "left" | "right"): void {
+    const act = direction === "left" ? swipeLeft : swipeRight;
+    if (!act) {
+      return;
+    }
+    settle();
+    setFlickingTo(direction);
+    pending.current = {
+      timer: setTimeout(settle, FLICK_MILLISECONDS),
+      act: act,
+    };
+  }
+
+  return { flickingTo: flickingTo, flickAway: flickAway };
 }
 
 function useRowGesture({

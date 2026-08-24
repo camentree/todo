@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { ReactNode } from "react";
 
 import { Chevron, SendIcon, TickIcon } from "./icons.tsx";
 import { ParseableTitle } from "./ParseableTitle.tsx";
@@ -80,6 +80,10 @@ export function TaskInfo({
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [newTag, setNewTag] = useState("");
+  const [listDraft, setListDraft] = useState<string | null>(null);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<
+    number | null
+  >(null);
   const [titleFocused, setTitleFocused] = useState(false);
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
@@ -285,6 +289,39 @@ export function TaskInfo({
     setEdits({ ...edits, ...changes });
   };
 
+  const subtaskRow = (subtask: CreatedTask): ReactNode => (
+    <TaskRow
+      key={subtask.id}
+      task={subtask}
+      isEditing={editingSubtaskId === subtask.id}
+      onEditingChange={(editing) =>
+        setEditingSubtaskId(editing ? subtask.id : null)
+      }
+      onCommit={(changes) =>
+        "state" in changes
+          ? toggleSubtask.mutate(subtask)
+          : renameSubtask.mutate({
+              subtask: subtask,
+              title: changes.title ?? subtask.title,
+            })
+      }
+      swipeLeft={{
+        name: "Delete",
+        action: () => deleteSubtask.mutate(subtask),
+      }}
+      showAttributes={false}
+      parseAttributes={false}
+    />
+  );
+
+  const chooseList = (choice: string): void => {
+    const next = canonicalName(choice);
+    if (next && next !== uncommittedTask.list) {
+      setEdits({ ...edits, list: next });
+    }
+    setListDraft(null);
+  };
+
   return (
     <>
       <div
@@ -333,9 +370,7 @@ export function TaskInfo({
             list={uncommittedTask.list ?? ""}
             at="sheet"
             multiline
-            onDone={(event: ReactKeyboardEvent<HTMLElement>) =>
-              event.currentTarget.blur()
-            }
+            onDone={() => titleRef.current?.blur()}
             input={{
               className: "info-title",
               "aria-label": "Title",
@@ -375,25 +410,21 @@ export function TaskInfo({
             open={openSections.includes("metadata")}
             onToggle={() => toggleSection("metadata")}
           >
-            <label className="info-field">
+            <div className="info-field">
               <span>List</span>
-              <input
-                list="known-lists"
-                key={uncommittedTask.list}
-                defaultValue={uncommittedTask.list ?? ""}
-                onBlur={(event) => {
-                  const next = canonicalName(event.target.value);
-                  if (next && next !== uncommittedTask.list) {
-                    setEdits({ ...edits, list: next });
-                  }
-                }}
+              <SuggestingInput
+                value={listDraft ?? uncommittedTask.list ?? ""}
+                options={lists}
+                label="List"
+                onChange={setListDraft}
+                onChoose={chooseList}
+                onLeave={() =>
+                  listDraft === null
+                    ? undefined
+                    : chooseList(listDraft)
+                }
               />
-              <datalist id="known-lists">
-                {lists.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            </label>
+            </div>
 
             <label className="info-field">
               <span>Stage</span>
@@ -438,20 +469,17 @@ export function TaskInfo({
                     <span className="tag-remove">×</span>
                   </button>
                 ))}
-                <input
-                  className="tag-input"
-                  list="known-tags"
+                <SuggestingInput
                   value={newTag}
+                  options={knownTags.filter(
+                    (tag) => !uncommittedTask.tags.includes(tag),
+                  )}
+                  className="tag-input"
                   placeholder="Add a tag"
-                  aria-label="Add a tag"
-                  enterKeyHint="done"
-                  onChange={(event) => setNewTag(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter") {
-                      return;
-                    }
-                    event.preventDefault();
-                    const tag = canonicalName(newTag).replace(
+                  label="Add a tag"
+                  onChange={setNewTag}
+                  onChoose={(choice) => {
+                    const tag = canonicalName(choice).replace(
                       /^#/,
                       "",
                     );
@@ -464,15 +492,6 @@ export function TaskInfo({
                     setNewTag("");
                   }}
                 />
-                <datalist id="known-tags">
-                  {knownTags
-                    .filter(
-                      (tag) => !uncommittedTask.tags.includes(tag),
-                    )
-                    .map((tag) => (
-                      <option key={tag} value={tag} />
-                    ))}
-                </datalist>
               </div>
             </div>
           </Section>
@@ -612,7 +631,10 @@ export function TaskInfo({
 
             <div className="info-field">
               <span>{repeats ? "Starts" : "Date"}</span>
-              <div className="info-input">
+              <div
+                className="info-input"
+                data-empty={!repeats && !uncommittedTask.dueDate}
+              >
                 <input
                   type="date"
                   value={
@@ -632,6 +654,9 @@ export function TaskInfo({
                         })
                   }
                 />
+                {!repeats && !uncommittedTask.dueDate && (
+                  <span className="info-example">31 Aug 2026</span>
+                )}
                 {!repeats && uncommittedTask.dueDate && (
                   <button
                     type="button"
@@ -649,7 +674,10 @@ export function TaskInfo({
 
             <div className="info-field">
               <span>Time</span>
-              <div className="info-input">
+              <div
+                className="info-input"
+                data-empty={!uncommittedTask.dueTime}
+              >
                 <input
                   type="time"
                   value={uncommittedTask.dueTime?.slice(0, 5) ?? ""}
@@ -660,6 +688,9 @@ export function TaskInfo({
                     })
                   }
                 />
+                {!uncommittedTask.dueTime && (
+                  <span className="info-example">8:00am</span>
+                )}
                 {uncommittedTask.dueTime && (
                   <button
                     type="button"
@@ -683,24 +714,9 @@ export function TaskInfo({
             onToggle={() => toggleSection("subtasks")}
           >
             <div className="info-subtasks">
-              {subtasks.map((subtask) => (
-                <SheetSubtask
-                  key={subtask.id}
-                  subtask={subtask}
-                  onCommit={(changes) =>
-                    "state" in changes
-                      ? toggleSubtask.mutate(subtask)
-                      : renameSubtask.mutate({
-                          subtask: subtask,
-                          title: changes.title ?? subtask.title,
-                        })
-                  }
-                  onDelete={() => deleteSubtask.mutate(subtask)}
-                />
-              ))}
-              <SheetSubtask
-                blank={true}
-                subtask={{
+              {subtasks.map((subtask) => subtaskRow(subtask))}
+              <TaskRow
+                task={{
                   ...(task.subtasks?.[0] ?? task),
                   id: null,
                   parentId: taskId,
@@ -715,10 +731,13 @@ export function TaskInfo({
                   schedule: null,
                   subtasks: [],
                 }}
+                isEditing={true}
+                onEditingChange={() => {}}
                 onCommit={(changes) =>
                   addSubtask.mutate(changes.title ?? "")
                 }
-                onDelete={() => {}}
+                showAttributes={false}
+                parseAttributes={false}
               />
             </div>
           </Section>
@@ -858,6 +877,104 @@ export function TaskInfo({
   );
 }
 
+function scrollListIntoView(field: HTMLInputElement): void {
+  const scroller = field.closest(".info-body");
+  const list = field.parentElement?.querySelector(".suggestions");
+  if (!scroller || !list) {
+    return;
+  }
+  const hidden =
+    list.getBoundingClientRect().bottom -
+    scroller.getBoundingClientRect().bottom;
+  if (hidden > 0) {
+    scroller.scrollBy({ top: hidden + 16, behavior: "smooth" });
+  }
+}
+
+function SuggestingInput({
+  value,
+  options,
+  label,
+  className,
+  placeholder,
+  onChange,
+  onChoose,
+  onLeave,
+}: {
+  value: string;
+  options: string[];
+  label: string;
+  className?: string;
+  placeholder?: string;
+  onChange: (next: string) => void;
+  onChoose: (choice: string) => void;
+  onLeave?: () => void;
+}) {
+  const [showing, setShowing] = useState(false);
+  const [filter, setFilter] = useState<string | null>(null);
+  const matches =
+    filter === null
+      ? options
+      : options.filter((option) =>
+          option.toLowerCase().includes(filter.trim().toLowerCase()),
+        );
+
+  return (
+    <div className="picker">
+      <input
+        className={className}
+        value={value}
+        placeholder={placeholder}
+        aria-label={label}
+        enterKeyHint="done"
+        autoComplete="off"
+        onChange={(event) => {
+          onChange(event.target.value);
+          setFilter(event.target.value);
+          setShowing(true);
+        }}
+        onFocus={(event) => {
+          const field = event.currentTarget;
+          setFilter(null);
+          setShowing(true);
+          requestAnimationFrame(() => scrollListIntoView(field));
+        }}
+        onBlur={() => {
+          setShowing(false);
+          onLeave?.();
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") {
+            return;
+          }
+          event.preventDefault();
+          onChoose(value);
+          setShowing(false);
+        }}
+      />
+
+      {showing && matches.length > 0 && (
+        <div className="suggestions" data-at="sheet">
+          {matches.map((option) => (
+            <button
+              type="button"
+              key={option}
+              className="suggestion"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onChoose(option);
+                setShowing(false);
+              }}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CommentRow({
   comment,
   onResurface,
@@ -920,8 +1037,8 @@ function Section({
         onClick={onToggle}
       >
         <span>{label}</span>
-        {count > 0 && <span className="info-count">{count}</span>}
         <Chevron open={open} />
+        {count > 0 && <span className="info-count">{count}</span>}
       </button>
       <div className="collapsible" data-open={open}>
         <div>
@@ -1055,32 +1172,4 @@ function withIndentation({
     selectionStart: wholeLines ? blockStart : caret,
     selectionEnd: wholeLines ? blockEnd + moved : caret,
   };
-}
-
-function SheetSubtask({
-  subtask,
-  onCommit,
-  onDelete,
-  blank = false,
-}: {
-  subtask: Task;
-  onCommit: (changes: Partial<Task>) => void;
-  onDelete: () => void;
-  blank?: boolean;
-}) {
-  const [editing, setEditing] = useState(false);
-
-  return (
-    <TaskRow
-      task={subtask}
-      isEditing={blank || editing}
-      onEditingChange={setEditing}
-      onCommit={onCommit}
-      swipeLeft={
-        blank ? undefined : { name: "Delete", action: onDelete }
-      }
-      showAttributes={false}
-      parseAttributes={false}
-    />
-  );
 }

@@ -37,7 +37,7 @@ export function ParseableTitle({
   at: "row" | "search" | "sheet";
   suggest?: boolean;
   multiline?: boolean;
-  onDone?: (event: KeyboardEvent<TitleElement>) => void;
+  onDone?: () => void;
   onCancel?: (event: KeyboardEvent<TitleElement>) => void;
   input: InputHTMLAttributes<TitleElement> &
     Partial<Record<`data-${string}`, boolean>>;
@@ -108,7 +108,17 @@ export function ParseableTitle({
   }
 
   function typed(event: ChangeEvent<TitleElement>): void {
-    onChange(event.target.value);
+    const next = event.target.value;
+    if (next.includes("\n")) {
+      onChange(next.replace(/\n/g, ""));
+      if (matches.length > 0) {
+        pick(matches[highlighted] ?? "");
+        return;
+      }
+      onDone?.();
+      return;
+    }
+    onChange(next);
     setCaret(event.target.selectionStart ?? 0);
     setSuppressed(false);
     setHighlighted(0);
@@ -141,7 +151,8 @@ export function ParseableTitle({
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      onDone?.(event);
+      event.stopPropagation();
+      onDone?.();
       return;
     }
     if (event.key === "Escape") {

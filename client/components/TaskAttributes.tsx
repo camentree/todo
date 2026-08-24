@@ -60,11 +60,13 @@ export function attributesOf(task: DescribedTask): TaskAttribute[] {
           to: `/list/${encodeURIComponent(task.list)}`,
         }
       : null,
-    ...task.tags.map((tag): TaskAttribute => ({
-      field: "tag",
-      text: tag,
-      to: `/tag/${encodeURIComponent(tag)}`,
-    })),
+    ...task.tags.map(
+      (tag): TaskAttribute => ({
+        field: "tag",
+        text: tag,
+        to: `/tag/${encodeURIComponent(tag)}`,
+      }),
+    ),
     task.who
       ? {
           field: "who",
@@ -146,18 +148,23 @@ export function AttributeChips({
     <span className="task-meta">
       {attributes.map((attribute) =>
         onRemove && attribute.field !== "list" ? (
-          <button
-            type="button"
+          <span
             key={`${attribute.field}-${attribute.text}`}
             className="capture-chip removable"
             data-field={attribute.field}
-            aria-label={`Remove ${attribute.text}`}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onRemove(attribute)}
           >
             {sigilFor(attribute.field)}
             {attribute.text.toLowerCase()}
-          </button>
+            <button
+              type="button"
+              className="chip-remove"
+              aria-label={`Remove ${attribute.text}`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onRemove(attribute)}
+            >
+              ×
+            </button>
+          </span>
         ) : (
           <span
             key={`${attribute.field}-${attribute.text}`}
