@@ -110,8 +110,8 @@ export function TaskInfo({
   const commentsOpen = openSections.includes("comments");
   const hasTiming = Boolean(
     editedTask?.dueDate ||
-      editedTask?.dueTime ||
-      editedTask?.schedule,
+    editedTask?.dueTime ||
+    editedTask?.schedule,
   );
 
   useEffect(() => {
@@ -1079,6 +1079,7 @@ function SheetSubtask({
         blank ? undefined : { name: "Delete", action: onDelete }
       }
       showAttributes={false}
+      parseAttributes={false}
     />
   );
 }

@@ -361,6 +361,15 @@ a {
   z-index: 40;
 }
 
+.swipe-band {
+  position: relative;
+  overflow: hidden;
+}
+
+.swipe-band:has(.suggestions) {
+  overflow: visible;
+}
+
 .swipe-action {
   position: absolute;
   top: 0;
@@ -640,12 +649,22 @@ a {
 }
 
 .task-note {
-  padding: 0.15rem 0.25rem 0.6rem
+  display: block;
+  width: 100%;
+  padding: 0.65rem 0.25rem 0.6rem
     calc(var(--tick) + var(--tick-gap) + 0.25rem);
   color: var(--dim);
   font-size: 0.88rem;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.task-note.editing {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  overflow: hidden;
 }
 
 .subtasks .task,
@@ -1630,7 +1649,17 @@ a {
 }
 
 @media (hover: hover) {
-  .task-shell[data-focused="true"] > .swipe-track > .task {
+  .task-title,
+  .task-note {
+    cursor: text;
+  }
+
+  .subtasks .task,
+  .info-subtasks .task {
+    padding: var(--row-pad) 0.25rem;
+  }
+
+  .task-shell[data-focused="true"] .swipe-band > .task {
     background: var(--hover);
     border-radius: 9px;
   }
@@ -1640,7 +1669,7 @@ a {
     visibility: hidden;
   }
 
-  .task-shell[data-focused="true"] > .swipe-track > .task .task-info,
+  .task-shell[data-focused="true"] .swipe-band > .task .task-info,
   .task[data-editing="true"] .task-info {
     visibility: visible;
   }

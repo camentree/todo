@@ -20,6 +20,7 @@ export function ParseableTitle({
   inputRef,
   list = "",
   at,
+  suggest = true,
   onDone,
   onCancel,
   input,
@@ -29,6 +30,7 @@ export function ParseableTitle({
   inputRef: RefObject<HTMLInputElement | null>;
   list?: string;
   at: "row" | "search" | "sheet";
+  suggest?: boolean;
   onDone?: (event: KeyboardEvent<HTMLInputElement>) => void;
   onCancel?: (event: KeyboardEvent<HTMLInputElement>) => void;
   input: InputHTMLAttributes<HTMLInputElement> &
@@ -58,9 +60,10 @@ export function ParseableTitle({
     queryFn: api.stages,
   });
 
-  const opening = suppressed
-    ? null
-    : sigilBefore({ input: value, caret: caret });
+  const opening =
+    suppressed || !suggest
+      ? null
+      : sigilBefore({ input: value, caret: caret });
   const matches = suggestionsFor({
     opening: opening,
     lists: lists,

@@ -533,6 +533,7 @@ function SubtaskRow({
           action: () => actions.remove(subtask),
         }}
         showAttributes={false}
+        parseAttributes={false}
       />
     </div>
   );
