@@ -37,8 +37,6 @@ const BLANK_TASK: Task = {
   createdAt: "",
   updatedAt: "",
   commentCount: 0,
-  unseenCommentCount: 0,
-  lastCommentFromOthers: false,
   schedule: null,
   subtasks: [],
 };

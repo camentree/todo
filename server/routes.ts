@@ -141,13 +141,13 @@ api.post("/tasks/:id/comments", async (context) => {
   );
 });
 
-api.post("/tasks/:id/comments/seen", async (context) => {
-  await comments.markSeen(numberParam(context.req.param("id")));
+api.post("/comments/:id/resurface", async (context) => {
+  await comments.resurface(numberParam(context.req.param("id")));
   return context.json({ ok: true });
 });
 
-api.post("/comments/:id/seen", async (context) => {
-  await comments.markOneSeen(numberParam(context.req.param("id")));
+api.delete("/comments/:id", async (context) => {
+  await comments.remove(numberParam(context.req.param("id")));
   return context.json({ ok: true });
 });
 

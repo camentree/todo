@@ -32,8 +32,6 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   commentCount: number;
-  unseenCommentCount: number;
-  lastCommentFromOthers: boolean;
   schedule: Schedule | null;
   subtasks?: CreatedTask[];
 }
@@ -49,7 +47,6 @@ export interface Comment {
   author: string;
   body: string;
   createdAt: string;
-  seenAt: string | null;
 }
 
 export interface RecurringTask extends Schedule {
@@ -67,15 +64,21 @@ export interface RecurringTask extends Schedule {
 export interface Event {
   id: number;
   taskId: number | null;
+  taskTitle: string | null;
   source: EventSource;
   summary: string;
   createdAt: string;
 }
 
-export type BreakUpField =
-  "none" | "list" | "stage" | "tag" | "due_date" | "who";
+export type GroupByField =
+  | "none"
+  | "list"
+  | "stage"
+  | "tag"
+  | "due_date"
+  | "who";
 
-export type SortField =
+export type OrderByField =
   | "manual"
   | "relevance"
   | "due_date"
@@ -83,13 +86,13 @@ export type SortField =
   | "created_at"
   | "resolved_at";
 
-export type SortDirection = "asc" | "desc";
+export type OrderDirection = "asc" | "desc";
 
 export type Layout = "stacked" | "columns";
 
 export interface ViewPreference {
-  breakUpBy: BreakUpField;
-  sortBy: SortField;
-  sortDirection: SortDirection;
+  groupBy: GroupByField;
+  orderBy: OrderByField;
+  orderDirection: OrderDirection;
   layout: Layout;
 }

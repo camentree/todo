@@ -132,7 +132,7 @@ export function Tasks() {
   const captureSeed =
     searchText !== null || archived || finished
       ? null
-      : scope.field && scope.field !== view.breakUpBy
+      : scope.field && scope.field !== view.groupBy
         ? seedFor(scope)
         : {};
 
@@ -216,8 +216,7 @@ function within(task: CreatedTask, scope: Scope): boolean {
     return (
       task.archivedAt === null &&
       task.state !== "missed" &&
-      (dueOnOrBefore(task.dueDate, todayAsDateString()) ||
-        task.unseenCommentCount > 0)
+      dueOnOrBefore(task.dueDate, todayAsDateString())
     );
   }
   if (scope.field === "archived") {

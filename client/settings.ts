@@ -2,10 +2,10 @@ import { useSyncExternalStore } from "react";
 
 import type { Scope } from "./screens/Tasks.tsx";
 import type {
-  BreakUpField,
+  GroupByField,
   Layout,
-  SortDirection,
-  SortField,
+  OrderDirection,
+  OrderByField,
   ViewPreference,
 } from "@shared/types.ts";
 
@@ -24,37 +24,37 @@ export interface GlobalSettings {
 }
 
 const FLAT_MANUAL: ViewPreference = {
-  breakUpBy: "none",
-  sortBy: "manual",
-  sortDirection: "asc",
+  groupBy: "none",
+  orderBy: "manual",
+  orderDirection: "asc",
   layout: "stacked",
 };
 
 const BY_LIST: ViewPreference = {
-  breakUpBy: "list",
-  sortBy: "manual",
-  sortDirection: "asc",
+  groupBy: "list",
+  orderBy: "manual",
+  orderDirection: "asc",
   layout: "stacked",
 };
 
 const BY_DUE: ViewPreference = {
-  breakUpBy: "none",
-  sortBy: "due_date",
-  sortDirection: "desc",
+  groupBy: "none",
+  orderBy: "due_date",
+  orderDirection: "desc",
   layout: "stacked",
 };
 
 const BY_FINISHED: ViewPreference = {
-  breakUpBy: "none",
-  sortBy: "resolved_at",
-  sortDirection: "desc",
+  groupBy: "none",
+  orderBy: "resolved_at",
+  orderDirection: "desc",
   layout: "stacked",
 };
 
 const BY_RELEVANCE: ViewPreference = {
-  breakUpBy: "none",
-  sortBy: "relevance",
-  sortDirection: "asc",
+  groupBy: "none",
+  orderBy: "relevance",
+  orderDirection: "asc",
   layout: "stacked",
 };
 
@@ -151,11 +151,10 @@ export function useViewPreference(
   const saved = useSyncExternalStore(subscribe, () => screens[key]);
   return [
     {
-      breakUpBy: (saved?.breakUpBy ??
-        fallback.breakUpBy) as BreakUpField,
-      sortBy: (saved?.sortBy ?? fallback.sortBy) as SortField,
-      sortDirection: (saved?.sortDirection ??
-        fallback.sortDirection) as SortDirection,
+      groupBy: (saved?.groupBy ?? fallback.groupBy) as GroupByField,
+      orderBy: (saved?.orderBy ?? fallback.orderBy) as OrderByField,
+      orderDirection: (saved?.orderDirection ??
+        fallback.orderDirection) as OrderDirection,
       layout: (saved?.layout ?? fallback.layout) as Layout,
     },
     (changes) => changeScreen(key, changes),

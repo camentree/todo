@@ -24,17 +24,15 @@ function task(overrides: Partial<CreatedTask>): CreatedTask {
     updatedAt: "2026-08-01T09:00:00Z",
     schedule: null,
     commentCount: 0,
-    unseenCommentCount: 0,
-    lastCommentFromOthers: false,
     ...overrides,
   };
 }
 
 function view(overrides: Partial<ViewPreference>): ViewPreference {
   return {
-    breakUpBy: "none",
-    sortBy: "resolved_at",
-    sortDirection: "desc",
+    groupBy: "none",
+    orderBy: "resolved_at",
+    orderDirection: "desc",
     layout: "stacked",
     ...overrides,
   };
@@ -51,7 +49,7 @@ describe("sorting by when a task was finished", () => {
     expect(
       sortTasks({
         tasks: [earlier, later],
-        view: view({ sortDirection: "desc" }),
+        view: view({ orderDirection: "desc" }),
       }).map((sorted) => sorted.id),
     ).toEqual([2, 1]);
   });
@@ -60,7 +58,7 @@ describe("sorting by when a task was finished", () => {
     expect(
       sortTasks({
         tasks: [later, earlier],
-        view: view({ sortDirection: "asc" }),
+        view: view({ orderDirection: "asc" }),
       }).map((sorted) => sorted.id),
     ).toEqual([1, 2]);
   });
@@ -75,7 +73,7 @@ describe("sorting by when a task was finished", () => {
     expect(
       sortTasks({
         tasks: [unfinished, later, earlier],
-        view: view({ sortDirection: "asc" }),
+        view: view({ orderDirection: "asc" }),
       }).map((sorted) => sorted.id),
     ).toEqual([3, 1, 2]);
   });

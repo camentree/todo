@@ -34,7 +34,7 @@ export function TopBar({
   const { data: unseen = [] } = useQuery({
     queryKey: ["events", "unseen"],
     queryFn: api.unseenEvents,
-    refetchInterval: 60_000,
+    refetchInterval: 300_000,
   });
 
   useEffect(() => {

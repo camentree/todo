@@ -18,10 +18,13 @@ export async function record({
 
 export async function unseen(): Promise<Event[]> {
   return sql<Event[]>`
-    select id, task_id, source, summary, created_at
-    from todo.events
-    where source <> 'app' and seen_at is null
-    order by created_at desc
+    select
+      events.id, events.task_id, events.source, events.summary,
+      events.created_at, tasks.title as task_title
+    from todo.events as events
+    left join todo.tasks as tasks on tasks.id = events.task_id
+    where events.source <> 'app' and events.seen_at is null
+    order by events.created_at desc
     limit 50
   `;
 }

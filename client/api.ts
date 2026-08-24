@@ -77,8 +77,14 @@ export const api = {
     send<Comment>(`/tasks/${taskId}/comments`, "POST", {
       body: body,
     }),
-  markCommentSeen: (commentId: number) =>
-    send<{ ok: true }>(`/comments/${commentId}/seen`, "POST", {}),
+  resurfaceComment: (commentId: number) =>
+    send<{ ok: true }>(
+      `/comments/${commentId}/resurface`,
+      "POST",
+      {},
+    ),
+  deleteComment: (commentId: number) =>
+    send<{ ok: true }>(`/comments/${commentId}`, "DELETE", {}),
   archiveTasks: (ids: number[]) =>
     send<CreatedTask[]>("/tasks/archive", "POST", { ids: ids }),
   unarchiveTasks: (ids: number[]) =>

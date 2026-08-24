@@ -19,11 +19,13 @@ import { api } from "../api.ts";
 import { formatWhen } from "../format.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import { useLockedScroll } from "../useLockedScroll.ts";
+import { useSwipe } from "../useSwipe.ts";
 import { canonicalName } from "@shared/names.ts";
 import { toDateString } from "@shared/recurrence.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import type {
+  Comment,
   CreatedTask,
   Frequency,
   Schedule,
@@ -44,7 +46,11 @@ const DRAG_TO_CLOSE = 110;
 const INDENT = "  ";
 
 type InfoSection =
-  "metadata" | "timing" | "subtasks" | "note" | "comments";
+  | "metadata"
+  | "timing"
+  | "subtasks"
+  | "note"
+  | "comments";
 
 function sectionsHoldingSomething(task: CreatedTask): InfoSection[] {
   const sections: InfoSection[] = [];
@@ -79,6 +85,8 @@ export function TaskInfo({
   const [edits, setEdits] = useState<Partial<Task>>({});
   const [everyDraft, setEveryDraft] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
+  const [confirmingDelete, setConfirmingDelete] =
+    useState<Comment | null>(null);
   const [closing, setClosing] = useState(false);
   const [openSections, setOpenSections] = useState<InfoSection[]>([]);
 
@@ -102,8 +110,8 @@ export function TaskInfo({
   const commentsOpen = openSections.includes("comments");
   const hasTiming = Boolean(
     editedTask?.dueDate ||
-    editedTask?.dueTime ||
-    editedTask?.schedule,
+      editedTask?.dueTime ||
+      editedTask?.schedule,
   );
 
   useEffect(() => {
@@ -190,9 +198,17 @@ export function TaskInfo({
       refresh();
     },
   });
-  const seeComment = useMutation({
-    mutationFn: (commentId: number) => api.markCommentSeen(commentId),
+  const resurfaceComment = useMutation({
+    mutationFn: (commentId: number) =>
+      api.resurfaceComment(commentId),
     onSuccess: refresh,
+  });
+  const deleteComment = useMutation({
+    mutationFn: (commentId: number) => api.deleteComment(commentId),
+    onSuccess: () => {
+      setConfirmingDelete(null);
+      refresh();
+    },
   });
 
   useEffect(() => {
@@ -751,22 +767,14 @@ export function TaskInfo({
           >
             <div className="info-comments">
               {comments.map((entry) => (
-                <div className="comment" key={entry.id}>
-                  <div className="comment-who">
-                    {entry.author} · {formatWhen(entry.createdAt)}
-                    {entry.seenAt === null && (
-                      <button
-                        type="button"
-                        className="comment-seen"
-                        aria-label="Mark as seen"
-                        onClick={() => seeComment.mutate(entry.id)}
-                      >
-                        <TickIcon />
-                      </button>
-                    )}
-                  </div>
-                  <div>{entry.body}</div>
-                </div>
+                <CommentRow
+                  key={entry.id}
+                  comment={entry}
+                  onResurface={() =>
+                    resurfaceComment.mutate(entry.id)
+                  }
+                  onDelete={() => setConfirmingDelete(entry)}
+                />
               ))}
               <form
                 className="comment-entry"
@@ -810,7 +818,83 @@ export function TaskInfo({
           </Section>
         </div>
       </div>
+
+      {confirmingDelete && (
+        <>
+          <div
+            className="scrim confirm-scrim"
+            onClick={() => setConfirmingDelete(null)}
+          />
+          <div
+            className="confirm"
+            role="dialog"
+            aria-label="Delete this comment"
+          >
+            <p className="confirm-question">Delete this comment?</p>
+            <p className="confirm-detail">{confirmingDelete.body}</p>
+            <div className="confirm-choices">
+              <button
+                type="button"
+                className="confirm-cancel"
+                onClick={() => setConfirmingDelete(null)}
+              >
+                Keep
+              </button>
+              <button
+                type="button"
+                className="confirm-destroy"
+                onClick={() =>
+                  deleteComment.mutate(confirmingDelete.id)
+                }
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
+  );
+}
+
+function CommentRow({
+  comment,
+  onResurface,
+  onDelete,
+}: {
+  comment: Comment;
+  onResurface: () => void;
+  onDelete: () => void;
+}) {
+  const swipe = useSwipe({
+    onLeft: onDelete,
+    onRight: onResurface,
+  });
+
+  return (
+    <div className="swipe-track">
+      {swipe.swiping && (
+        <>
+          <div className="swipe-action archive">Delete</div>
+          <div className="swipe-action defer">Unseen</div>
+        </>
+      )}
+      <div
+        className="comment"
+        ref={swipe.ref}
+        style={{ transform: `translateX(${swipe.offset}px)` }}
+        data-swiping={swipe.swiping}
+        onPointerDown={swipe.down}
+        onPointerMove={swipe.move}
+        onPointerUp={swipe.up}
+        onPointerCancel={swipe.up}
+      >
+        <div className="comment-who">
+          {comment.author} · {formatWhen(comment.createdAt)}
+        </div>
+        <div>{comment.body}</div>
+      </div>
+    </div>
   );
 }
 

@@ -9,13 +9,13 @@ import {
   attributesOf,
   withoutAttribute,
 } from "./TaskAttributes.tsx";
+import { SWIPE_FRACTION, useSwipe } from "../useSwipe.ts";
 import { renameChanges } from "../useTaskActions.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { Task } from "@shared/types.ts";
 
 const LONG_PRESS_MILLISECONDS = 400;
-const SWIPE_FRACTION = 0.4;
 const SCROLL_BREATHING_ROOM = 96;
 const SCROLL_MILLISECONDS = 900;
 
@@ -217,13 +217,6 @@ export function TaskRow({
             </button>
           )}
 
-          {task.lastCommentFromOthers && (
-            <span
-              className="comment-dot"
-              aria-label="Waiting on you"
-            />
-          )}
-
           {children.length > 0 && (
             <button
               type="button"
@@ -414,19 +407,16 @@ function useRowGesture({
   onLongPress?: (pointerX: number, pointerY: number) => void;
   enabled: boolean;
 }) {
-  const [offset, setOffset] = useState(0);
-  const start = useRef<{ x: number; y: number } | null>(null);
-  const sideways = useRef(0);
-  const furthest = useRef(0);
+  const swipe = useSwipe({
+    onLeft: onLeft,
+    onRight: onRight,
+    enabled: enabled,
+  });
   const holding = useRef(false);
-  const active = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const element = useRef<HTMLDivElement>(null);
-  const stopWatching = useRef<(() => void) | null>(null);
-  const endLatest = useRef<() => void>(() => {});
 
   useEffect(() => {
-    const node = element.current;
+    const node = swipe.ref.current;
     if (!node) {
       return;
     }
@@ -442,17 +432,8 @@ function useRowGesture({
   }, []);
 
   useEffect(() => {
-    return () => {
-      stopWatching.current?.();
-      if (timer.current) {
-        clearTimeout(timer.current);
-      }
-    };
+    return () => stopTimer();
   }, []);
-
-  useEffect(() => {
-    endLatest.current = endGesture;
-  });
 
   function stopTimer(): void {
     if (timer.current) {
@@ -461,80 +442,15 @@ function useRowGesture({
     }
   }
 
-  function watchForRelease(
-    pointerId: number,
-    finish: () => void,
-  ): void {
-    stopWatching.current?.();
-
-    function onPointerRelease(event: PointerEvent): void {
-      if (event.pointerId === pointerId) {
-        finish();
-      }
-    }
-    function onWindowBlur(): void {
-      finish();
-    }
-
-    window.addEventListener("pointerup", onPointerRelease);
-    window.addEventListener("pointercancel", onPointerRelease);
-    window.addEventListener("blur", onWindowBlur);
-    stopWatching.current = () => {
-      window.removeEventListener("pointerup", onPointerRelease);
-      window.removeEventListener("pointercancel", onPointerRelease);
-      window.removeEventListener("blur", onWindowBlur);
-      stopWatching.current = null;
-    };
-  }
-
-  function endGesture(): void {
-    if (!active.current) {
-      return;
-    }
-    active.current = false;
-    stopWatching.current?.();
-    stopTimer();
-
-    if (holding.current) {
-      holding.current = false;
-      start.current = null;
-      setOffset(0);
-      return;
-    }
-    if (!start.current) {
-      return;
-    }
-    const dx = sideways.current;
-    const threshold =
-      (element.current?.offsetWidth ?? 0) * SWIPE_FRACTION;
-    start.current = null;
-    sideways.current = 0;
-    setOffset(0);
-    if (dx <= -threshold) {
-      onLeft?.();
-    } else if (dx >= threshold) {
-      onRight?.();
-    }
-  }
-
-  const swipeable = Boolean(onLeft || onRight);
-
   return {
-    ref: element,
-    offset: offset,
-    swiping: offset !== 0,
-    travelled: () => furthest.current > 8,
+    ref: swipe.ref,
+    offset: swipe.offset,
+    swiping: swipe.swiping,
+    travelled: swipe.travelled,
     down: (event: React.PointerEvent) => {
-      if (!enabled || (!swipeable && !onLongPress)) {
-        return;
-      }
-      active.current = true;
-      watchForRelease(event.pointerId, () => endLatest.current());
-      start.current = { x: event.clientX, y: event.clientY };
-      sideways.current = 0;
-      furthest.current = 0;
       holding.current = false;
-      if (!onLongPress) {
+      swipe.down(event);
+      if (!enabled || !onLongPress) {
         return;
       }
       const pointerX = event.clientX;
@@ -545,42 +461,23 @@ function useRowGesture({
       }, LONG_PRESS_MILLISECONDS);
     },
     move: (event: React.PointerEvent) => {
-      if (!start.current) {
-        return;
-      }
-      const dx = event.clientX - start.current.x;
-      const dy = event.clientY - start.current.y;
-      furthest.current = Math.max(
-        furthest.current,
-        Math.abs(dx),
-        Math.abs(dy),
-      );
-
       if (holding.current) {
         return;
       }
-
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+      swipe.move(event);
+      if (swipe.travelled()) {
         stopTimer();
-        start.current = null;
-        setOffset(0);
-        return;
       }
-
-      if (!swipeable) {
-        return;
-      }
-
-      if (Math.abs(dx) > 6) {
-        stopTimer();
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }
-      }
-      sideways.current = dx;
-      setOffset(dx);
     },
-    up: () => endGesture(),
+    up: () => {
+      stopTimer();
+      if (holding.current) {
+        holding.current = false;
+        swipe.cancel();
+        return;
+      }
+      swipe.up();
+    },
   };
 }
 

@@ -583,14 +583,6 @@ a {
   color: var(--text);
 }
 
-.comment-dot {
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: var(--faint);
-  flex-shrink: 0;
-}
-
 .subtask-toggle {
   display: flex;
   align-items: center;
@@ -934,6 +926,10 @@ a {
   font-size: 0.92rem;
   padding: 0.3rem 0.55rem 0.6rem;
   margin: 0;
+}
+
+.menu.changes > * {
+  flex-shrink: 0;
 }
 
 .menu.changes .event {
@@ -1390,10 +1386,18 @@ a {
 }
 
 .comment {
+  position: relative;
   background: var(--raised);
   border-radius: 10px;
   padding: 0.65rem 0.8rem;
   font-size: 0.92rem;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.comment[data-swiping="false"] {
+  transition: transform var(--motion) var(--ease);
 }
 
 .comment-who {
@@ -1406,20 +1410,62 @@ a {
   margin-bottom: 0.25rem;
 }
 
-.comment-seen {
-  width: 1.35rem;
-  height: 1.35rem;
-  margin-left: auto;
-  border-radius: 50%;
-  color: var(--dim);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
+.confirm-scrim {
+  z-index: 49;
 }
 
-.comment-seen:hover {
-  background: var(--chip-bg);
-  color: var(--accent);
+.confirm {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(20rem, 84vw);
+  padding: 1.1rem;
+  background: var(--ground);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.65);
+  animation: drop-in var(--motion-menu) var(--ease);
+}
+
+.confirm-question {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.confirm-detail {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.confirm-choices {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.confirm-cancel,
+.confirm-destroy {
+  padding: 0.45rem 0.9rem;
+  border-radius: 9px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.confirm-cancel {
+  color: var(--dim);
+}
+
+.confirm-destroy {
+  background: var(--swipe-warn);
+  color: var(--ground);
 }
 
 .comment-entry {
@@ -1481,6 +1527,11 @@ a {
 
 .event[data-swiping="false"] {
   transition: transform var(--motion) var(--ease);
+}
+
+.event-title {
+  font-weight: 600;
+  margin-bottom: 0.1rem;
 }
 
 .event-when {

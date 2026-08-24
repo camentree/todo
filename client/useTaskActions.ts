@@ -390,7 +390,7 @@ export function useTaskActions(
       landing: Landing,
       orderedIds: number[],
     ) => {
-      onManualOrder?.({ sortBy: "manual", sortDirection: "asc" });
+      onManualOrder?.({ orderBy: "manual", orderDirection: "asc" });
       move(taskId, landing, orderedIds);
     },
   };

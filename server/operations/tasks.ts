@@ -1,12 +1,15 @@
 import { sql } from "../database.ts";
-import { CAMEN } from "./comments.ts";
 import * as events from "./events.ts";
 import * as recurring from "./recurring.ts";
 import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
-import type { EventSource, Schedule, CreatedTask } from "@shared/types.ts";
+import type {
+  EventSource,
+  Schedule,
+  CreatedTask,
+} from "@shared/types.ts";
 
 const COLUMNS = sql`
   id, list, parent_id, recurring_task_id, title, note, state, stage, tags, who,
@@ -14,19 +17,6 @@ const COLUMNS = sql`
   updated_at,
   (select count(*)::int from todo.comments where task_id = todo.tasks.id)
     as comment_count,
-  (
-    select count(*)::int from todo.comments
-    where task_id = todo.tasks.id and seen_at is null
-  ) as unseen_comment_count,
-  coalesce(
-    (
-      select author <> ${CAMEN} from todo.comments
-      where task_id = todo.tasks.id
-      order by created_at desc, id desc
-      limit 1
-    ),
-    false
-  ) as last_comment_from_others,
   (
     select json_build_object(
       'frequency', schedule.frequency,
@@ -64,7 +54,9 @@ export async function query({
   return attachSubtasks(parents);
 }
 
-async function attachSubtasks(parents: CreatedTask[]): Promise<CreatedTask[]> {
+async function attachSubtasks(
+  parents: CreatedTask[],
+): Promise<CreatedTask[]> {
   if (parents.length === 0) {
     return [];
   }
@@ -354,7 +346,9 @@ export async function archive(ids: number[]): Promise<CreatedTask[]> {
   `;
 }
 
-export async function unarchive(ids: number[]): Promise<CreatedTask[]> {
+export async function unarchive(
+  ids: number[],
+): Promise<CreatedTask[]> {
   return sql<CreatedTask[]>`
     update todo.tasks
     set archived_at = null, updated_at = now()
@@ -388,7 +382,9 @@ export async function unhide(id: number): Promise<CreatedTask[]> {
   `;
 }
 
-export async function deferByOneDay(id: number): Promise<CreatedTask[]> {
+export async function deferByOneDay(
+  id: number,
+): Promise<CreatedTask[]> {
   return sql<CreatedTask[]>`
     update todo.tasks
     set due_date = coalesce(due_date, current_date) + 1, updated_at = now()

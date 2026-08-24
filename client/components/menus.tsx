@@ -3,7 +3,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { api } from "../api.ts";
@@ -16,18 +15,19 @@ import {
 } from "../settings.ts";
 import type { HistoryMonths } from "../settings.ts";
 import { asTitle, formatWhen } from "../format.ts";
+import { useSwipe } from "../useSwipe.ts";
 import { useTheme } from "../theme.ts";
 import type { Theme } from "../settings.ts";
 import { canonicalName } from "@shared/names.ts";
 import type {
-  BreakUpField,
+  GroupByField,
   Event as TaskEvent,
-  SortDirection,
-  SortField,
+  OrderDirection,
+  OrderByField,
   ViewPreference,
 } from "@shared/types.ts";
 
-const GROUP_OPTIONS: { field: BreakUpField; label: string }[] = [
+const GROUP_OPTIONS: { field: GroupByField; label: string }[] = [
   { field: "none", label: "Nothing" },
   { field: "list", label: "List" },
   { field: "stage", label: "Stage" },
@@ -38,8 +38,8 @@ const GROUP_OPTIONS: { field: BreakUpField; label: string }[] = [
 
 const SORT_OPTIONS: {
   value: string;
-  field: SortField;
-  direction: SortDirection;
+  field: OrderByField;
+  direction: OrderDirection;
   label: string;
 }[] = [
   {
@@ -179,19 +179,19 @@ export function ViewMenu({
   const { historyMonths } = useGlobalSettings();
 
   const sortValue =
-    view.sortBy === "manual" || view.sortBy === "relevance"
-      ? view.sortBy
-      : `${view.sortBy}:${view.sortDirection}`;
+    view.orderBy === "manual" || view.orderBy === "relevance"
+      ? view.orderBy
+      : `${view.orderBy}:${view.orderDirection}`;
 
   return (
     <div className="menu under-right">
       <label className="menu-field row">
         <span className="menu-label">Group by</span>
         <select
-          value={view.breakUpBy}
+          value={view.groupBy}
           onChange={(event) =>
             onViewChange({
-              breakUpBy: event.target.value as BreakUpField,
+              groupBy: event.target.value as GroupByField,
             })
           }
         >
@@ -213,8 +213,8 @@ export function ViewMenu({
             );
             if (chosen) {
               onViewChange({
-                sortBy: chosen.field,
-                sortDirection: chosen.direction,
+                orderBy: chosen.field,
+                orderDirection: chosen.direction,
               });
             }
           }}
@@ -227,7 +227,7 @@ export function ViewMenu({
         </select>
       </label>
 
-      {view.breakUpBy !== "none" && (
+      {view.groupBy !== "none" && (
         <MenuSwitch
           label="Columns"
           wideOnly
@@ -344,6 +344,7 @@ export function ChangesMenu({ onClose }: { onClose: () => void }) {
   const { data: events = [] } = useQuery({
     queryKey: ["events", "unseen"],
     queryFn: api.unseenEvents,
+    refetchInterval: 300_000,
   });
 
   const markSeen = useMutation({
@@ -417,51 +418,27 @@ function EventRow({
   event: TaskEvent;
   onSeen: () => void;
 }) {
-  const [offset, setOffset] = useState(0);
-  const startX = useRef<number | null>(null);
-  const distance = useRef(0);
+  const swipe = useSwipe({
+    onRight: onSeen,
+  });
+  const shift = Math.max(0, swipe.offset);
 
   return (
     <div className="event-track">
-      {offset > 0 && <div className="event-action">Seen</div>}
+      {shift > 0 && <div className="event-action">Seen</div>}
       <div
         className="event"
-        style={{ transform: `translateX(${offset}px)` }}
-        data-swiping={offset !== 0}
-        onPointerDown={(pointer) => {
-          startX.current = pointer.clientX;
-          distance.current = 0;
-        }}
-        onPointerMove={(pointer) => {
-          if (startX.current === null) {
-            return;
-          }
-          distance.current = Math.max(
-            0,
-            pointer.clientX - startX.current,
-          );
-          if (
-            distance.current > 8 &&
-            !pointer.currentTarget.hasPointerCapture(
-              pointer.pointerId,
-            )
-          ) {
-            pointer.currentTarget.setPointerCapture(
-              pointer.pointerId,
-            );
-          }
-          setOffset(distance.current);
-        }}
-        onPointerUp={() => {
-          const travelled = distance.current;
-          startX.current = null;
-          distance.current = 0;
-          setOffset(0);
-          if (travelled >= 72) {
-            onSeen();
-          }
-        }}
+        ref={swipe.ref}
+        style={{ transform: `translateX(${shift}px)` }}
+        data-swiping={swipe.swiping}
+        onPointerDown={swipe.down}
+        onPointerMove={swipe.move}
+        onPointerUp={swipe.up}
+        onPointerCancel={swipe.up}
       >
+        {event.taskTitle && (
+          <div className="event-title">{event.taskTitle}</div>
+        )}
         <div>{event.summary}</div>
         <div className="event-when">
           {formatWhen(event.createdAt)} · {event.source}

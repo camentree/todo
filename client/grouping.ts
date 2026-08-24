@@ -72,7 +72,7 @@ function groupsOf({
   lists: string[];
   screenWide: AttributeOmission[];
 }): BoardGroup[] {
-  if (view.breakUpBy === "none") {
+  if (view.groupBy === "none") {
     return [
       {
         key: "all",
@@ -83,7 +83,7 @@ function groupsOf({
     ];
   }
 
-  if (view.breakUpBy === "list") {
+  if (view.groupBy === "list") {
     return lists
       .map((list) => ({
         key: `list-${list}`,
@@ -99,7 +99,7 @@ function groupsOf({
       .filter((group) => group.tasks.length > 0);
   }
 
-  if (view.breakUpBy === "stage") {
+  if (view.groupBy === "stage") {
     return TASK_STAGES.map((stage) => ({
       key: `stage-${stage}`,
       label: stageLabel(stage),
@@ -113,13 +113,13 @@ function groupsOf({
     })).filter((group) => group.tasks.length > 0);
   }
 
-  const breakUpBy = view.breakUpBy;
+  const groupBy = view.groupBy;
   const buckets = new Map<string, CreatedTask[]>();
   const rank = new Map<string, string | null>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
-      breakUpBy: breakUpBy,
+      groupBy: groupBy,
     })) {
       const existing = buckets.get(label);
       if (existing) {
@@ -130,7 +130,7 @@ function groupsOf({
           label,
           rankFor({
             task: task,
-            breakUpBy: breakUpBy,
+            groupBy: groupBy,
             label: label,
           }),
         );
@@ -139,7 +139,7 @@ function groupsOf({
   }
 
   const backwards =
-    breakUpBy === "due_date" && view.sortDirection === "desc";
+    groupBy === "due_date" && view.orderDirection === "desc";
 
   const entries = [...buckets.entries()].sort(([left], [right]) => {
     const leftRank = rank.get(left) ?? null;
@@ -152,31 +152,28 @@ function groupsOf({
   });
 
   return entries.map(([label, grouped]) => ({
-    key: `${breakUpBy}-${label}`,
+    key: `${groupBy}-${label}`,
     label: label,
-    seed: seedFor({ breakUpBy: breakUpBy, label: label }),
-    omitAttributes: [
-      ...screenWide,
-      { field: breakUpBy, label: label },
-    ],
+    seed: seedFor({ groupBy: groupBy, label: label }),
+    omitAttributes: [...screenWide, { field: groupBy, label: label }],
     tasks: grouped,
   }));
 }
 
 function seedFor({
-  breakUpBy,
+  groupBy,
   label,
 }: {
-  breakUpBy: ViewPreference["breakUpBy"];
+  groupBy: ViewPreference["groupBy"];
   label: string;
 }): Partial<Task> {
-  if (breakUpBy === "due_date") {
+  if (groupBy === "due_date") {
     return { dueDate: label };
   }
-  if (breakUpBy === "who") {
+  if (groupBy === "who") {
     return { who: label };
   }
-  if (breakUpBy === "tag") {
+  if (groupBy === "tag") {
     return { tags: [label] };
   }
   return {};
@@ -200,11 +197,11 @@ export function sortTasks({
   tasks: CreatedTask[];
   view: ViewPreference;
 }): CreatedTask[] {
-  if (view.sortBy === "relevance") {
+  if (view.orderBy === "relevance") {
     return tasks;
   }
 
-  const direction = view.sortDirection === "desc" ? -1 : 1;
+  const direction = view.orderDirection === "desc" ? -1 : 1;
 
   return [...tasks].sort((left, right) => {
     const leftDone = sinks(left);
@@ -227,16 +224,16 @@ function compare({
   right: CreatedTask;
   view: ViewPreference;
 }): number {
-  if (view.sortBy === "title") {
+  if (view.orderBy === "title") {
     return left.title.localeCompare(right.title);
   }
-  if (view.sortBy === "created_at") {
+  if (view.orderBy === "created_at") {
     return (
       parseISO(left.createdAt).getTime() -
       parseISO(right.createdAt).getTime()
     );
   }
-  if (view.sortBy === "resolved_at") {
+  if (view.orderBy === "resolved_at") {
     if (!left.resolvedAt && !right.resolvedAt) {
       return left.sortOrder - right.sortOrder;
     }
@@ -244,7 +241,7 @@ function compare({
     if (!right.resolvedAt) return -1;
     return left.resolvedAt.localeCompare(right.resolvedAt);
   }
-  if (view.sortBy === "due_date") {
+  if (view.orderBy === "due_date") {
     if (!left.dueDate && !right.dueDate) {
       return left.sortOrder - right.sortOrder;
     }
@@ -257,17 +254,17 @@ function compare({
 
 function rankFor({
   task,
-  breakUpBy,
+  groupBy,
   label,
 }: {
   task: CreatedTask;
-  breakUpBy: ViewPreference["breakUpBy"];
+  groupBy: ViewPreference["groupBy"];
   label: string;
 }): string | null {
-  if (breakUpBy === "due_date") {
+  if (groupBy === "due_date") {
     return task.dueDate;
   }
-  if (breakUpBy === "who") {
+  if (groupBy === "who") {
     return task.who;
   }
   return task.tags.length > 0 ? label : null;
@@ -275,15 +272,15 @@ function rankFor({
 
 function labelsFor({
   task,
-  breakUpBy,
+  groupBy,
 }: {
   task: CreatedTask;
-  breakUpBy: ViewPreference["breakUpBy"];
+  groupBy: ViewPreference["groupBy"];
 }): string[] {
-  if (breakUpBy === "tag") {
+  if (groupBy === "tag") {
     return task.tags.length > 0 ? task.tags : ["No tag"];
   }
-  if (breakUpBy === "who") {
+  if (groupBy === "who") {
     return [task.who ?? "Nobody"];
   }
   return [formatDueDate(task.dueDate) ?? "No date"];
