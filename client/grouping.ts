@@ -1,6 +1,6 @@
 import { parseISO } from "date-fns";
 
-import type { HiddenAttribute, TaskGroup } from "./types.ts";
+import type { Attribute } from "./attributes.ts";
 import { formatDueDate } from "./format.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
@@ -8,11 +8,19 @@ import { canonicalName } from "@shared/names.ts";
 import { isTerminal } from "@shared/states.ts";
 import type {
   CreatedTask,
-  Task,
   ViewPreference,
 } from "@shared/types.ts";
 
 export const HIDDEN_GROUP = "hidden";
+
+export interface TaskGroup {
+  key: string;
+  label: string;
+  groupedBy: Attribute[];
+  guessedAttributes: Attribute[];
+  hiddenAttributes: Attribute[];
+  tasks: CreatedTask[];
+}
 
 type GroupBeforeGuessing = Omit<TaskGroup, "guessedAttributes">;
 
@@ -26,7 +34,7 @@ export function buildGroups({
   tasks: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  hiddenAttributes?: HiddenAttribute[];
+  hiddenAttributes?: Attribute[];
   showFinished?: boolean;
 }): TaskGroup[] {
   const sorted = sortTasks({ tasks: tasks, view: view });
@@ -52,7 +60,7 @@ export function buildGroups({
     {
       key: HIDDEN_GROUP,
       label: "Hidden",
-      groupedBy: {},
+      groupedBy: [],
       hiddenAttributes: screenWide,
       tasks: hidden,
     },
@@ -62,52 +70,57 @@ export function buildGroups({
 function withGuesses(group: GroupBeforeGuessing): TaskGroup {
   const [first, ...rest] = group.tasks;
   if (!first) {
-    return { ...group, guessedAttributes: {} };
+    return { ...group, guessedAttributes: [] };
   }
 
-  const guessed: Partial<Task> = {};
+  const grouping = new Set(
+    group.groupedBy.map((attribute) => attribute.field),
+  );
+  const guessed: Attribute[] = [];
+
   if (
-    group.groupedBy.list === undefined &&
+    !grouping.has("list") &&
     rest.every((task) => task.list === first.list)
   ) {
-    guessed.list = first.list;
+    guessed.push({
+      field: "list",
+      value: first.list,
+      label: first.list,
+    });
   }
   if (
-    group.groupedBy.who === undefined &&
+    !grouping.has("who") &&
     first.who !== null &&
     rest.every((task) => task.who === first.who)
   ) {
-    guessed.who = first.who;
+    guessed.push({ field: "who", value: first.who, label: first.who });
   }
   if (
-    group.groupedBy.stage === undefined &&
+    !grouping.has("stage") &&
     first.stage !== null &&
     rest.every((task) => task.stage === first.stage)
   ) {
-    guessed.stage = first.stage;
+    guessed.push({
+      field: "stage",
+      value: first.stage,
+      label: stageLabel(first.stage),
+    });
   }
 
-  const alreadyGrouping = group.groupedBy.tags ?? [];
-  const sharedTags = first.tags.filter(
-    (tag) =>
-      !holdsTag(alreadyGrouping, tag) &&
-      rest.every((task) => holdsTag(task.tags, tag)),
-  );
-  if (sharedTags.length > 0) {
-    guessed.tags = sharedTags;
+  const groupingTags = group.groupedBy
+    .filter((attribute) => attribute.field === "tag")
+    .map((attribute) => attribute.value ?? "");
+  for (const tag of first.tags) {
+    if (holdsTag(groupingTags, tag)) {
+      continue;
+    }
+    if (!rest.every((task) => holdsTag(task.tags, tag))) {
+      continue;
+    }
+    guessed.push({ field: "tag", value: tag, label: tag });
   }
 
   return { ...group, guessedAttributes: guessed };
-}
-
-export function mergeTags(
-  existing: string[],
-  added: string[],
-): string[] {
-  return [
-    ...existing,
-    ...added.filter((tag) => !holdsTag(existing, tag)),
-  ];
 }
 
 function holdsTag(tags: string[], wanted: string): boolean {
@@ -129,14 +142,14 @@ function groupsOf({
   sorted: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  screenWide: HiddenAttribute[];
+  screenWide: Attribute[];
 }): GroupBeforeGuessing[] {
   if (view.groupBy === "none") {
     return [
       {
         key: "all",
         label: "",
-        groupedBy: {},
+        groupedBy: [],
         hiddenAttributes: screenWide,
         tasks: sorted,
       },
@@ -148,36 +161,44 @@ function groupsOf({
       ...new Set([...lists, ...sorted.map((task) => task.list)]),
     ];
     return everyList
-      .map((list) => ({
-        key: `list-${list}`,
-        label: list,
-        groupedBy: { list: list },
-        hiddenAttributes: [
-          ...screenWide,
-          { field: "list" as const, label: list },
-        ],
-        tasks: sorted.filter((task) => task.list === list),
-      }))
+      .map((list) => {
+        const attribute: Attribute = {
+          field: "list",
+          value: list,
+          label: list,
+        };
+        return {
+          key: `list-${list}`,
+          label: list,
+          groupedBy: [attribute],
+          hiddenAttributes: [...screenWide, attribute],
+          tasks: sorted.filter((task) => task.list === list),
+        };
+      })
       .filter((group) => group.tasks.length > 0);
   }
 
   if (view.groupBy === "stage") {
-    return TASK_STAGES.map((stage) => ({
-      key: `stage-${stage}`,
-      label: stageLabel(stage),
-      groupedBy: { stage: stage },
-      hiddenAttributes: [
-        ...screenWide,
-        { field: "stage" as const, label: stageLabel(stage) },
-      ],
-      tasks: sorted.filter((task) => stageOf(task) === stage),
-    })).filter((group) => group.tasks.length > 0);
+    return TASK_STAGES.map((stage) => {
+      const attribute: Attribute = {
+        field: "stage",
+        value: stage,
+        label: stageLabel(stage),
+      };
+      return {
+        key: `stage-${stage}`,
+        label: stageLabel(stage),
+        groupedBy: [attribute],
+        hiddenAttributes: [...screenWide, attribute],
+        tasks: sorted.filter((task) => stageOf(task) === stage),
+      };
+    }).filter((group) => group.tasks.length > 0);
   }
 
   const groupBy = view.groupBy;
   const buckets = new Map<string, CreatedTask[]>();
   const rank = new Map<string, string | null>();
-  const groupedByForLabel = new Map<string, Partial<Task>>();
+  const groupedByForLabel = new Map<string, Attribute[]>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
@@ -221,13 +242,16 @@ function groupsOf({
     return backwards ? -order : order;
   });
 
-  return entries.map(([label, grouped]) => ({
-    key: `${groupBy}-${label}`,
-    label: label,
-    groupedBy: groupedByForLabel.get(label) ?? {},
-    hiddenAttributes: [...screenWide, { field: groupBy, label: label }],
-    tasks: grouped,
-  }));
+  return entries.map(([label, grouped]) => {
+    const grouping = groupedByForLabel.get(label) ?? [];
+    return {
+      key: `${groupBy}-${label}`,
+      label: label,
+      groupedBy: grouping,
+      hiddenAttributes: [...screenWide, ...grouping],
+      tasks: grouped,
+    };
+  });
 }
 
 function groupedByFor({
@@ -238,14 +262,22 @@ function groupedByFor({
   task: CreatedTask;
   groupBy: ViewPreference["groupBy"];
   label: string;
-}): Partial<Task> {
+}): Attribute[] {
   if (groupBy === "due_date") {
-    return { dueDate: task.dueDate };
+    return [
+      { field: "due_date", value: task.dueDate, label: label },
+    ];
   }
   if (groupBy === "who") {
-    return { who: task.who };
+    return [{ field: "who", value: task.who, label: label }];
   }
-  return { tags: task.tags.length > 0 ? [label] : [] };
+  return [
+    {
+      field: "tag",
+      value: task.tags.length > 0 ? label : null,
+      label: label,
+    },
+  ];
 }
 
 function stageOf(task: CreatedTask): TaskStage {

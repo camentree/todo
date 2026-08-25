@@ -13,11 +13,17 @@ import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { useKeyboardSwipe } from "../hooks/useKeyboardSwipe.ts";
 import { SWIPE_FRACTION, usePointerSwipe } from "../hooks/usePointerSwipe.ts";
 import { renameChanges } from "../taskLine.ts";
-import type { HiddenAttribute, SwipeAction } from "../types.ts";
+import { linkTo } from "../attributes.ts";
+import type { Attribute } from "../attributes.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
 
 const LONG_PRESS_MILLISECONDS = 400;
+
+export interface SwipeAction {
+  name: string;
+  action: () => void;
+}
 
 export function TaskRow({
   task,
@@ -56,7 +62,7 @@ export function TaskRow({
   onLongPress?: (pointerX: number, pointerY: number) => void;
   showAttributes: boolean;
   parseAttributes?: boolean;
-  hiddenAttributes?: HiddenAttribute[];
+  hiddenAttributes?: Attribute[];
   focusOnMount?: boolean;
   renderSubtask?: (subtask: CreatedTask) => ReactNode;
   renderNewSubtask?: (parent: Task) => ReactNode;
@@ -526,18 +532,18 @@ function Attributes({
   travelled,
 }: {
   task: Task;
-  omit: HiddenAttribute[];
+  omit: Attribute[];
   travelled: () => boolean;
 }) {
   const navigate = useNavigate();
 
   const shown = attributesOf(task).filter(
     (item) =>
-      item.text.toLowerCase() === "today" ||
+      item.label.toLowerCase() === "today" ||
       !omit.some(
         (omission) =>
           omission.field === item.field &&
-          omission.label.toLowerCase() === item.text.toLowerCase(),
+          omission.label.toLowerCase() === item.label.toLowerCase(),
       ),
   );
 
@@ -547,22 +553,25 @@ function Attributes({
 
   return (
     <span className="task-meta">
-      {shown.map(({ field, text, to }) => (
-        <button
-          type="button"
-          key={`${field}-${text}`}
-          className={field === "tag" ? "tag" : undefined}
-          data-clickable={Boolean(to)}
-          onClick={() => {
-            if (travelled() || !to) {
-              return;
-            }
-            navigate(to);
-          }}
-        >
-          {text.toLowerCase()}
-        </button>
-      ))}
+      {shown.map((attribute) => {
+        const to = linkTo(attribute);
+        return (
+          <button
+            type="button"
+            key={`${attribute.field}-${attribute.label}`}
+            className={attribute.field === "tag" ? "tag" : undefined}
+            data-clickable={Boolean(to)}
+            onClick={() => {
+              if (travelled() || !to) {
+                return;
+              }
+              navigate(to);
+            }}
+          >
+            {attribute.label.toLowerCase()}
+          </button>
+        );
+      })}
     </span>
   );
 }

@@ -10,8 +10,8 @@ export const ATTRIBUTES = [
   "archived",
 ] as const;
 
-export type Attribute = (typeof ATTRIBUTES)[number];
+export type AttributeField = (typeof ATTRIBUTES)[number];
 
-export function asAttribute(value: unknown): Attribute | null {
+export function asAttributeField(value: unknown): AttributeField | null {
   return ATTRIBUTES.find((attribute) => attribute === value) ?? null;
 }

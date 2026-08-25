@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import type { Attribute } from "@shared/attributes.ts";
+import type { AttributeField } from "@shared/attributes.ts";
 import type {
   GroupByField,
   Layout,
@@ -17,7 +17,7 @@ export const HISTORY_STOPS = [1, 3, 6, 12, 24, 60, null] as const;
 
 export type HistoryMonths = (typeof HISTORY_STOPS)[number];
 export interface Scope {
-  field: Attribute | null;
+  field: AttributeField | null;
   value: string;
   today: boolean;
 }

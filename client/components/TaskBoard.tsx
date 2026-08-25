@@ -4,20 +4,13 @@ import type { ReactNode, RefObject } from "react";
 import { Chevron } from "./icons.tsx";
 import { TaskRow } from "./TaskRow.tsx";
 import { isDueToday } from "../format.ts";
-import {
-  buildGroups,
-  HIDDEN_GROUP,
-  mergeTags,
-} from "../grouping.ts";
+import { buildGroups, HIDDEN_GROUP } from "../grouping.ts";
+import type { TaskGroup } from "../grouping.ts";
 import { easeToTop } from "../hooks/useEaseIntoView.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { renameChanges, taskAsLine } from "../taskLine.ts";
-import type {
-  DestinationAttributes,
-  HiddenAttribute,
-  RowActions,
-  TaskGroup,
-} from "../types.ts";
+import { asChanges } from "../attributes.ts";
+import type { Attribute } from "../attributes.ts";
 import type { TaskState } from "@shared/states.ts";
 import type {
   CreatedTask,
@@ -48,11 +41,23 @@ const BLANK_TASK: Task = {
   subtasks: [],
 };
 
+export interface RowActions {
+  toggle: (task: CreatedTask) => void;
+  open: (task: CreatedTask) => void;
+  rename: (task: CreatedTask, changes: Partial<Task>) => void;
+  create: (changes: Partial<Task>) => Promise<CreatedTask>;
+  remove: (task: CreatedTask) => void;
+  swipeLeft: (task: CreatedTask) => void;
+  swipeRight: (task: CreatedTask) => void;
+  undo: () => void;
+  redo: () => void;
+}
+
 export interface TaskBoardProps {
   tasks: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  hiddenAttributes: HiddenAttribute[];
+  hiddenAttributes: Attribute[];
   justToggled: ReadonlyMap<number, TaskState>;
   showFinished: boolean;
   pending: boolean;
@@ -63,7 +68,7 @@ export interface TaskBoardProps {
   onCapturingChange: (open: boolean) => void;
   onMove: (
     taskId: number,
-    destinationAttributes: DestinationAttributes,
+    destinationAttributes: Attribute[],
     orderedIds: number[],
   ) => void;
 }
@@ -177,9 +182,9 @@ export function TaskBoard({
       group.tasks.some((task) => task.id === focusedId),
     );
     const made = await actions.create({
-      ...destinationGroup?.guessedAttributes,
+      ...asChanges(destinationGroup?.guessedAttributes ?? []),
       ...renameChanges(line),
-      ...destinationGroup?.groupedBy,
+      ...asChanges(destinationGroup?.groupedBy ?? []),
     });
     land(made.id);
     if (
@@ -191,7 +196,7 @@ export function TaskBoard({
     }
     const ordered = destinationGroup.tasks.map((task) => task.id);
     ordered.splice(ordered.indexOf(focusedId) + 1, 0, made.id);
-    onMove(made.id, {}, ordered);
+    onMove(made.id, [], ordered);
   }
 
   function editBeside(taskId: number, step: number): void {
@@ -412,9 +417,9 @@ export function TaskBoard({
           renderCapture={captureRow}
           canCapture={captureSeed !== null}
           seed={{
-            ...group.guessedAttributes,
+            ...asChanges(group.guessedAttributes),
             ...captureSeed,
-            ...group.groupedBy,
+            ...asChanges(group.groupedBy),
           }}
           capturingHere={capturingGroup === group.key}
           capturingUnseeded={capturing && group.key === lastGroupKey}
@@ -634,7 +639,7 @@ function useMoveTask({
   boardRef: RefObject<HTMLDivElement | null>;
   onMove: (
     taskId: number,
-    destinationAttributes: DestinationAttributes,
+    destinationAttributes: Attribute[],
     orderedIds: number[],
   ) => void;
 }): {
@@ -738,16 +743,20 @@ function useMoveTask({
     const moving = source.tasks.find(
       (task) => task.id === dropped.taskId,
     );
-    const conferred: DestinationAttributes =
+    const conferred: Attribute[] =
       target.key === source.key
-        ? {}
-        : { ...target.guessedAttributes, ...target.groupedBy };
-    const destinationAttributes: DestinationAttributes =
-      conferred.tags && moving
-        ? {
+        ? []
+        : [...target.guessedAttributes, ...target.groupedBy];
+    const destinationAttributes: Attribute[] =
+      conferred.some((attribute) => attribute.field === "tag") && moving
+        ? [
             ...conferred,
-            tags: mergeTags(moving.tags, conferred.tags),
-          }
+            ...moving.tags.map((tag) => ({
+              field: "tag" as const,
+              value: tag,
+              label: tag,
+            })),
+          ]
         : conferred;
 
     const unchanged =

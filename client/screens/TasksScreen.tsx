@@ -13,7 +13,7 @@ import {
 import { api } from "../api.ts";
 import { recordFailure } from "../failures.ts";
 import {
-  recordArchiving,
+  recordArchiving, 
   recordDeferral,
   recordDeletion,
   recordEdit,
@@ -27,10 +27,8 @@ import { TopBar } from "../components/TopBar.tsx";
 import { Shortcuts } from "../components/Shortcuts.tsx";
 import { TaskBoard } from "../components/TaskBoard.tsx";
 import { AddButton } from "../components/TaskRow.tsx";
-import type {
-  DestinationAttributes,
-  HiddenAttribute,
-} from "../types.ts";
+import { asChanges } from "../attributes.ts";
+import type { Attribute } from "../attributes.ts";
 import { TaskInfo } from "../components/TaskInfo.tsx";
 import {
   asTitle,
@@ -48,7 +46,7 @@ import {
 } from "../settings.ts";
 import type { Scope } from "../settings.ts";
 import { reassignSlots } from "@shared/ordering.ts";
-import { asAttribute } from "@shared/attributes.ts";
+import { asAttributeField } from "@shared/attributes.ts";
 import { canonicalName } from "@shared/names.ts";
 import { asStage } from "@shared/stages.ts";
 import { isTerminal, type TaskState } from "@shared/states.ts";
@@ -58,7 +56,6 @@ import type {
   Task,
   ViewPreference,
 } from "@shared/types.ts";
-
 export function TasksScreen() {
   const parameters = useParams();
   const location = useLocation();
@@ -81,7 +78,7 @@ export function TasksScreen() {
           today: true,
         }
       : {
-          field: asAttribute(field),
+          field: asAttributeField(field),
           value: value
             ? canonicalName(decodeURIComponent(value))
             : "",
@@ -345,11 +342,12 @@ function titleFor(scope: Scope): string {
   return asTitle(text);
 }
 
-function scopedTo(scope: Scope): HiddenAttribute[] {
+function scopedTo(scope: Scope): Attribute[] {
   return scope.field
     ? [
         {
           field: scope.field,
+          value: scope.value,
           label: attributeText(scope.field, scope.value),
         },
       ]
@@ -426,7 +424,7 @@ function recordSwipeRight({
 
 interface QueuedMove {
   taskId: number;
-  destinationAttributes: DestinationAttributes;
+  destinationAttributes: Partial<Task>;
   orderedIds: number[];
 }
 
@@ -751,9 +749,10 @@ function useTaskActions(
 
   function move(
     taskId: number,
-    destinationAttributes: DestinationAttributes,
+    destination: Attribute[],
     orderedIds: number[],
   ): void {
+    const destinationAttributes = asChanges(destination);
     if (Object.keys(destinationAttributes).length > 0) {
       patchEverywhere(taskId, {
         ...destinationAttributes,
@@ -796,11 +795,11 @@ function useTaskActions(
     swipeRight: (task: CreatedTask) => swipeRight.mutate(task),
     move: (
       taskId: number,
-      destinationAttributes: DestinationAttributes,
+      destination: Attribute[],
       orderedIds: number[],
     ) => {
       onManualOrder?.({ orderBy: "manual", orderDirection: "asc" });
-      move(taskId, destinationAttributes, orderedIds);
+      move(taskId, destination, orderedIds);
     },
   };
 }

@@ -7,7 +7,7 @@ import {
   parseISO,
 } from "date-fns";
 
-import type { Attribute } from "@shared/attributes.ts";
+import type { AttributeField } from "@shared/attributes.ts";
 import { asStage, stageLabel } from "@shared/stages.ts";
 import type { Schedule } from "@shared/types.ts";
 
@@ -83,7 +83,7 @@ export function formatDueTime(dueTime: string | null): string | null {
 }
 
 export function attributeText(
-  attribute: Attribute,
+  attribute: AttributeField,
   value: string,
 ): string {
   if (attribute === "due_time") {

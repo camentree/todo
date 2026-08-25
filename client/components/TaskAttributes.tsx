@@ -4,16 +4,11 @@ import {
   formatDueTime,
 } from "../format.ts";
 import { renameChanges } from "../taskLine.ts";
-import type { Attribute } from "@shared/attributes.ts";
+import type { Attribute } from "../attributes.ts";
+import type { AttributeField } from "@shared/attributes.ts";
 import { parse, type ParsedToken } from "@shared/parser.ts";
 import { stageLabel } from "@shared/stages.ts";
 import type { Task } from "@shared/types.ts";
-
-export interface TaskAttribute {
-  field: Attribute;
-  text: string;
-  to?: string;
-}
 
 export type DescribedTask = Pick<
   Task,
@@ -47,64 +42,56 @@ export function typedTask({
   };
 }
 
-export function attributesOf(task: DescribedTask): TaskAttribute[] {
+export function attributesOf(task: DescribedTask): Attribute[] {
   const archived = task.archivedAt !== null;
   const due = archived ? null : formatDueDate(task.dueDate);
   const time = archived ? null : formatDueTime(task.dueTime);
 
-  const items: (TaskAttribute | null)[] = [
+  const items: (Attribute | null)[] = [
     task.list
-      ? {
-          field: "list" as const,
-          text: task.list,
-          to: `/list/${encodeURIComponent(task.list)}`,
-        }
+      ? { field: "list" as const, value: task.list, label: task.list }
       : null,
     ...task.tags.map(
-      (tag): TaskAttribute => ({
+      (tag): Attribute => ({
         field: "tag",
-        text: tag,
-        to: `/tag/${encodeURIComponent(tag)}`,
+        value: tag,
+        label: tag,
       }),
     ),
     task.who
-      ? {
-          field: "who",
-          text: task.who,
-          to: `/who/${encodeURIComponent(task.who)}`,
-        }
+      ? { field: "who" as const, value: task.who, label: task.who }
       : null,
     due && task.dueDate
       ? {
-          field: "due_date",
-          text: due,
-          to: `/due_date/${task.dueDate}`,
+          field: "due_date" as const,
+          value: task.dueDate,
+          label: due,
         }
       : null,
     time && task.dueTime
       ? {
-          field: "due_time",
-          text: time,
-          to: `/due_time/${task.dueTime.slice(0, 5)}`,
+          field: "due_time" as const,
+          value: task.dueTime.slice(0, 5),
+          label: time,
         }
       : null,
     task.schedule
       ? {
-          field: "recurring",
-          text: cadenceOf(task.schedule),
-          to: "/recurring/true",
+          field: "recurring" as const,
+          value: "true",
+          label: cadenceOf(task.schedule),
         }
       : null,
     task.stage
       ? {
-          field: "stage",
-          text: stageLabel(task.stage),
-          to: `/stage/${task.stage}`,
+          field: "stage" as const,
+          value: task.stage,
+          label: stageLabel(task.stage),
         }
       : null,
   ];
 
-  return items.filter((item): item is TaskAttribute => item !== null);
+  return items.filter((item): item is Attribute => item !== null);
 }
 
 export function asRenamed({
@@ -125,8 +112,8 @@ export function AttributeText({ task }: { task: DescribedTask }) {
 
   return (
     <span className="task-meta">
-      {attributes.map(({ field, text }) => (
-        <span key={`${field}-${text}`}>{text.toLowerCase()}</span>
+      {attributes.map(({ field, label }) => (
+        <span key={`${field}-${label}`}>{label.toLowerCase()}</span>
       ))}
     </span>
   );
@@ -137,7 +124,7 @@ export function AttributeChips({
   onRemove,
 }: {
   task: DescribedTask;
-  onRemove?: (attribute: TaskAttribute) => void;
+  onRemove?: (attribute: Attribute) => void;
 }) {
   const attributes = attributesOf(task);
   if (attributes.length === 0) {
@@ -149,16 +136,16 @@ export function AttributeChips({
       {attributes.map((attribute) =>
         onRemove && attribute.field !== "list" ? (
           <span
-            key={`${attribute.field}-${attribute.text}`}
+            key={`${attribute.field}-${attribute.label}`}
             className="capture-chip removable"
             data-field={attribute.field}
           >
             {sigilFor(attribute.field)}
-            {attribute.text.toLowerCase()}
+            {attribute.label.toLowerCase()}
             <button
               type="button"
               className="chip-remove"
-              aria-label={`Remove ${attribute.text}`}
+              aria-label={`Remove ${attribute.label}`}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => onRemove(attribute)}
             >
@@ -167,12 +154,12 @@ export function AttributeChips({
           </span>
         ) : (
           <span
-            key={`${attribute.field}-${attribute.text}`}
+            key={`${attribute.field}-${attribute.label}`}
             className="capture-chip"
             data-field={attribute.field}
           >
             {sigilFor(attribute.field)}
-            {attribute.text.toLowerCase()}
+            {attribute.label.toLowerCase()}
           </span>
         ),
       )}
@@ -187,7 +174,7 @@ export function withoutAttribute({
 }: {
   task: DescribedTask;
   draft: string;
-  attribute: TaskAttribute;
+  attribute: Attribute;
 }): { draft: string; changes: Partial<Task> } {
   const spoken = parse({ input: draft, today: new Date() })
     .tokens.filter((token) =>
@@ -209,7 +196,7 @@ function saysSo({
   attribute,
 }: {
   token: ParsedToken;
-  attribute: TaskAttribute;
+  attribute: Attribute;
 }): boolean {
   if (attribute.field === "recurring") {
     return token.kind === "recurrence";
@@ -221,7 +208,7 @@ function saysSo({
     return token.kind === "dueTime";
   }
   if (attribute.field === "tag") {
-    return token.kind === "tag" && token.value === attribute.text;
+    return token.kind === "tag" && token.value === attribute.value;
   }
   return token.kind === attribute.field;
 }
@@ -231,11 +218,11 @@ function clearing({
   attribute,
 }: {
   task: DescribedTask;
-  attribute: TaskAttribute;
+  attribute: Attribute;
 }): Partial<Task> {
   if (attribute.field === "tag") {
     return {
-      tags: task.tags.filter((tag) => tag !== attribute.text),
+      tags: task.tags.filter((tag) => tag !== attribute.value),
     };
   }
   if (attribute.field === "who") {
@@ -256,7 +243,7 @@ function clearing({
   return {};
 }
 
-function sigilFor(field: Attribute): string {
+function sigilFor(field: AttributeField): string {
   if (field === "tag") {
     return "#";
   }

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { buildGroups, sortTasks } from "../client/grouping.ts";
+import type { TaskGroup } from "../client/grouping.ts";
+import type { AttributeField } from "@shared/attributes.ts";
 import type { CreatedTask, ViewPreference } from "@shared/types.ts";
 
 function task(overrides: Partial<CreatedTask>): CreatedTask {
@@ -110,13 +112,22 @@ describe("what a group guesses its tasks have in common", () => {
     });
   }
 
+  function guessedValues(
+    group: TaskGroup | undefined,
+    field: AttributeField,
+  ): (string | null)[] {
+    return (group?.guessedAttributes ?? [])
+      .filter((attribute) => attribute.field === field)
+      .map((attribute) => attribute.value);
+  }
+
   test("a list every task shares is guessed", () => {
     const [group] = groupsOfTagged([
       task({ id: 1, list: "programming", tags: ["parallax"] }),
       task({ id: 2, list: "programming", tags: ["parallax"] }),
     ]);
 
-    expect(group?.guessedAttributes.list).toBe("programming");
+    expect(guessedValues(group, "list")).toEqual(["programming"]);
   });
 
   test("one task disagreeing drops the guess", () => {
@@ -125,7 +136,7 @@ describe("what a group guesses its tasks have in common", () => {
       task({ id: 2, list: "home", tags: ["parallax"] }),
     ]);
 
-    expect(group?.guessedAttributes.list).toBeUndefined();
+    expect(guessedValues(group, "list")).toEqual([]);
   });
 
   test("the tag the group is built on is not guessed back", () => {
@@ -134,7 +145,7 @@ describe("what a group guesses its tasks have in common", () => {
       task({ id: 2, tags: ["parallax", "urgent"] }),
     ]);
 
-    expect(group?.guessedAttributes.tags).toEqual(["urgent"]);
+    expect(guessedValues(group, "tag")).toEqual(["urgent"]);
   });
 
   test("a tag only some tasks carry is not guessed", () => {
@@ -143,7 +154,7 @@ describe("what a group guesses its tasks have in common", () => {
       task({ id: 2, tags: ["parallax"] }),
     ]);
 
-    expect(group?.guessedAttributes.tags).toBeUndefined();
+    expect(guessedValues(group, "tag")).toEqual([]);
   });
 
   test("case does not stop two tags counting as one", () => {
@@ -152,6 +163,6 @@ describe("what a group guesses its tasks have in common", () => {
       task({ id: 2, tags: ["parallax", "urgent"] }),
     ]);
 
-    expect(group?.guessedAttributes.tags).toEqual(["Urgent"]);
+    expect(guessedValues(group, "tag")).toEqual(["Urgent"]);
   });
 });
