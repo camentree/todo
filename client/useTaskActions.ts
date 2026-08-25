@@ -48,7 +48,10 @@ function lastUsedList(): string | null {
 }
 
 type SwipeRightOutcome =
-  "deleted" | "unhidden" | "deferred" | "hidden";
+  | "deleted"
+  | "unhidden"
+  | "deferred"
+  | "hidden";
 
 function recordSwipeRight({
   task,
@@ -406,16 +409,8 @@ export function useTaskActions(
             ),
           ]);
         }
-        if (
-          landing.list !== undefined ||
-          landing.stage !== undefined
-        ) {
-          landed([
-            await api.updateTask(taskId, {
-              list: landing.list,
-              stage: landing.stage,
-            }),
-          ]);
+        if (Object.keys(landing).length > 0) {
+          landed([await api.updateTask(taskId, landing)]);
         }
         if (orderedIds.length > 1) {
           landed(await api.reorderTasks(orderedIds));
@@ -429,11 +424,12 @@ export function useTaskActions(
     landing: Landing,
     orderedIds: number[],
   ): void {
-    if (landing.list !== undefined || landing.stage !== undefined) {
+    if (Object.keys(landing).length > 0) {
       patchEverywhere(taskId, {
-        list: landing.list,
-        stage: landing.stage,
-        state: landing.stage === "complete" ? "complete" : undefined,
+        ...landing,
+        ...(landing.stage === "complete"
+          ? { state: "complete" as TaskState }
+          : {}),
       });
     }
     reorderInMemory(orderedIds);

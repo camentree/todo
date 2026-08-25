@@ -20,12 +20,14 @@ export function TopBar({
   view,
   onViewChange,
   searching,
+  finished,
   onOpenSearch,
 }: {
   title: string;
   view?: ViewPreference;
   onViewChange?: (changes: Partial<ViewPreference>) => void;
   searching: boolean;
+  finished: boolean;
   onOpenSearch?: () => void;
 }) {
   const [menu, setMenu] = useState<OpenMenu>("none");
@@ -110,7 +112,12 @@ export function TopBar({
           <ScopeMenu onClose={() => setMenu("none")} />
         )}
         {menu === "view" && view && onViewChange && (
-          <ViewMenu view={view} onViewChange={onViewChange} />
+          <ViewMenu
+            view={view}
+            onViewChange={onViewChange}
+            searching={searching}
+            finished={finished}
+          />
         )}
         {menu === "bell" && (
           <ChangesMenu onClose={() => setMenu("none")} />

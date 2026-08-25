@@ -3,6 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -38,6 +39,26 @@ import type {
 } from "@shared/types.ts";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function alreadyLoaded(
+  queryClient: QueryClient,
+  taskId: number,
+): CreatedTask | undefined {
+  for (const [, cached] of queryClient.getQueriesData({
+    queryKey: ["tasks"],
+  })) {
+    if (!Array.isArray(cached)) {
+      continue;
+    }
+    const found = (cached as CreatedTask[]).find(
+      (task) => task?.id === taskId,
+    );
+    if (found) {
+      return found;
+    }
+  }
+  return undefined;
+}
 
 function toggleWeekday(weekdays: number[], index: number): number[] {
   const next = weekdays.includes(index)
@@ -114,6 +135,7 @@ export function TaskInfo({
     queryKey: ["task", taskId],
     queryFn: () => api.task(taskId),
     retry: false,
+    initialData: () => alreadyLoaded(queryClient, taskId),
   });
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],

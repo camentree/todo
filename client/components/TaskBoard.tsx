@@ -8,7 +8,6 @@ import { isDueToday } from "../format.ts";
 import { buildGroups } from "../grouping.ts";
 import { useShortcuts } from "../useShortcuts.ts";
 import { renameChanges, taskAsLine } from "../useTaskActions.ts";
-import type { TaskStage } from "@shared/stages.ts";
 import type { TaskState } from "@shared/states.ts";
 import type {
   CreatedTask,
@@ -46,17 +45,12 @@ export type { AttributeOmission } from "./TaskRow.tsx";
 export interface BoardGroup {
   key: string;
   label: string;
-  stage?: TaskStage;
-  list?: string;
-  seed?: Partial<Task>;
+  identity: Partial<Task>;
   omitAttributes: AttributeOmission[];
   tasks: CreatedTask[];
 }
 
-export interface Landing {
-  stage?: TaskStage;
-  list?: string;
-}
+export type Landing = Partial<Task>;
 
 export interface RowActions {
   toggle: (task: CreatedTask) => void;
@@ -154,7 +148,6 @@ export function TaskBoard({
       return;
     }
     blank.focus();
-    blank.scrollIntoView({ block: "center", behavior: "smooth" });
     setAddingSubtaskTo(null);
   }, [addingSubtaskTo, expanded]);
 
@@ -196,8 +189,24 @@ export function TaskBoard({
     if (!line?.trim()) {
       return;
     }
-    const made = await actions.create(renameChanges(line));
+    const landingGroup = groups.find((group) =>
+      group.tasks.some((task) => task.id === focusedId),
+    );
+    const made = await actions.create({
+      ...renameChanges(line),
+      ...landingGroup?.identity,
+    });
     land(made.id);
+    if (
+      focusedId === null ||
+      !landingGroup ||
+      view.orderBy !== "manual"
+    ) {
+      return;
+    }
+    const ordered = landingGroup.tasks.map((task) => task.id);
+    ordered.splice(ordered.indexOf(focusedId) + 1, 0, made.id);
+    onMove(made.id, {}, ordered);
   }
 
   function editBeside(taskId: number, step: number): void {
@@ -210,9 +219,6 @@ export function TaskBoard({
     if (shown.some((task) => task.id === next)) {
       focusOn(next);
     }
-    boardRef.current
-      ?.querySelector(`[data-task="${next}"]`)
-      ?.scrollIntoView({ block: "nearest" });
   }
 
   useShortcuts((event) => {
@@ -406,7 +412,12 @@ export function TaskBoard({
   }
 
   return (
-    <div className="board" data-layout={view.layout} ref={boardRef}>
+    <div
+      className="board"
+      key={view.layout}
+      data-layout={view.layout}
+      ref={boardRef}
+    >
       {groups.map((group) => (
         <Group
           key={group.key}
@@ -414,7 +425,7 @@ export function TaskBoard({
           renderTask={taskRow}
           renderCapture={captureRow}
           canCapture={captureSeed !== null}
-          seed={{ ...captureSeed, ...group.seed }}
+          seed={{ ...captureSeed, ...group.identity }}
           capturingHere={capturingGroup === group.key}
           capturingUnseeded={capturing && group.key === lastGroupKey}
           onLanded={land}
@@ -734,9 +745,7 @@ function useDragToReorder({
     ids.splice(at, 0, dropped.taskId);
 
     const landing: Landing =
-      target.key === source.key
-        ? {}
-        : { stage: target.stage, list: target.list };
+      target.key === source.key ? {} : target.identity;
 
     const unchanged =
       target.key === source.key &&
@@ -887,7 +896,7 @@ function useRowFocus({
     const resuming = shown.findIndex(
       (task) => task.id === lastFocusedId.current,
     );
-    focusAt(resuming === -1 ? 0 : resuming);
+    focusAt(resuming === -1 ? 0 : resuming + step);
   }
 
   return {

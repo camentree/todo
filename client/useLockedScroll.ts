@@ -2,15 +2,11 @@ import { useEffect } from "react";
 
 export function useLockedScroll(): void {
   useEffect(() => {
-    const scrollY = window.scrollY;
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
+    const root = document.documentElement;
+    const held = root.style.overflow;
+    root.style.overflow = "hidden";
     return () => {
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.width = "";
-      window.scrollTo({ top: scrollY, behavior: "instant" });
+      root.style.overflow = held;
     };
   }, []);
 }

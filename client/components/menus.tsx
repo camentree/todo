@@ -22,7 +22,6 @@ import { canonicalName } from "@shared/names.ts";
 import type {
   GroupByField,
   Event as TaskEvent,
-  OrderDirection,
   OrderByField,
   ViewPreference,
 } from "@shared/types.ts";
@@ -37,71 +36,16 @@ const GROUP_OPTIONS: { field: GroupByField; label: string }[] = [
 ];
 
 const SORT_OPTIONS: {
-  value: string;
   field: OrderByField;
-  direction: OrderDirection;
   label: string;
+  directional: boolean;
 }[] = [
-  {
-    value: "manual",
-    field: "manual",
-    direction: "asc",
-    label: "Manual",
-  },
-  {
-    value: "relevance",
-    field: "relevance",
-    direction: "asc",
-    label: "Best match",
-  },
-  {
-    value: "due_date:asc",
-    field: "due_date",
-    direction: "asc",
-    label: "Due date — soonest",
-  },
-  {
-    value: "due_date:desc",
-    field: "due_date",
-    direction: "desc",
-    label: "Due date — latest",
-  },
-  {
-    value: "title:asc",
-    field: "title",
-    direction: "asc",
-    label: "Title — A to Z",
-  },
-  {
-    value: "title:desc",
-    field: "title",
-    direction: "desc",
-    label: "Title — Z to A",
-  },
-  {
-    value: "created_at:desc",
-    field: "created_at",
-    direction: "desc",
-    label: "Added — newest",
-  },
-  {
-    value: "created_at:asc",
-    field: "created_at",
-    direction: "asc",
-    label: "Added — oldest",
-  },
-  {
-    value: "resolved_at:desc",
-    field: "resolved_at",
-    direction: "desc",
-    label: "Finished — newest",
-  },
-  {
-    value: "resolved_at:asc",
-    field: "resolved_at",
-    direction: "asc",
-    label: "Finished — oldest",
-  },
+  { field: "manual", label: "Manual", directional: false },
+  { field: "relevance", label: "Best match", directional: false },
+  { field: "due_date", label: "Due date", directional: true },
+  { field: "title", label: "Title", directional: true },
+  { field: "created_at", label: "Added", directional: true },
+  { field: "resolved_at", label: "Finished", directional: true },
 ];
 
 export function ScopeMenu({ onClose }: { onClose: () => void }) {
@@ -171,17 +115,33 @@ function historyAt(index: number): HistoryMonths {
 export function ViewMenu({
   view,
   onViewChange,
+  searching,
+  finished,
 }: {
   view: ViewPreference;
   onViewChange: (changes: Partial<ViewPreference>) => void;
+  searching: boolean;
+  finished: boolean;
 }) {
   const [theme, onThemeChange] = useTheme();
   const { historyMonths } = useGlobalSettings();
 
-  const sortValue =
-    view.orderBy === "manual" || view.orderBy === "relevance"
-      ? view.orderBy
-      : `${view.orderBy}:${view.orderDirection}`;
+  const offered = SORT_OPTIONS.filter((option) => {
+    if (option.field === view.orderBy) {
+      return true;
+    }
+    if (option.field === "relevance") {
+      return searching;
+    }
+    if (option.field === "resolved_at") {
+      return finished;
+    }
+    return true;
+  });
+
+  const ordering = SORT_OPTIONS.find(
+    (option) => option.field === view.orderBy,
+  );
 
   return (
     <div className="menu under-right">
@@ -206,37 +166,51 @@ export function ViewMenu({
       <label className="menu-field row">
         <span className="menu-label">Order by</span>
         <select
-          value={sortValue}
-          onChange={(event) => {
-            const chosen = SORT_OPTIONS.find(
-              (option) => option.value === event.target.value,
-            );
-            if (chosen) {
-              onViewChange({
-                orderBy: chosen.field,
-                orderDirection: chosen.direction,
-              });
-            }
-          }}
+          value={view.orderBy}
+          onChange={(event) =>
+            onViewChange({
+              orderBy: event.target.value as OrderByField,
+            })
+          }
         >
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
+          {offered.map((option) => (
+            <option key={option.field} value={option.field}>
               {option.label}
             </option>
           ))}
         </select>
       </label>
 
-      {view.groupBy !== "none" && (
-        <MenuSwitch
-          label="Columns"
-          wideOnly
-          on={view.layout === "columns"}
-          onChange={(on) =>
-            onViewChange({ layout: on ? "columns" : "stacked" })
-          }
-        />
-      )}
+      <div
+        className="collapsible menu-reveal"
+        data-open={ordering?.directional ?? false}
+      >
+        <div>
+          <MenuSwitch
+            label="Ascending"
+            on={view.orderDirection === "asc"}
+            onChange={(on) =>
+              onViewChange({ orderDirection: on ? "asc" : "desc" })
+            }
+          />
+        </div>
+      </div>
+
+      <div
+        className="collapsible menu-reveal"
+        data-wide-only={true}
+        data-open={view.groupBy !== "none"}
+      >
+        <div>
+          <MenuSwitch
+            label="Columns"
+            on={view.layout === "columns"}
+            onChange={(on) =>
+              onViewChange({ layout: on ? "columns" : "stacked" })
+            }
+          />
+        </div>
+      </div>
 
       <label className="menu-field">
         <span className="menu-label">
@@ -287,16 +261,14 @@ function preferredTheme(): Theme {
 function MenuSwitch({
   label,
   on,
-  wideOnly = false,
   onChange,
 }: {
   label: string;
   on: boolean;
-  wideOnly?: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
-    <div className="menu-field row" data-wide-only={wideOnly}>
+    <div className="menu-field row">
       <span className="menu-label">{label}</span>
       <button
         type="button"

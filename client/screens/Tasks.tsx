@@ -157,6 +157,7 @@ export function Tasks() {
         view={view}
         onViewChange={changeView}
         searching={searchText !== null}
+        finished={finished}
         onOpenSearch={() => setSearchText("")}
       />
 

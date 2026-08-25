@@ -3,8 +3,11 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Failures } from "./components/Failures.tsx";
 import { TaskLink } from "./screens/TaskLink.tsx";
 import { Tasks } from "./screens/Tasks.tsx";
+import { useEaseIntoView } from "./useEaseIntoView.ts";
 
 export function App() {
+  useEaseIntoView();
+
   return (
     <div className="app">
       <Failures />

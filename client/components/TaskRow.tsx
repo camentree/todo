@@ -18,8 +18,6 @@ import type { CreatedTask, Task } from "@shared/types.ts";
 
 const FLICK_MILLISECONDS = 500;
 const LONG_PRESS_MILLISECONDS = 400;
-const SCROLL_BREATHING_ROOM = 96;
-const SCROLL_MILLISECONDS = 900;
 
 export interface AttributeOmission {
   field: Attribute;
@@ -78,7 +76,6 @@ export function TaskRow({
 }) {
   const [draft, setDraft] = useState(task.title);
   const [edits, setEdits] = useState<Partial<Task>>({});
-  const [hasFocus, setHasFocus] = useState(false);
   const [caretAt, setCaretAt] = useState<number | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const openedByPointer = useRef(false);
@@ -161,7 +158,7 @@ export function TaskRow({
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      onEditingChange(true);
+      onInfoOpen?.();
       return;
     }
     if (event.key === " ") {
@@ -173,7 +170,8 @@ export function TaskRow({
     }
     if (event.key === "i") {
       event.preventDefault();
-      onInfoOpen?.();
+      setCaretAt(task.title.length);
+      onEditingChange(true);
       return;
     }
     if (isTerminal(task.state)) {
@@ -183,7 +181,7 @@ export function TaskRow({
       onFocusNext?.();
       flickAway("left");
     }
-    if (event.key === "h" && swipeRight && task.archivedAt === null) {
+    if (event.key === "s" && swipeRight && task.archivedAt === null) {
       onFocusNext?.();
       flickAway("right");
     }
@@ -244,12 +242,10 @@ export function TaskRow({
           onPointerMove={gesture.move}
           onPointerUp={gesture.up}
           onPointerCancel={gesture.up}
-          onFocus={() => setHasFocus(true)}
           onBlur={(event) => {
             if (event.currentTarget.contains(event.relatedTarget)) {
               return;
             }
-            setHasFocus(false);
             if (unsaved) {
               if (draft.trim().length === 0) {
                 onEditingChange(false);
@@ -349,7 +345,7 @@ export function TaskRow({
             )}
           </div>
 
-          {isEditing && hasFocus
+          {isEditing
             ? parseAttributes && (
                 <AttributeChips
                   task={uncommitted}
@@ -516,17 +512,6 @@ function TitleField({
         "aria-label": "Title",
         enterKeyHint: "done",
         autoCapitalize: "none",
-        onFocus: (event) => {
-          const row = event.currentTarget.closest(".task");
-          const owner = row
-            ?.closest(".subtasks")
-            ?.closest(".swipe-track")
-            ?.querySelector(".task");
-          const anchor = owner ?? row;
-          if (anchor) {
-            easeToTop(anchor);
-          }
-        },
       }}
     />
   );
@@ -577,32 +562,6 @@ function Attributes({
       ))}
     </span>
   );
-}
-
-function easeToTop(row: Element): void {
-  const from = window.scrollY;
-  const to = Math.max(
-    0,
-    from + row.getBoundingClientRect().top - SCROLL_BREATHING_ROOM,
-  );
-  const started = performance.now();
-
-  function step(now: number): void {
-    const through = Math.min(
-      (now - started) / SCROLL_MILLISECONDS,
-      1,
-    );
-    const eased = 1 - Math.pow(1 - through, 3);
-    window.scrollTo({
-      top: from + (to - from) * eased,
-      behavior: "instant",
-    });
-    if (through < 1) {
-      requestAnimationFrame(step);
-    }
-  }
-
-  requestAnimationFrame(step);
 }
 
 function caretIndexAt(event: React.MouseEvent): number | null {

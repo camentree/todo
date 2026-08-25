@@ -51,6 +51,7 @@ export function buildGroups({
     {
       key: HIDDEN_GROUP,
       label: "Hidden",
+      identity: {},
       omitAttributes: screenWide,
       tasks: hidden,
     },
@@ -77,6 +78,7 @@ function groupsOf({
       {
         key: "all",
         label: "",
+        identity: {},
         omitAttributes: screenWide,
         tasks: sorted,
       },
@@ -88,8 +90,7 @@ function groupsOf({
       .map((list) => ({
         key: `list-${list}`,
         label: list,
-        list: list,
-        seed: { list: list },
+        identity: { list: list },
         omitAttributes: [
           ...screenWide,
           { field: "list" as const, label: list },
@@ -103,8 +104,7 @@ function groupsOf({
     return TASK_STAGES.map((stage) => ({
       key: `stage-${stage}`,
       label: stageLabel(stage),
-      stage: stage,
-      seed: { stage: stage },
+      identity: { stage: stage },
       omitAttributes: [
         ...screenWide,
         { field: "stage" as const, label: stageLabel(stage) },
@@ -116,6 +116,7 @@ function groupsOf({
   const groupBy = view.groupBy;
   const buckets = new Map<string, CreatedTask[]>();
   const rank = new Map<string, string | null>();
+  const identities = new Map<string, Partial<Task>>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
@@ -129,6 +130,14 @@ function groupsOf({
         rank.set(
           label,
           rankFor({
+            task: task,
+            groupBy: groupBy,
+            label: label,
+          }),
+        );
+        identities.set(
+          label,
+          identityFor({
             task: task,
             groupBy: groupBy,
             label: label,
@@ -154,29 +163,28 @@ function groupsOf({
   return entries.map(([label, grouped]) => ({
     key: `${groupBy}-${label}`,
     label: label,
-    seed: seedFor({ groupBy: groupBy, label: label }),
+    identity: identities.get(label) ?? {},
     omitAttributes: [...screenWide, { field: groupBy, label: label }],
     tasks: grouped,
   }));
 }
 
-function seedFor({
+function identityFor({
+  task,
   groupBy,
   label,
 }: {
+  task: CreatedTask;
   groupBy: ViewPreference["groupBy"];
   label: string;
 }): Partial<Task> {
   if (groupBy === "due_date") {
-    return { dueDate: label };
+    return { dueDate: task.dueDate };
   }
   if (groupBy === "who") {
-    return { who: label };
+    return { who: task.who };
   }
-  if (groupBy === "tag") {
-    return { tags: [label] };
-  }
-  return {};
+  return { tags: task.tags.length > 0 ? [label] : [] };
 }
 
 function stageOf(task: CreatedTask): TaskStage {
