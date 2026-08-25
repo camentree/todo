@@ -7,7 +7,7 @@ const GIVE_UP_VERTICAL = 10;
 
 export const SWIPE_FRACTION = 0.4;
 
-export function useSwipe({
+export function usePointerSwipe({
   onLeft,
   onRight,
   enabled = true,

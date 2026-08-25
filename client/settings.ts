@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import type { Scope } from "./screens/Tasks.tsx";
+import type { Attribute } from "@shared/attributes.ts";
 import type {
   GroupByField,
   Layout,
@@ -16,6 +16,12 @@ const SETTLE_MILLISECONDS = 500;
 export const HISTORY_STOPS = [1, 3, 6, 12, 24, 60, null] as const;
 
 export type HistoryMonths = (typeof HISTORY_STOPS)[number];
+export interface Scope {
+  field: Attribute | null;
+  value: string;
+  today: boolean;
+}
+
 export type Theme = "system" | "light" | "dark";
 
 export interface GlobalSettings {

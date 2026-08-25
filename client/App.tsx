@@ -1,9 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Failures } from "./components/Failures.tsx";
-import { TaskLink } from "./screens/TaskLink.tsx";
-import { Tasks } from "./screens/Tasks.tsx";
-import { useEaseIntoView } from "./useEaseIntoView.ts";
+import { TaskInfoScreen } from "./screens/TaskInfoScreen.tsx";
+import { TasksScreen } from "./screens/TasksScreen.tsx";
+import { useEaseIntoView } from "./hooks/useEaseIntoView.ts";
 
 export function App() {
   useEaseIntoView();
@@ -12,17 +12,16 @@ export function App() {
     <div className="app">
       <Failures />
       <Routes>
-        <Route path="/" element={<Tasks />} />
-        <Route path="/today" element={<Tasks />} />
+        <Route path="/" element={<TasksScreen />} />
+        <Route path="/today" element={<TasksScreen />} />
         <Route
           path="/due_date/today"
           element={<Navigate to="/today" replace />}
         />
-        <Route path="/today/:taskId" element={<Tasks />} />
-        <Route path="/task/:taskId" element={<TaskLink />} />
-        <Route path="/:taskId" element={<Tasks />} />
-        <Route path="/:field/:value" element={<Tasks />} />
-        <Route path="/:field/:value/:taskId" element={<Tasks />} />
+        <Route path="/task/:taskId" element={<TaskInfoScreen />} />
+        <Route path="/:taskId" element={<TasksScreen />} />
+        <Route path="/:field/:value" element={<TasksScreen />} />
+        <Route path="/:field/:value/:taskId" element={<TasksScreen />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

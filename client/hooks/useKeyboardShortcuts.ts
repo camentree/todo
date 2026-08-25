@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-export function useShortcuts(
+export function useKeyboardShortcuts(
   handle: (event: KeyboardEvent) => void,
   listening: boolean = true,
 ): void {

@@ -99,3 +99,59 @@ describe("a ticked task once the ledger catches up", () => {
     ]);
   });
 });
+
+describe("what a group guesses its tasks have in common", () => {
+  function groupsOfTagged(tasks: CreatedTask[]) {
+    return buildGroups({
+      tasks: tasks,
+      view: view({ groupBy: "tag", orderBy: "manual" }),
+      lists: ["programming", "home"],
+      showFinished: true,
+    });
+  }
+
+  test("a list every task shares is guessed", () => {
+    const [group] = groupsOfTagged([
+      task({ id: 1, list: "programming", tags: ["parallax"] }),
+      task({ id: 2, list: "programming", tags: ["parallax"] }),
+    ]);
+
+    expect(group?.guessedAttributes.list).toBe("programming");
+  });
+
+  test("one task disagreeing drops the guess", () => {
+    const [group] = groupsOfTagged([
+      task({ id: 1, list: "programming", tags: ["parallax"] }),
+      task({ id: 2, list: "home", tags: ["parallax"] }),
+    ]);
+
+    expect(group?.guessedAttributes.list).toBeUndefined();
+  });
+
+  test("the tag the group is built on is not guessed back", () => {
+    const [group] = groupsOfTagged([
+      task({ id: 1, tags: ["parallax", "urgent"] }),
+      task({ id: 2, tags: ["parallax", "urgent"] }),
+    ]);
+
+    expect(group?.guessedAttributes.tags).toEqual(["urgent"]);
+  });
+
+  test("a tag only some tasks carry is not guessed", () => {
+    const [group] = groupsOfTagged([
+      task({ id: 1, tags: ["parallax", "urgent"] }),
+      task({ id: 2, tags: ["parallax"] }),
+    ]);
+
+    expect(group?.guessedAttributes.tags).toBeUndefined();
+  });
+
+  test("case does not stop two tags counting as one", () => {
+    const [group] = groupsOfTagged([
+      task({ id: 1, tags: ["parallax", "Urgent"] }),
+      task({ id: 2, tags: ["parallax", "urgent"] }),
+    ]);
+
+    expect(group?.guessedAttributes.tags).toEqual(["Urgent"]);
+  });
+});

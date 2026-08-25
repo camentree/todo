@@ -1060,7 +1060,7 @@ a {
   flex-shrink: 0;
 }
 
-.task-shell[data-lifting="true"] {
+.task-shell[data-moving="true"] {
   opacity: 0.25;
 }
 

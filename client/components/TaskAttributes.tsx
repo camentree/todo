@@ -3,7 +3,7 @@ import {
   formatDueDate,
   formatDueTime,
 } from "../format.ts";
-import { renameChanges } from "../useTaskActions.ts";
+import { renameChanges } from "../taskLine.ts";
 import type { Attribute } from "@shared/attributes.ts";
 import { parse, type ParsedToken } from "@shared/parser.ts";
 import { stageLabel } from "@shared/stages.ts";

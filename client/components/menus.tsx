@@ -15,7 +15,7 @@ import {
 } from "../settings.ts";
 import type { HistoryMonths } from "../settings.ts";
 import { asTitle, formatWhen } from "../format.ts";
-import { useSwipe } from "../useSwipe.ts";
+import { usePointerSwipe } from "../hooks/usePointerSwipe.ts";
 import { useTheme } from "../theme.ts";
 import type { Theme } from "../settings.ts";
 import { canonicalName } from "@shared/names.ts";
@@ -390,7 +390,7 @@ function EventRow({
   event: TaskEvent;
   onSeen: () => void;
 }) {
-  const swipe = useSwipe({
+  const swipe = usePointerSwipe({
     onRight: onSeen,
   });
 

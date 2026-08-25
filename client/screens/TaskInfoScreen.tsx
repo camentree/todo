@@ -1,18 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { Navigate, useParams } from "react-router-dom";
 
-import { api } from "../api.ts";
+import { useTask } from "../hooks/useTasks.ts";
 import type { CreatedTask } from "@shared/types.ts";
 
-export function TaskLink() {
+export function TaskInfoScreen() {
   const parameters = useParams();
   const taskId = Number(parameters.taskId);
 
-  const { data: task, isPending } = useQuery({
-    queryKey: ["task", taskId],
-    queryFn: () => api.task(taskId),
-    retry: false,
-  });
+  const { task, isPending } = useTask(taskId);
 
   if (isPending) {
     return null;
@@ -20,13 +15,13 @@ export function TaskLink() {
 
   return (
     <Navigate
-      to={`${task ? screenHolding(task) : ""}/${taskId}`}
+      to={`${task ? findScreen(task) : ""}/${taskId}`}
       replace
     />
   );
 }
 
-function screenHolding(task: CreatedTask): string {
+function findScreen(task: CreatedTask): string {
   if (task.archivedAt !== null) {
     return "/archived/true";
   }

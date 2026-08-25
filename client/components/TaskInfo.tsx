@@ -3,7 +3,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -23,9 +22,10 @@ import {
   recordStateChange,
 } from "../history.ts";
 import { formatWhen } from "../format.ts";
-import { renameChanges } from "../useTaskActions.ts";
-import { useLockedScroll } from "../useLockedScroll.ts";
-import { useSwipe } from "../useSwipe.ts";
+import { renameChanges } from "../taskLine.ts";
+import { useLockedScroll } from "../hooks/useLockedScroll.ts";
+import { useTask } from "../hooks/useTasks.ts";
+import { usePointerSwipe } from "../hooks/usePointerSwipe.ts";
 import { canonicalName } from "@shared/names.ts";
 import { toDateString } from "@shared/recurrence.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
@@ -38,27 +38,29 @@ import type {
   Task,
 } from "@shared/types.ts";
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const FOCUSABLE = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(", ");
 
-function alreadyLoaded(
-  queryClient: QueryClient,
-  taskId: number,
-): CreatedTask | undefined {
-  for (const [, cached] of queryClient.getQueriesData({
-    queryKey: ["tasks"],
-  })) {
-    if (!Array.isArray(cached)) {
-      continue;
-    }
-    const found = (cached as CreatedTask[]).find(
-      (task) => task?.id === taskId,
-    );
-    if (found) {
-      return found;
-    }
+function focusableInside(sheet: HTMLElement | null): HTMLElement[] {
+  if (!sheet) {
+    return [];
   }
-  return undefined;
+  return [
+    ...sheet.querySelectorAll<HTMLElement>(FOCUSABLE),
+  ].filter(
+    (element) =>
+      element.offsetParent !== null &&
+      element.closest('[data-open="false"]') === null,
+  );
 }
+
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 function toggleWeekday(weekdays: number[], index: number): number[] {
   const next = weekdays.includes(index)
@@ -124,6 +126,7 @@ export function TaskInfo({
 
   const started = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const drag = useDragDown({
@@ -131,12 +134,7 @@ export function TaskInfo({
     onRelease: () => closeSlowly(),
   });
 
-  const { data: task, isError } = useQuery({
-    queryKey: ["task", taskId],
-    queryFn: () => api.task(taskId),
-    retry: false,
-    initialData: () => alreadyLoaded(queryClient, taskId),
-  });
+  const { task, isError } = useTask(taskId);
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],
     queryFn: api.lists,
@@ -145,8 +143,8 @@ export function TaskInfo({
   const commentsOpen = openSections.includes("comments");
   const hasTiming = Boolean(
     editedTask?.dueDate ||
-      editedTask?.dueTime ||
-      editedTask?.schedule,
+    editedTask?.dueTime ||
+    editedTask?.schedule,
   );
 
   useEffect(() => {
@@ -261,6 +259,27 @@ export function TaskInfo({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
+      if (event.defaultPrevented) {
+        return;
+      }
+      if (event.key === "Tab") {
+        const fields = focusableInside(sheetRef.current);
+        if (fields.length === 0) {
+          return;
+        }
+        event.preventDefault();
+        const active = document.activeElement;
+        const here =
+          active instanceof HTMLElement ? fields.indexOf(active) : -1;
+        if (here === -1) {
+          (event.shiftKey ? fields[fields.length - 1] : fields[0])
+            ?.focus();
+          return;
+        }
+        const step = event.shiftKey ? -1 : 1;
+        fields[(here + step + fields.length) % fields.length]?.focus();
+        return;
+      }
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         const active = document.activeElement;
@@ -391,6 +410,7 @@ export function TaskInfo({
       />
       <div
         className="info"
+        ref={sheetRef}
         data-closing={closing}
         data-dragging={drag.dragging}
         role="dialog"
@@ -1073,7 +1093,7 @@ function CommentRow({
   onResurface: () => void;
   onDelete: () => void;
 }) {
-  const swipe = useSwipe({
+  const swipe = usePointerSwipe({
     onLeft: onDelete,
     onRight: onResurface,
   });

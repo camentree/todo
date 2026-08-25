@@ -1,6 +1,6 @@
 import { Fragment, useEffect } from "react";
 
-import { useLockedScroll } from "../useLockedScroll.ts";
+import { useLockedScroll } from "../hooks/useLockedScroll.ts";
 
 const KEYS = [
   { keys: ["j", "↓", "⌃n"], does: "next" },

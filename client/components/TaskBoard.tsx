@@ -3,11 +3,21 @@ import type { ReactNode, RefObject } from "react";
 
 import { Chevron } from "./icons.tsx";
 import { TaskRow } from "./TaskRow.tsx";
-import type { AttributeOmission } from "./TaskRow.tsx";
 import { isDueToday } from "../format.ts";
-import { buildGroups } from "../grouping.ts";
-import { useShortcuts } from "../useShortcuts.ts";
-import { renameChanges, taskAsLine } from "../useTaskActions.ts";
+import {
+  buildGroups,
+  HIDDEN_GROUP,
+  mergeTags,
+} from "../grouping.ts";
+import { easeToTop } from "../hooks/useEaseIntoView.ts";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
+import { renameChanges, taskAsLine } from "../taskLine.ts";
+import type {
+  DestinationAttributes,
+  HiddenAttribute,
+  RowActions,
+  TaskGroup,
+} from "../types.ts";
 import type { TaskState } from "@shared/states.ts";
 import type {
   CreatedTask,
@@ -38,37 +48,11 @@ const BLANK_TASK: Task = {
   subtasks: [],
 };
 
-export const HIDDEN_GROUP = "hidden";
-
-export type { AttributeOmission } from "./TaskRow.tsx";
-
-export interface BoardGroup {
-  key: string;
-  label: string;
-  identity: Partial<Task>;
-  omitAttributes: AttributeOmission[];
-  tasks: CreatedTask[];
-}
-
-export type Landing = Partial<Task>;
-
-export interface RowActions {
-  toggle: (task: CreatedTask) => void;
-  open: (task: CreatedTask) => void;
-  rename: (task: CreatedTask, changes: Partial<Task>) => void;
-  create: (changes: Partial<Task>) => Promise<CreatedTask>;
-  remove: (task: CreatedTask) => void;
-  swipeLeft: (task: CreatedTask) => void;
-  swipeRight: (task: CreatedTask) => void;
-  undo: () => void;
-  redo: () => void;
-}
-
 export interface TaskBoardProps {
   tasks: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  omitAttributes: AttributeOmission[];
+  hiddenAttributes: HiddenAttribute[];
   justToggled: ReadonlyMap<number, TaskState>;
   showFinished: boolean;
   pending: boolean;
@@ -79,7 +63,7 @@ export interface TaskBoardProps {
   onCapturingChange: (open: boolean) => void;
   onMove: (
     taskId: number,
-    landing: Landing,
+    destinationAttributes: DestinationAttributes,
     orderedIds: number[],
   ) => void;
 }
@@ -88,7 +72,7 @@ export function TaskBoard({
   tasks,
   view,
   lists,
-  omitAttributes,
+  hiddenAttributes,
   justToggled,
   showFinished,
   pending,
@@ -105,10 +89,10 @@ export function TaskBoard({
         tasks: tasks,
         view: view,
         lists: lists,
-        omitAttributes: omitAttributes,
+        hiddenAttributes: hiddenAttributes,
         showFinished: showFinished,
       }),
-    [tasks, view, lists, omitAttributes, showFinished],
+    [tasks, view, lists, hiddenAttributes, showFinished],
   );
 
   const [capturingGroup, setCapturingGroup] = useState<string | null>(
@@ -124,7 +108,7 @@ export function TaskBoard({
   >(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const copied = useRef<string | null>(null);
-  const { lift, startLift } = useDragToReorder({
+  const { move, startMove } = useMoveTask({
     groups: groups,
     boardRef: boardRef,
     onMove: onMove,
@@ -189,22 +173,23 @@ export function TaskBoard({
     if (!line?.trim()) {
       return;
     }
-    const landingGroup = groups.find((group) =>
+    const destinationGroup = groups.find((group) =>
       group.tasks.some((task) => task.id === focusedId),
     );
     const made = await actions.create({
+      ...destinationGroup?.guessedAttributes,
       ...renameChanges(line),
-      ...landingGroup?.identity,
+      ...destinationGroup?.groupedBy,
     });
     land(made.id);
     if (
       focusedId === null ||
-      !landingGroup ||
+      !destinationGroup ||
       view.orderBy !== "manual"
     ) {
       return;
     }
-    const ordered = landingGroup.tasks.map((task) => task.id);
+    const ordered = destinationGroup.tasks.map((task) => task.id);
     ordered.splice(ordered.indexOf(focusedId) + 1, 0, made.id);
     onMove(made.id, {}, ordered);
   }
@@ -221,7 +206,7 @@ export function TaskBoard({
     }
   }
 
-  useShortcuts((event) => {
+  useKeyboardShortcuts((event) => {
     if (event.key === "Escape") {
       focusOn(null);
       return;
@@ -296,13 +281,14 @@ export function TaskBoard({
           actions.create({ ...changes, list: parent.list })
         }
         showAttributes={false}
+        parseAttributes={false}
       />
     );
   }
 
   function taskRow(
     task: CreatedTask,
-    group: BoardGroup,
+    group: TaskGroup,
     index: number,
   ): ReactNode {
     return (
@@ -312,7 +298,7 @@ export function TaskBoard({
         data-task={task.id}
         data-group={group.key}
         data-index={index}
-        data-lifting={lift?.taskId === task.id}
+        data-moving={move?.taskId === task.id}
         data-focused={focusedId === task.id}
         onMouseEnter={() => hoverOn(task.id)}
         onMouseLeave={() => hoverOn(null)}
@@ -350,7 +336,7 @@ export function TaskBoard({
             action: () => actions.swipeRight(task),
           }}
           onLongPress={(pointerX, pointerY) =>
-            startLift({
+            startMove({
               taskId: task.id,
               fromKey: group.key,
               pointerX: pointerX,
@@ -358,7 +344,7 @@ export function TaskBoard({
             })
           }
           showAttributes={true}
-          omitAttributes={group.omitAttributes}
+          hiddenAttributes={group.hiddenAttributes}
           expanded={expanded.has(task.id)}
           onExpandedChange={(open) => expand(task.id, open)}
           renderSubtask={subtaskRow}
@@ -419,13 +405,17 @@ export function TaskBoard({
       ref={boardRef}
     >
       {groups.map((group) => (
-        <Group
+        <GroupedTasks
           key={group.key}
           group={group}
           renderTask={taskRow}
           renderCapture={captureRow}
           canCapture={captureSeed !== null}
-          seed={{ ...captureSeed, ...group.identity }}
+          seed={{
+            ...group.guessedAttributes,
+            ...captureSeed,
+            ...group.groupedBy,
+          }}
           capturingHere={capturingGroup === group.key}
           capturingUnseeded={capturing && group.key === lastGroupKey}
           onLanded={land}
@@ -446,7 +436,7 @@ export function TaskBoard({
               return next;
             })
           }
-          lift={lift}
+          move={move}
         />
       ))}
 
@@ -454,6 +444,7 @@ export function TaskBoard({
         <div className="tasks board-capture">
           {captureRow({
             seed: capturing ? {} : (captureSeed ?? {}),
+            onCreated: land,
             onDismiss: () => onCapturingChange(false),
           })}
         </div>
@@ -481,7 +472,7 @@ function movement(event: KeyboardEvent): number {
   return 0;
 }
 
-function Group({
+function GroupedTasks({
   group,
   renderTask,
   renderCapture,
@@ -494,12 +485,12 @@ function Group({
   onLanded,
   collapsed,
   onToggleCollapsed,
-  lift,
+  move,
 }: {
-  group: BoardGroup;
+  group: TaskGroup;
   renderTask: (
     task: CreatedTask,
-    group: BoardGroup,
+    group: TaskGroup,
     index: number,
   ) => ReactNode;
   renderCapture: (capture: {
@@ -516,7 +507,7 @@ function Group({
   onLanded: (taskId: number) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  lift: Lift | null;
+  move: Move | null;
 }) {
   const capturable = canCapture && group.key !== HIDDEN_GROUP;
 
@@ -541,15 +532,15 @@ function Group({
           <div className="tasks">
             {group.tasks.map((task, index) => (
               <div key={task.id}>
-                {lift?.toKey === group.key &&
-                  lift.index === index && (
+                {move?.toKey === group.key &&
+                  move.index === index && (
                     <div className="drop-line" />
                   )}
                 {renderTask(task, group, index)}
               </div>
             ))}
-            {lift?.toKey === group.key &&
-              lift.index >= group.tasks.length && (
+            {move?.toKey === group.key &&
+              move.index >= group.tasks.length && (
                 <div className="drop-line" />
               )}
             {capturable &&
@@ -627,36 +618,36 @@ function saveTask({
   actions.rename(task, changes);
 }
 
-interface Lift {
+interface Move {
   taskId: number;
   fromKey: string;
   toKey: string;
   index: number;
 }
 
-function useDragToReorder({
+function useMoveTask({
   groups,
   boardRef,
   onMove,
 }: {
-  groups: BoardGroup[];
+  groups: TaskGroup[];
   boardRef: RefObject<HTMLDivElement | null>;
   onMove: (
     taskId: number,
-    landing: Landing,
+    destinationAttributes: DestinationAttributes,
     orderedIds: number[],
   ) => void;
 }): {
-  lift: Lift | null;
-  startLift: (start: {
+  move: Move | null;
+  startMove: (start: {
     taskId: number;
     fromKey: string;
     pointerX: number;
     pointerY: number;
   }) => void;
 } {
-  const [lift, setLift] = useState<Lift | null>(null);
-  const liftRef = useRef<Lift | null>(null);
+  const [move, setMove] = useState<Move | null>(null);
+  const moveRef = useRef<Move | null>(null);
   const finishLatest = useRef<() => void>(() => {});
 
   function placeAt(
@@ -664,7 +655,7 @@ function useDragToReorder({
     pointerY: number,
     taskId: number,
     fromKey: string,
-  ): Lift {
+  ): Move {
     const rows = [
       ...(boardRef.current?.querySelectorAll<HTMLElement>(
         "[data-row]",
@@ -721,10 +712,10 @@ function useDragToReorder({
     return null;
   }
 
-  function finishLift(): void {
-    const dropped = liftRef.current;
-    liftRef.current = null;
-    setLift(null);
+  function finishMove(): void {
+    const dropped = moveRef.current;
+    moveRef.current = null;
+    setMove(null);
     if (!dropped) {
       return;
     }
@@ -744,23 +735,35 @@ function useDragToReorder({
     const at = Math.min(dropped.index, ids.length);
     ids.splice(at, 0, dropped.taskId);
 
-    const landing: Landing =
-      target.key === source.key ? {} : target.identity;
+    const moving = source.tasks.find(
+      (task) => task.id === dropped.taskId,
+    );
+    const conferred: DestinationAttributes =
+      target.key === source.key
+        ? {}
+        : { ...target.guessedAttributes, ...target.groupedBy };
+    const destinationAttributes: DestinationAttributes =
+      conferred.tags && moving
+        ? {
+            ...conferred,
+            tags: mergeTags(moving.tags, conferred.tags),
+          }
+        : conferred;
 
     const unchanged =
       target.key === source.key &&
       target.tasks.every((task, index) => task.id === ids[index]);
 
     if (!unchanged) {
-      onMove(dropped.taskId, landing, ids);
+      onMove(dropped.taskId, destinationAttributes, ids);
     }
   }
 
   useEffect(() => {
-    finishLatest.current = finishLift;
+    finishLatest.current = finishMove;
   });
 
-  function startLift({
+  function startMove({
     taskId,
     fromKey,
     pointerX,
@@ -773,8 +776,8 @@ function useDragToReorder({
   }): void {
     function track(atX: number, atY: number): void {
       const next = placeAt(atX, atY, taskId, fromKey);
-      liftRef.current = next;
-      setLift(next);
+      moveRef.current = next;
+      setMove(next);
     }
 
     function onDragMove(event: PointerEvent): void {
@@ -795,7 +798,7 @@ function useDragToReorder({
     window.addEventListener("pointercancel", onDragEnd);
   }
 
-  return { lift: lift, startLift: startLift };
+  return { move: move, startMove: startMove };
 }
 
 function useRowFocus({
@@ -832,11 +835,14 @@ function useRowFocus({
     }
     setFocusedId(landingId);
     setLandingId(null);
-    requestAnimationFrame(() =>
-      boardRef.current
-        ?.querySelector(`[data-task="${landingId}"]`)
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
-    );
+    requestAnimationFrame(() => {
+      const landed = boardRef.current?.querySelector(
+        `[data-task="${landingId}"]`,
+      );
+      if (landed) {
+        easeToTop(landed);
+      }
+    });
   }, [landingId, shown, boardRef]);
 
   useEffect(() => {

@@ -9,25 +9,15 @@ import {
   attributesOf,
   withoutAttribute,
 } from "./TaskAttributes.tsx";
-import { useShortcuts } from "../useShortcuts.ts";
-import { SWIPE_FRACTION, useSwipe } from "../useSwipe.ts";
-import { renameChanges } from "../useTaskActions.ts";
-import type { Attribute } from "@shared/attributes.ts";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
+import { useKeyboardSwipe } from "../hooks/useKeyboardSwipe.ts";
+import { SWIPE_FRACTION, usePointerSwipe } from "../hooks/usePointerSwipe.ts";
+import { renameChanges } from "../taskLine.ts";
+import type { HiddenAttribute, SwipeAction } from "../types.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
 
-const FLICK_MILLISECONDS = 500;
 const LONG_PRESS_MILLISECONDS = 400;
-
-export interface AttributeOmission {
-  field: Attribute;
-  label: string;
-}
-
-export interface SwipeAction {
-  name: string;
-  action: () => void;
-}
 
 export function TaskRow({
   task,
@@ -44,7 +34,7 @@ export function TaskRow({
   onLongPress,
   showAttributes,
   parseAttributes = true,
-  omitAttributes = [],
+  hiddenAttributes = [],
   focusOnMount = false,
   renderSubtask,
   renderNewSubtask,
@@ -66,7 +56,7 @@ export function TaskRow({
   onLongPress?: (pointerX: number, pointerY: number) => void;
   showAttributes: boolean;
   parseAttributes?: boolean;
-  omitAttributes?: AttributeOmission[];
+  hiddenAttributes?: HiddenAttribute[];
   focusOnMount?: boolean;
   renderSubtask?: (subtask: CreatedTask) => ReactNode;
   renderNewSubtask?: (parent: Task) => ReactNode;
@@ -100,15 +90,33 @@ export function TaskRow({
     ...edits,
   };
 
-  const gesture = useRowGesture({
+  const gesture = useSwipeOrHold({
     onLeft: swipeLeft?.action,
     onRight: swipeRight?.action,
     onLongPress: onLongPress,
     enabled: !isTerminal(task.state) && !isEditing,
   });
-  const { flickingTo, flickAway } = useFlickAway({
-    swipeLeft: swipeLeft?.action,
-    swipeRight: swipeRight?.action,
+  const { swipingTo } = useKeyboardSwipe({
+    left: swipeLeft
+      ? {
+          key: "a",
+          action: () => {
+            onFocusNext?.();
+            swipeLeft.action();
+          },
+        }
+      : null,
+    right:
+      swipeRight && task.archivedAt === null
+        ? {
+            key: "s",
+            action: () => {
+              onFocusNext?.();
+              swipeRight.action();
+            },
+          }
+        : null,
+    enabled: isFocused && !isEditing && !isTerminal(task.state),
   });
 
   const children = task.subtasks ?? [];
@@ -119,14 +127,21 @@ export function TaskRow({
   const expandable =
     children.length > 0 || note.length > 0 || expanded;
 
-  const flickTravel =
-    flickingTo === "left"
+  const swipeTravel =
+    swipingTo === "left"
       ? -SWIPE_FRACTION * 100
       : SWIPE_FRACTION * 100;
   const shift =
-    flickingTo === null ? `${gesture.offset}px` : `${flickTravel}%`;
+    swipingTo === null ? `${gesture.offset}px` : `${swipeTravel}%`;
+  const revealing =
+    swipingTo ??
+    (gesture.offset < 0
+      ? "left"
+      : gesture.offset > 0
+        ? "right"
+        : null);
 
-  useShortcuts((event) => {
+  useKeyboardShortcuts((event) => {
     if (
       event.key === "ArrowRight" &&
       onExpandedChange &&
@@ -174,17 +189,6 @@ export function TaskRow({
       onEditingChange(true);
       return;
     }
-    if (isTerminal(task.state)) {
-      return;
-    }
-    if (event.key === "a" && swipeLeft) {
-      onFocusNext?.();
-      flickAway("left");
-    }
-    if (event.key === "s" && swipeRight && task.archivedAt === null) {
-      onFocusNext?.();
-      flickAway("right");
-    }
   }, isFocused && !isEditing);
 
   function commit(movingOn = false): void {
@@ -219,15 +223,11 @@ export function TaskRow({
   return (
     <div className="swipe-track">
       <div className="swipe-band">
-        {(gesture.swiping || flickingTo !== null) && (
-          <>
-            <div className="swipe-action archive">
-              {swipeLeft?.name}
-            </div>
-            <div className="swipe-action defer">
-              {swipeRight?.name}
-            </div>
-          </>
+        {revealing === "left" && (
+          <div className="swipe-action archive">{swipeLeft?.name}</div>
+        )}
+        {revealing === "right" && (
+          <div className="swipe-action defer">{swipeRight?.name}</div>
         )}
 
         <div
@@ -363,7 +363,7 @@ export function TaskRow({
             : showAttributes && (
                 <Attributes
                   task={task}
-                  omit={omitAttributes}
+                  omit={hiddenAttributes}
                   travelled={gesture.travelled}
                 />
               )}
@@ -489,10 +489,13 @@ function TitleField({
     if (!takeFocus) {
       return;
     }
-    inputRef.current?.focus({ preventScroll: true });
-    if (caretAt !== null) {
-      inputRef.current?.setSelectionRange(caretAt, caretAt);
+    const field = inputRef.current;
+    if (!field) {
+      return;
     }
+    field.focus({ preventScroll: true });
+    const landAt = caretAt ?? field.value.length;
+    field.setSelectionRange(landAt, landAt);
   }, [takeFocus, caretAt, inputRef]);
 
   return (
@@ -523,7 +526,7 @@ function Attributes({
   travelled,
 }: {
   task: Task;
-  omit: AttributeOmission[];
+  omit: HiddenAttribute[];
   travelled: () => boolean;
 }) {
   const navigate = useNavigate();
@@ -582,54 +585,7 @@ function dismissKeyboard(): void {
   }
 }
 
-function useFlickAway({
-  swipeLeft,
-  swipeRight,
-}: {
-  swipeLeft?: () => void;
-  swipeRight?: () => void;
-}): {
-  flickingTo: "left" | "right" | null;
-  flickAway: (direction: "left" | "right") => void;
-} {
-  const [flickingTo, setFlickingTo] = useState<
-    "left" | "right" | null
-  >(null);
-  const pending = useRef<{
-    timer: ReturnType<typeof setTimeout>;
-    act: () => void;
-  } | null>(null);
-
-  function settle(): void {
-    const current = pending.current;
-    if (!current) {
-      return;
-    }
-    clearTimeout(current.timer);
-    pending.current = null;
-    setFlickingTo(null);
-    current.act();
-  }
-
-  useEffect(() => settle, []);
-
-  function flickAway(direction: "left" | "right"): void {
-    const act = direction === "left" ? swipeLeft : swipeRight;
-    if (!act) {
-      return;
-    }
-    settle();
-    setFlickingTo(direction);
-    pending.current = {
-      timer: setTimeout(settle, FLICK_MILLISECONDS),
-      act: act,
-    };
-  }
-
-  return { flickingTo: flickingTo, flickAway: flickAway };
-}
-
-function useRowGesture({
+function useSwipeOrHold({
   onLeft,
   onRight,
   onLongPress,
@@ -640,7 +596,7 @@ function useRowGesture({
   onLongPress?: (pointerX: number, pointerY: number) => void;
   enabled: boolean;
 }) {
-  const swipe = useSwipe({
+  const swipe = usePointerSwipe({
     onLeft: onLeft,
     onRight: onRight,
     enabled: enabled,

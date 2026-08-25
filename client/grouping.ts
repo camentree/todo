@@ -1,13 +1,10 @@
 import { parseISO } from "date-fns";
 
-import { HIDDEN_GROUP } from "./components/TaskBoard.tsx";
-import type {
-  BoardGroup,
-  AttributeOmission,
-} from "./components/TaskBoard.tsx";
+import type { HiddenAttribute, TaskGroup } from "./types.ts";
 import { formatDueDate } from "./format.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
+import { canonicalName } from "@shared/names.ts";
 import { isTerminal } from "@shared/states.ts";
 import type {
   CreatedTask,
@@ -15,22 +12,26 @@ import type {
   ViewPreference,
 } from "@shared/types.ts";
 
+export const HIDDEN_GROUP = "hidden";
+
+type GroupBeforeGuessing = Omit<TaskGroup, "guessedAttributes">;
+
 export function buildGroups({
   tasks,
   view,
   lists,
-  omitAttributes = [],
+  hiddenAttributes = [],
   showFinished = false,
 }: {
   tasks: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  omitAttributes?: AttributeOmission[];
+  hiddenAttributes?: HiddenAttribute[];
   showFinished?: boolean;
-}): BoardGroup[] {
+}): TaskGroup[] {
   const sorted = sortTasks({ tasks: tasks, view: view });
 
-  const screenWide = omitAttributes;
+  const screenWide = hiddenAttributes;
   const setAside = (task: CreatedTask) =>
     !showFinished && putAway(task);
   const hidden = sorted.filter(setAside);
@@ -43,7 +44,7 @@ export function buildGroups({
   });
 
   if (hidden.length === 0) {
-    return groups;
+    return groups.map(withGuesses);
   }
 
   return [
@@ -51,11 +52,68 @@ export function buildGroups({
     {
       key: HIDDEN_GROUP,
       label: "Hidden",
-      identity: {},
-      omitAttributes: screenWide,
+      groupedBy: {},
+      hiddenAttributes: screenWide,
       tasks: hidden,
     },
+  ].map(withGuesses);
+}
+
+function withGuesses(group: GroupBeforeGuessing): TaskGroup {
+  const [first, ...rest] = group.tasks;
+  if (!first) {
+    return { ...group, guessedAttributes: {} };
+  }
+
+  const guessed: Partial<Task> = {};
+  if (
+    group.groupedBy.list === undefined &&
+    rest.every((task) => task.list === first.list)
+  ) {
+    guessed.list = first.list;
+  }
+  if (
+    group.groupedBy.who === undefined &&
+    first.who !== null &&
+    rest.every((task) => task.who === first.who)
+  ) {
+    guessed.who = first.who;
+  }
+  if (
+    group.groupedBy.stage === undefined &&
+    first.stage !== null &&
+    rest.every((task) => task.stage === first.stage)
+  ) {
+    guessed.stage = first.stage;
+  }
+
+  const alreadyGrouping = group.groupedBy.tags ?? [];
+  const sharedTags = first.tags.filter(
+    (tag) =>
+      !holdsTag(alreadyGrouping, tag) &&
+      rest.every((task) => holdsTag(task.tags, tag)),
+  );
+  if (sharedTags.length > 0) {
+    guessed.tags = sharedTags;
+  }
+
+  return { ...group, guessedAttributes: guessed };
+}
+
+export function mergeTags(
+  existing: string[],
+  added: string[],
+): string[] {
+  return [
+    ...existing,
+    ...added.filter((tag) => !holdsTag(existing, tag)),
   ];
+}
+
+function holdsTag(tags: string[], wanted: string): boolean {
+  return tags.some(
+    (tag) => canonicalName(tag) === canonicalName(wanted),
+  );
 }
 
 function putAway(task: CreatedTask): boolean {
@@ -71,27 +129,30 @@ function groupsOf({
   sorted: CreatedTask[];
   view: ViewPreference;
   lists: string[];
-  screenWide: AttributeOmission[];
-}): BoardGroup[] {
+  screenWide: HiddenAttribute[];
+}): GroupBeforeGuessing[] {
   if (view.groupBy === "none") {
     return [
       {
         key: "all",
         label: "",
-        identity: {},
-        omitAttributes: screenWide,
+        groupedBy: {},
+        hiddenAttributes: screenWide,
         tasks: sorted,
       },
     ];
   }
 
   if (view.groupBy === "list") {
-    return lists
+    const everyList = [
+      ...new Set([...lists, ...sorted.map((task) => task.list)]),
+    ];
+    return everyList
       .map((list) => ({
         key: `list-${list}`,
         label: list,
-        identity: { list: list },
-        omitAttributes: [
+        groupedBy: { list: list },
+        hiddenAttributes: [
           ...screenWide,
           { field: "list" as const, label: list },
         ],
@@ -104,8 +165,8 @@ function groupsOf({
     return TASK_STAGES.map((stage) => ({
       key: `stage-${stage}`,
       label: stageLabel(stage),
-      identity: { stage: stage },
-      omitAttributes: [
+      groupedBy: { stage: stage },
+      hiddenAttributes: [
         ...screenWide,
         { field: "stage" as const, label: stageLabel(stage) },
       ],
@@ -116,7 +177,7 @@ function groupsOf({
   const groupBy = view.groupBy;
   const buckets = new Map<string, CreatedTask[]>();
   const rank = new Map<string, string | null>();
-  const identities = new Map<string, Partial<Task>>();
+  const groupedByForLabel = new Map<string, Partial<Task>>();
   for (const task of sorted) {
     for (const label of labelsFor({
       task: task,
@@ -135,9 +196,9 @@ function groupsOf({
             label: label,
           }),
         );
-        identities.set(
+        groupedByForLabel.set(
           label,
-          identityFor({
+          groupedByFor({
             task: task,
             groupBy: groupBy,
             label: label,
@@ -163,13 +224,13 @@ function groupsOf({
   return entries.map(([label, grouped]) => ({
     key: `${groupBy}-${label}`,
     label: label,
-    identity: identities.get(label) ?? {},
-    omitAttributes: [...screenWide, { field: groupBy, label: label }],
+    groupedBy: groupedByForLabel.get(label) ?? {},
+    hiddenAttributes: [...screenWide, { field: groupBy, label: label }],
     tasks: grouped,
   }));
 }
 
-function identityFor({
+function groupedByFor({
   task,
   groupBy,
   label,

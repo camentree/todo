@@ -43,7 +43,7 @@ function isTextEntry(
   );
 }
 
-function easeToTop(element: Element): void {
+export function easeToTop(element: Element): void {
   const from = window.scrollY;
   const to = Math.max(
     0,
