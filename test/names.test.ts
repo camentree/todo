@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { canonicalName } from "./names.ts";
+import { canonicalName } from "@shared/names.ts";
 
 describe("canonicalName", () => {
   test("folds case, so two spellings are one name", () => {

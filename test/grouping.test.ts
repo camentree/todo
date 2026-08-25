@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildGroups, sortTasks } from "./grouping.ts";
+import { buildGroups, sortTasks } from "../client/grouping.ts";
 import type { CreatedTask, ViewPreference } from "@shared/types.ts";
 
 function task(overrides: Partial<CreatedTask>): CreatedTask {

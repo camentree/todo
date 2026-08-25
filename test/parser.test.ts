@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { parse, type ParsedToken } from "./parser.ts";
+import { parse, type ParsedToken } from "@shared/parser.ts";
 
 const thursday = new Date(2026, 7, 13);
 

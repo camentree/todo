@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { searchTasks } from "./search.ts";
-import type { CreatedTask } from "./types.ts";
+import { searchTasks } from "@shared/search.ts";
+import type { CreatedTask } from "@shared/types.ts";
 
 const thursday = new Date(2026, 7, 13);
 

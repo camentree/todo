@@ -28,6 +28,7 @@
     "server",
     "shared",
     "scripts",
+    "test",
     "vite.config.ts"
   ]
 }

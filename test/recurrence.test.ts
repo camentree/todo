@@ -4,7 +4,7 @@ import {
   describeSchedule,
   dueDatesBetween,
   type Schedule,
-} from "./recurrence.ts";
+} from "@shared/recurrence.ts";
 
 function schedule(overrides: Partial<Schedule>): Schedule {
   return {

@@ -24,10 +24,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: [
-      "../shared/**/*.test.ts",
-      "../server/**/*.test.ts",
-      "**/*.test.ts",
-    ],
+    include: ["../test/**/*.test.ts"],
   },
 });
