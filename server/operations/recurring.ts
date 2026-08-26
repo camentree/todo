@@ -309,12 +309,6 @@ async function rollOverOne({
       transaction: transaction,
     });
   });
-
-  await events.record({
-    taskId: null,
-    source: "system",
-    summary: `"${recurring.title}" went unfinished and rolled over`,
-  });
 }
 
 async function createInstance({

@@ -98,7 +98,7 @@ export const api = {
   reorderTasks: (ids: number[]) =>
     send<CreatedTask[]>("/tasks/reorder", "POST", { ids: ids }),
 
-  unseenEvents: () => request<Event[]>("/events/unseen"),
+  recentEvents: () => request<Event[]>("/events"),
   markEventsSeen: () =>
     send<{ ok: true }>("/events/seen", "POST", {}),
   markEventSeen: (id: number) =>

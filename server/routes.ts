@@ -174,8 +174,8 @@ api.post("/tasks/reorder", async (context) => {
   return context.json(await tasks.reorder(body.ids));
 });
 
-api.get("/events/unseen", async (context) => {
-  return context.json(await events.unseen());
+api.get("/events", async (context) => {
+  return context.json(await events.recent());
 });
 
 api.post("/events/seen", async (context) => {

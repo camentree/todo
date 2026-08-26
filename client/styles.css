@@ -1571,6 +1571,7 @@ a {
 .event-track {
   position: relative;
   overflow: hidden;
+  border-radius: 10px;
 }
 
 .event-action {
@@ -1590,14 +1591,22 @@ a {
 .event {
   position: relative;
   padding: 0.55rem;
+  border-radius: 10px;
   background: var(--raised);
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }
 
+.event .here-dot {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.6rem;
+}
+
 .event-summary {
   display: block;
+  padding-right: 1rem;
   font-size: 0.88rem;
   line-height: 1.35;
 }

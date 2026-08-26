@@ -31,11 +31,12 @@ export function TopBar({
   const [menu, setMenu] = useState<OpenMenu>("none");
   const failed = useFailures();
 
-  const { data: unseen = [] } = useQuery({
-    queryKey: ["events", "unseen"],
-    queryFn: api.unseenEvents,
+  const { data: changes = [] } = useQuery({
+    queryKey: ["events", "recent"],
+    queryFn: api.recentEvents,
     refetchInterval: 300_000,
   });
+  const unseen = changes.filter((change) => change.seenAt === null);
 
   return (
     <>
