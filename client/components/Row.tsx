@@ -12,22 +12,13 @@ import {
 import { Note } from "./ui/Note.tsx";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { useKeyboardSwipe } from "../hooks/useKeyboardSwipe.ts";
-import {
-  SWIPE_FRACTION,
-  usePointerSwipe,
-} from "../hooks/usePointerSwipe.ts";
+import { Swipeable } from "./ui/Swipeable.tsx";
+import type { SwipeAction } from "./ui/Swipeable.tsx";
 import { renameChanges } from "../tasks/taskLine.ts";
 import { linkTo } from "../tasks/attributes.ts";
 import type { Attribute } from "../tasks/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
-
-const LONG_PRESS_MILLISECONDS = 400;
-
-export interface SwipeAction {
-  name: string;
-  action: () => void;
-}
 
 export function Row({
   task,
@@ -68,10 +59,7 @@ export function Row({
   parseAttributes?: boolean;
   hiddenAttributes?: Attribute[];
   focusOnMount?: boolean;
-  renderSubtask?: (
-    subtask: CreatedTask,
-    index: number,
-  ) => ReactNode;
+  renderSubtask?: (subtask: CreatedTask, index: number) => ReactNode;
   renderNewSubtask?: (parent: Task) => ReactNode;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
@@ -103,12 +91,6 @@ export function Row({
     ...edits,
   };
 
-  const gesture = useSwipeOrHold({
-    onLeft: swipeLeft?.action,
-    onRight: swipeRight?.action,
-    onLongPress: onLongPress,
-    enabled: !isTerminal(task.state) && !isEditing,
-  });
   const { swipingTo } = useKeyboardSwipe({
     left: swipeLeft
       ? {
@@ -139,20 +121,6 @@ export function Row({
   const note = (task.note ?? "").trim();
   const expandable =
     children.length > 0 || note.length > 0 || expanded;
-
-  const swipeTravel =
-    swipingTo === "left"
-      ? -SWIPE_FRACTION * 100
-      : SWIPE_FRACTION * 100;
-  const shift =
-    swipingTo === null ? `${gesture.offset}px` : `${swipeTravel}%`;
-  const revealing =
-    swipingTo ??
-    (gesture.offset < 0
-      ? "left"
-      : gesture.offset > 0
-        ? "right"
-        : null);
 
   useKeyboardShortcuts((event) => {
     if (
@@ -234,156 +202,135 @@ export function Row({
   }
 
   return (
-    <div className="swipe-track">
-      <div className="swipe-band">
-        {revealing === "left" && (
-          <div className="swipe-action archive">
-            {swipeLeft?.name}
-          </div>
-        )}
-        {revealing === "right" && (
-          <div className="swipe-action defer">{swipeRight?.name}</div>
-        )}
-
-        <div
-          className="task"
-          ref={gesture.ref}
-          data-done={isTerminal(task.state)}
-          data-editing={isEditing}
-          data-unsaved={unsaved}
-          data-swiping={gesture.swiping}
-          style={{ transform: `translateX(${shift})` }}
-          onPointerDown={gesture.down}
-          onPointerMove={gesture.move}
-          onPointerUp={gesture.up}
-          onPointerCancel={gesture.up}
-          onBlur={(event) => {
-            if (event.currentTarget.contains(event.relatedTarget)) {
-              return;
+    <>
+      <Swipeable
+        className="task"
+        left={swipeLeft}
+        right={swipeRight}
+        enabled={!isTerminal(task.state) && !isEditing}
+        swipingTo={swipingTo}
+        onLongPress={onLongPress}
+        data-done={isTerminal(task.state)}
+        data-editing={isEditing}
+        data-unsaved={unsaved}
+        onBlur={(event) => {
+          if (event.currentTarget.contains(event.relatedTarget)) {
+            return;
+          }
+          if (unsaved) {
+            if (draft.trim().length === 0) {
+              onEditingChange(false);
             }
-            if (unsaved) {
-              if (draft.trim().length === 0) {
-                onEditingChange(false);
+            return;
+          }
+          commit();
+        }}
+      >
+        <div className="task-main">
+          <button
+            type="button"
+            className="task-tick"
+            data-state={task.state}
+            aria-label={`Mark ${task.title} done`}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (unsaved) {
+                return;
               }
-              return;
-            }
-            commit();
-          }}
-        >
-          <div className="task-main">
+              onCommit({
+                state: isTerminal(task.state) ? "to_do" : "complete",
+              });
+            }}
+          />
+
+          {isEditing ? (
+            <TitleField
+              value={draft}
+              onChange={setDraft}
+              list={uncommitted.list ?? ""}
+              inputRef={titleRef}
+              suggest={parseAttributes}
+              caretAt={caretAt}
+              takeFocus={!unsaved || focusOnMount}
+              onEnter={commit}
+              onEscape={stopEditing}
+              onTab={onTab && moveOn}
+            />
+          ) : (
             <button
               type="button"
-              className="task-tick"
-              data-state={task.state}
-              aria-label={`Mark ${task.title} done`}
+              className="task-title"
               onClick={(event) => {
-                event.stopPropagation();
-                if (unsaved) {
+                setCaretAt(caretIndexAt(event));
+                onEditingChange(true);
+              }}
+            >
+              {task.title}
+            </button>
+          )}
+
+          {onInfoOpen && (
+            <button
+              type="button"
+              className="task-info"
+              aria-label="Task details"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                dismissKeyboard();
+                openedByPointer.current = true;
+                onInfoOpen();
+              }}
+              onClick={() => {
+                if (openedByPointer.current) {
+                  openedByPointer.current = false;
                   return;
                 }
-                onCommit({
-                  state: isTerminal(task.state)
-                    ? "to_do"
-                    : "complete",
-                });
+                onInfoOpen();
               }}
-            />
+            >
+              <Sprite name="info" />
+            </button>
+          )}
 
-            {isEditing ? (
-              <TitleField
-                value={draft}
-                onChange={setDraft}
-                list={uncommitted.list ?? ""}
-                inputRef={titleRef}
-                suggest={parseAttributes}
-                caretAt={caretAt}
-                takeFocus={!unsaved || focusOnMount}
-                onEnter={commit}
-                onEscape={stopEditing}
-                onTab={onTab && moveOn}
-              />
-            ) : (
-              <button
-                type="button"
-                className="task-title"
-                onClick={(event) => {
-                  if (!gesture.travelled()) {
-                    setCaretAt(caretIndexAt(event));
-                    onEditingChange(true);
-                  }
-                }}
-              >
-                {task.title}
-              </button>
-            )}
-
-            {onInfoOpen && (
-              <button
-                type="button"
-                className="task-info"
-                aria-label="Task details"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  dismissKeyboard();
-                  openedByPointer.current = true;
-                  onInfoOpen();
-                }}
-                onClick={() => {
-                  if (openedByPointer.current) {
-                    openedByPointer.current = false;
-                    return;
-                  }
-                  onInfoOpen();
-                }}
-              >
-                <Sprite name="info" />
-              </button>
-            )}
-
-            {expandable && !isEditing && (
-              <button
-                type="button"
-                className="subtask-toggle"
-                aria-label="Expand"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onExpandedChange?.(!expanded);
-                }}
-              >
-                {children.length > 0 && (
-                  <span className="subtask-count">
-                    {finished}/{children.length}
-                  </span>
-                )}
-                <Sprite name="chevron" open={expanded} />
-              </button>
-            )}
-          </div>
-
-          {isEditing
-            ? parseAttributes && (
-                <AttributeChips
-                  task={uncommitted}
-                  onRemove={(attribute) => {
-                    const without = withoutAttribute({
-                      task: uncommitted,
-                      draft: draft,
-                      attribute: attribute,
-                    });
-                    setDraft(without.draft);
-                    setEdits({ ...edits, ...without.changes });
-                  }}
-                />
-              )
-            : showAttributes && (
-                <Attributes
-                  task={task}
-                  omit={hiddenAttributes}
-                  travelled={gesture.travelled}
-                />
+          {expandable && !isEditing && (
+            <button
+              type="button"
+              className="subtask-toggle"
+              aria-label="Expand"
+              onClick={(event) => {
+                event.stopPropagation();
+                onExpandedChange?.(!expanded);
+              }}
+            >
+              {children.length > 0 && (
+                <span className="subtask-count">
+                  {finished}/{children.length}
+                </span>
               )}
+              <Sprite name="chevron" open={expanded} />
+            </button>
+          )}
         </div>
-      </div>
+
+        {isEditing
+          ? parseAttributes && (
+              <AttributeChips
+                task={uncommitted}
+                onRemove={(attribute) => {
+                  const without = withoutAttribute({
+                    task: uncommitted,
+                    draft: draft,
+                    attribute: attribute,
+                  });
+                  setDraft(without.draft);
+                  setEdits({ ...edits, ...without.changes });
+                }}
+              />
+            )
+          : showAttributes && (
+              <Attributes task={task} omit={hiddenAttributes} />
+            )}
+      </Swipeable>
 
       {expandable && (
         <div className="collapsible" data-open={expanded}>
@@ -406,7 +353,7 @@ export function Row({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -471,11 +418,9 @@ function TitleField({
 function Attributes({
   task,
   omit,
-  travelled,
 }: {
   task: Task;
   omit: Attribute[];
-  travelled: () => boolean;
 }) {
   const navigate = useNavigate();
 
@@ -504,7 +449,7 @@ function Attributes({
             className={attribute.field === "tag" ? "tag" : undefined}
             data-clickable={Boolean(to)}
             onClick={() => {
-              if (travelled() || !to) {
+              if (!to) {
                 return;
               }
               navigate(to);
@@ -534,109 +479,6 @@ function dismissKeyboard(): void {
   if (focused instanceof HTMLElement) {
     focused.blur();
   }
-}
-
-function useSwipeOrHold({
-  onLeft,
-  onRight,
-  onLongPress,
-  enabled,
-}: {
-  onLeft?: () => void;
-  onRight?: () => void;
-  onLongPress?: (pointerX: number, pointerY: number) => void;
-  enabled: boolean;
-}) {
-  const swipe = usePointerSwipe({
-    onLeft: onLeft,
-    onRight: onRight,
-    enabled: enabled,
-  });
-  const holding = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stopWatching = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    const node = swipe.ref.current;
-    if (!node) {
-      return;
-    }
-    function holdTheScroll(event: TouchEvent): void {
-      if (holding.current) {
-        event.preventDefault();
-      }
-    }
-    node.addEventListener("touchmove", holdTheScroll, {
-      passive: false,
-    });
-    return () => node.removeEventListener("touchmove", holdTheScroll);
-  }, []);
-
-  useEffect(() => {
-    return () => stopTimer();
-  }, []);
-
-  function stopTimer(): void {
-    stopWatching.current?.();
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-  }
-
-  function watchForRelease(pointerId: number): void {
-    function onRelease(event: PointerEvent): void {
-      if (event.pointerId === pointerId) {
-        stopTimer();
-      }
-    }
-    window.addEventListener("pointerup", onRelease);
-    window.addEventListener("pointercancel", onRelease);
-    stopWatching.current = () => {
-      window.removeEventListener("pointerup", onRelease);
-      window.removeEventListener("pointercancel", onRelease);
-      stopWatching.current = null;
-    };
-  }
-
-  return {
-    ref: swipe.ref,
-    offset: swipe.offset,
-    swiping: swipe.swiping,
-    travelled: swipe.travelled,
-    down: (event: React.PointerEvent) => {
-      holding.current = false;
-      swipe.down(event);
-      if (!enabled || !onLongPress) {
-        return;
-      }
-      const pointerX = event.clientX;
-      const pointerY = event.clientY;
-      watchForRelease(event.pointerId);
-      timer.current = setTimeout(() => {
-        holding.current = true;
-        onLongPress(pointerX, pointerY);
-      }, LONG_PRESS_MILLISECONDS);
-    },
-    move: (event: React.PointerEvent) => {
-      if (holding.current) {
-        return;
-      }
-      swipe.move(event);
-      if (swipe.travelled()) {
-        stopTimer();
-      }
-    },
-    up: () => {
-      stopTimer();
-      if (holding.current) {
-        holding.current = false;
-        swipe.cancel();
-        return;
-      }
-      swipe.up();
-    },
-  };
 }
 
 export function AddButton({ onClick }: { onClick: () => void }) {

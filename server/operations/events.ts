@@ -43,6 +43,10 @@ export async function markSeen(id: number): Promise<void> {
   await sql`update todo.events set seen_at = now() where id = ${id}`;
 }
 
+export async function markUnseen(id: number): Promise<void> {
+  await sql`update todo.events set seen_at = null where id = ${id}`;
+}
+
 export async function markAllSeen(): Promise<void> {
   await sql`update todo.events set seen_at = now() where seen_at is null`;
 }

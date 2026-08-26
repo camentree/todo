@@ -92,6 +92,7 @@ export function Info({
   const task = confirmed && {
     ...confirmed,
     ...pending.get(confirmed.id),
+    subtasks: confirmed.subtasks,
   };
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],
@@ -415,7 +416,11 @@ export function Info({
           >
             <div className="info-subtasks">
               {subtasks.map((subtask) => subtaskRow(subtask))}
-              <NewSubtaskRow parent={task} actions={actions} />
+              <NewSubtaskRow
+                parent={task}
+                actions={actions}
+                index={subtasks.length}
+              />
             </div>
           </Section>
 

@@ -72,7 +72,11 @@ export function SubtaskRow({
       data-moving={moving}
     >
       <Row
-        task={{ ...subtask, ...pending.get(subtask.id) }}
+        task={{
+          ...subtask,
+          ...pending.get(subtask.id),
+          subtasks: subtask.subtasks,
+        }}
         onLongPress={onLongPress}
         isEditing={editing}
         onEditingChange={onEditingChange}
@@ -102,24 +106,36 @@ export function SubtaskRow({
 export function NewSubtaskRow({
   parent,
   actions,
+  index,
+  dropAt,
 }: {
   parent: Task;
   actions: SubtaskActions;
+  index: number;
+  dropAt?: "before" | "after";
 }): ReactNode {
   return (
-    <Row
-      task={{
-        ...BLANK_TASK,
-        parentId: parent.id,
-        list: parent.list,
-      }}
-      isEditing={true}
-      onEditingChange={() => {}}
-      onCommit={(changes) =>
-        actions.create({ ...changes, list: parent.list })
-      }
-      showAttributes={false}
-      parseAttributes={false}
-    />
+    <div
+      className="task-shell"
+      data-row="true"
+      data-parent={parent.id ?? undefined}
+      data-index={index}
+      data-drop={dropAt}
+    >
+      <Row
+        task={{
+          ...BLANK_TASK,
+          parentId: parent.id,
+          list: parent.list,
+        }}
+        isEditing={true}
+        onEditingChange={() => {}}
+        onCommit={(changes) =>
+          actions.create({ ...changes, list: parent.list })
+        }
+        showAttributes={false}
+        parseAttributes={false}
+      />
+    </div>
   );
 }

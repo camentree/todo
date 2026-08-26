@@ -187,3 +187,8 @@ api.post("/events/:id/seen", async (context) => {
   await events.markSeen(numberParam(context.req.param("id")));
   return context.json({ ok: true });
 });
+
+api.post("/events/:id/unseen", async (context) => {
+  await events.markUnseen(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});

@@ -103,4 +103,6 @@ export const api = {
     send<{ ok: true }>("/events/seen", "POST", {}),
   markEventSeen: (id: number) =>
     send<{ ok: true }>(`/events/${id}/seen`, "POST", {}),
+  markEventUnseen: (id: number) =>
+    send<{ ok: true }>(`/events/${id}/unseen`, "POST", {}),
 };

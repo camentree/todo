@@ -1578,7 +1578,6 @@ a {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 0;
   display: flex;
   align-items: center;
   padding: 0 1.15rem;
@@ -1586,6 +1585,14 @@ a {
   font-weight: 600;
   color: var(--ground);
   background: var(--accent);
+}
+
+.event-action[data-side="right"] {
+  left: 0;
+}
+
+.event-action[data-side="left"] {
+  right: 0;
 }
 
 .event {

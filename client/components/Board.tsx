@@ -294,7 +294,19 @@ export function Board({
   }
 
   function newSubtaskRow(parent: Task): ReactNode {
-    return <NewSubtaskRow parent={parent} actions={actions} />;
+    const siblingCount = (parent.subtasks ?? []).length;
+    return (
+      <NewSubtaskRow
+        parent={parent}
+        actions={actions}
+        index={siblingCount}
+        dropAt={dropAt({
+          parentId: parent.id,
+          index: siblingCount,
+          siblingCount: siblingCount + 1,
+        })}
+      />
+    );
   }
 
   function taskRow(
@@ -320,7 +332,11 @@ export function Board({
         onMouseLeave={() => hoverOn(null)}
       >
         <Row
-          task={{ ...task, ...held.get(task.id) }}
+          task={{
+            ...task,
+            ...held.get(task.id),
+            subtasks: task.subtasks,
+          }}
           isEditing={editingId === task.id}
           isFocused={focusedId === task.id}
           onEditingChange={(editing) =>
@@ -783,12 +799,14 @@ function useMoveTask({
       const box = headerOf(row).getBoundingClientRect();
       return pointerY >= box.top && pointerY <= box.bottom;
     });
+    const openSubtasks = under
+      ?.querySelector("[data-subtasks]")
+      ?.closest('.collapsible[data-open="true"]');
     const shutId =
       under &&
       under.dataset.parent === undefined &&
-      under
-        .querySelector("[data-subtasks]")
-        ?.closest('.collapsible[data-open="false"]')
+      under.dataset.task !== undefined &&
+      !openSubtasks
         ? Number(under.dataset.task)
         : null;
 
