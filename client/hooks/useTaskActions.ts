@@ -413,7 +413,7 @@ export function useTaskActions(
       edited: held.map((task, index) => ({
         before: task,
         showing: withChanges(task, {
-          ...(task.id === taskId ? changes : {}),
+          ...(task.id === taskId ? { ...changes, parentId: null } : {}),
           sortOrder: slots[index] ?? task.sortOrder,
         }),
       })),

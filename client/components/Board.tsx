@@ -329,7 +329,9 @@ export function Board({
               changes: changes,
               actions: actions,
             });
-            land(task.id);
+            if (!("state" in changes)) {
+              land(task.id);
+            }
           }}
           onInfoOpen={() => actions.open(task)}
           onFocusNext={() =>
@@ -746,7 +748,9 @@ function useMoveTask({
   }
 
   function everyTask(): CreatedTask[] {
-    return groups.flatMap((group) => group.tasks);
+    const walk = (list: CreatedTask[]): CreatedTask[] =>
+      list.flatMap((task) => [task, ...walk(task.subtasks ?? [])]);
+    return walk(groups.flatMap((group) => group.tasks));
   }
 
   function stopDwelling(): void {
