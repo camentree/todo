@@ -94,6 +94,44 @@ function without(tasks: CreatedTask[], ids: number[]): CreatedTask[] {
     );
 }
 
+function relocated({
+  tasks,
+  taskId,
+  parentId,
+}: {
+  tasks: CreatedTask[];
+  taskId: number;
+  parentId: number | null;
+}): CreatedTask[] {
+  const taken = findTask(tasks, taskId);
+  if (!taken) {
+    return tasks;
+  }
+  const moved = { ...taken, parentId: parentId };
+  const rest = without(tasks, [taskId]);
+  if (parentId === null) {
+    return [...rest, moved];
+  }
+  return rest.map((task) =>
+    task.id === parentId
+      ? { ...task, subtasks: [...(task.subtasks ?? []), moved] }
+      : task,
+  );
+}
+
+function subtasksInOrder(tasks: CreatedTask[]): CreatedTask[] {
+  return tasks.map((task) =>
+    task.subtasks
+      ? {
+          ...task,
+          subtasks: [...task.subtasks].sort(
+            (left, right) => left.sortOrder - right.sortOrder,
+          ),
+        }
+      : task,
+  );
+}
+
 function holdsTask(tasks: CreatedTask[], taskId: number): boolean {
   return tasks.some(
     (task) =>
@@ -141,6 +179,24 @@ export function useTaskActions(
 
   function takeBack(ids: number[]): void {
     eachCachedList((tasks) => without(tasks, ids));
+  }
+
+  function settleInPlace({
+    taskId,
+    parentId,
+  }: {
+    taskId: number;
+    parentId: number | null;
+  }): void {
+    eachCachedList((tasks) =>
+      subtasksInOrder(
+        relocated({
+          tasks: tasks,
+          taskId: taskId,
+          parentId: parentId,
+        }),
+      ),
+    );
   }
 
   function addToLedger(task: CreatedTask): void {
@@ -389,8 +445,8 @@ export function useTaskActions(
         if (orderedIds.length > 1) {
           written.push(...(await api.reorderTasks(orderedIds)));
         }
-        takeBack([moving.id]);
-        void queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
+        landed(written);
+        settleInPlace({ taskId: moving.id, parentId: parentId });
         return written;
       },
       delay: DEBOUNCED_MILLISECONDS,
@@ -445,6 +501,7 @@ export function useTaskActions(
           written.push(...(await api.reorderTasks(orderedIds)));
         }
         landed(written);
+        settleInPlace({ taskId: taskId, parentId: null });
         return written;
       },
       delay: DEBOUNCED_MILLISECONDS,
