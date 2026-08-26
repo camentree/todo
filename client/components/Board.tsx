@@ -31,6 +31,7 @@ export interface RowActions {
   remove: (task: CreatedTask) => void;
   swipeLeft: (task: CreatedTask) => void;
   swipeRight: (task: CreatedTask) => void;
+  reparent: (task: CreatedTask, parentId: number | null) => void;
   undo: () => void;
   redo: () => void;
 }
@@ -52,6 +53,7 @@ export interface BoardProps {
     destinationAttributes: Attribute[],
     orderedIds: number[],
   ) => void;
+  onNest: (taskId: number, parentId: number) => void;
 }
 
 export function Board({
@@ -67,6 +69,7 @@ export function Board({
   capturing,
   onCapturingChange,
   onMove,
+  onNest,
 }: BoardProps) {
   const groups = useMemo(
     () =>
@@ -98,6 +101,7 @@ export function Board({
     groups: groups,
     boardRef: boardRef,
     onMove: onMove,
+    onNest: onNest,
   });
 
   const shown = groups
@@ -258,6 +262,7 @@ export function Board({
         data-group={group.key}
         data-index={index}
         data-moving={move?.taskId === task.id}
+        data-nesting={move?.intoTaskId === task.id}
         data-focused={focusedId === task.id}
         onMouseEnter={() => hoverOn(task.id)}
         onMouseLeave={() => hoverOn(null)}
@@ -562,17 +567,21 @@ function saveTask({
   actions.rename(task, changes);
 }
 
+const NESTING_BAND = 0.3;
+
 interface Move {
   taskId: number;
   fromKey: string;
   toKey: string;
   index: number;
+  intoTaskId: number | null;
 }
 
 function useMoveTask({
   groups,
   boardRef,
   onMove,
+  onNest,
 }: {
   groups: TaskGroup[];
   boardRef: RefObject<HTMLDivElement | null>;
@@ -581,6 +590,7 @@ function useMoveTask({
     destinationAttributes: Attribute[],
     orderedIds: number[],
   ) => void;
+  onNest: (taskId: number, parentId: number) => void;
 }): {
   move: Move | null;
   startMove: (start: {
@@ -611,12 +621,28 @@ function useMoveTask({
 
     for (const row of rows) {
       const box = row.getBoundingClientRect();
+      const over = Number(row.dataset.task ?? 0);
+      const nesting =
+        over !== taskId &&
+        canHoldSubtasks(over) &&
+        pointerY > box.top + box.height * NESTING_BAND &&
+        pointerY < box.bottom - box.height * NESTING_BAND;
+      if (nesting) {
+        return {
+          taskId: taskId,
+          fromKey: fromKey,
+          toKey: row.dataset.group ?? fromKey,
+          index: Number(row.dataset.index ?? 0),
+          intoTaskId: over,
+        };
+      }
       if (pointerY < box.top + box.height / 2) {
         return {
           taskId: taskId,
           fromKey: fromKey,
           toKey: row.dataset.group ?? fromKey,
           index: Number(row.dataset.index ?? 0),
+          intoTaskId: null,
         };
       }
     }
@@ -628,6 +654,7 @@ function useMoveTask({
         fromKey: fromKey,
         toKey: last.dataset.group ?? fromKey,
         index: Number(last.dataset.index ?? 0) + 1,
+        intoTaskId: null,
       };
     }
 
@@ -636,7 +663,15 @@ function useMoveTask({
       fromKey: fromKey,
       toKey: emptyGroupUnder(pointerX) ?? fromKey,
       index: 0,
+      intoTaskId: null,
     };
+  }
+
+  function canHoldSubtasks(taskId: number): boolean {
+    const over = groups
+      .flatMap((group) => group.tasks)
+      .find((task) => task.id === taskId);
+    return over !== undefined && over.parentId === null;
   }
 
   function emptyGroupUnder(pointerX: number): string | null {
@@ -670,6 +705,11 @@ function useMoveTask({
       (group) => group.key === dropped.fromKey,
     );
     if (!target || !source) {
+      return;
+    }
+
+    if (dropped.intoTaskId !== null) {
+      onNest(dropped.taskId, dropped.intoTaskId);
       return;
     }
 

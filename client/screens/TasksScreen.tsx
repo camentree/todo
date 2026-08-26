@@ -186,6 +186,14 @@ export function TasksScreen() {
             navigate(`/${[...screen, task.id].join("/")}`),
         }}
         onMove={actions.move}
+        onNest={(taskId, parentId) => {
+          const moving = everything.find(
+            (task) => task.id === taskId,
+          );
+          if (moving) {
+            actions.reparent(moving, parentId);
+          }
+        }}
       />
 
       {!archived && !finished && (

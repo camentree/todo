@@ -89,6 +89,10 @@ export const api = {
     send<CreatedTask[]>("/tasks/archive", "POST", { ids: ids }),
   unarchiveTasks: (ids: number[]) =>
     send<CreatedTask[]>("/tasks/unarchive", "POST", { ids: ids }),
+  reparentTask: (id: number, parentId: number | null) =>
+    send<CreatedTask[]>(`/tasks/${id}/parent`, "POST", {
+      parentId: parentId,
+    }),
   reorderTasks: (ids: number[]) =>
     send<CreatedTask[]>("/tasks/reorder", "POST", { ids: ids }),
 

@@ -151,6 +151,16 @@ api.delete("/comments/:id", async (context) => {
   return context.json({ ok: true });
 });
 
+api.post("/tasks/:id/parent", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await tasks.reparent({
+      id: numberParam(context.req.param("id")),
+      parentId: body.parentId === null ? null : Number(body.parentId),
+    }),
+  );
+});
+
 api.post("/tasks/archive", async (context) => {
   const body = await context.req.json();
   return context.json(await tasks.archive(body.ids));

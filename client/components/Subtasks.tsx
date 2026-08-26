@@ -31,6 +31,7 @@ export interface SubtaskActions {
   rename: (task: CreatedTask, changes: Partial<Task>) => void;
   remove: (task: CreatedTask) => void;
   create: (changes: Partial<Task>) => Promise<CreatedTask>;
+  reparent: (task: CreatedTask, parentId: number | null) => void;
 }
 
 export function SubtaskRow({
@@ -68,6 +69,10 @@ export function SubtaskRow({
       swipeLeft={{
         name: "Delete",
         action: () => actions.remove(subtask),
+      }}
+      swipeRight={{
+        name: "Own task",
+        action: () => actions.reparent(subtask, null),
       }}
       showAttributes={false}
       parseAttributes={false}

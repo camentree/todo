@@ -338,6 +338,44 @@ export function useTaskActions(
     });
   }
 
+  function reparent(
+    task: CreatedTask,
+    parentId: number | null,
+  ): void {
+    const before = committed(task.id) ?? task;
+    const parent =
+      parentId === null ? undefined : committed(parentId);
+    const showing =
+      parent === undefined
+        ? { ...before, parentId: parentId }
+        : {
+            ...before,
+            parentId: parentId,
+            list: parent.list,
+            tags: parent.tags,
+            who: parent.who,
+            stage: parent.stage,
+            dueDate: null,
+            dueTime: null,
+            recurringTaskId: null,
+          };
+
+    defer({
+      edited: [{ before: before, showing: showing }],
+      call: async () => {
+        const written = await api.reparentTask(task.id, parentId);
+        takeBack([task.id]);
+        void queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
+        return written;
+      },
+      delay: DEBOUNCED_MILLISECONDS,
+      doing:
+        parentId === null
+          ? "make that a task of its own"
+          : "move that task under another",
+    });
+  }
+
   function move(
     taskId: number,
     destination: Attribute[],
@@ -407,5 +445,6 @@ export function useTaskActions(
     swipeLeft: (task: CreatedTask) => swipeLeft.mutate(task),
     swipeRight: (task: CreatedTask) => swipeRight.mutate(task),
     move: move,
+    reparent: reparent,
   };
 }
