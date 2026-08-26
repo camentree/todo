@@ -3,7 +3,7 @@ import { Navigate, useParams } from "react-router-dom";
 import { useTask } from "../hooks/useTasks.ts";
 import type { CreatedTask } from "@shared/types.ts";
 
-export function TaskInfoScreen() {
+export function InfoScreen() {
   const parameters = useParams();
   const taskId = Number(parameters.taskId);
 

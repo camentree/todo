@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Failures } from "./components/Failures.tsx";
-import { TaskInfoScreen } from "./screens/TaskInfoScreen.tsx";
+import { InfoScreen } from "./screens/InfoScreen.tsx";
 import { TasksScreen } from "./screens/TasksScreen.tsx";
 import { useEaseIntoView } from "./hooks/useEaseIntoView.ts";
 
@@ -18,7 +18,7 @@ export function App() {
           path="/due_date/today"
           element={<Navigate to="/today" replace />}
         />
-        <Route path="/task/:taskId" element={<TaskInfoScreen />} />
+        <Route path="/task/:taskId" element={<InfoScreen />} />
         <Route path="/:taskId" element={<TasksScreen />} />
         <Route path="/:field/:value" element={<TasksScreen />} />
         <Route path="/:field/:value/:taskId" element={<TasksScreen />} />

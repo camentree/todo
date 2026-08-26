@@ -2,8 +2,8 @@ import {
   changeGlobal,
   currentGlobal,
   useGlobalSettings,
-} from "./settings.ts";
-import type { Theme } from "./settings.ts";
+} from "../data/settings.ts";
+import type { Theme } from "../data/settings.ts";
 
 const GROUND = {
   light: "#f5f8f6",

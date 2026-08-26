@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { createStore, useStore } from "../data/store.ts";
 
 import type { AttributeField } from "@shared/attributes.ts";
 import type {
@@ -84,34 +84,26 @@ function stored<T>(key: string, fallback: T): T {
   }
 }
 
-const listeners = new Set<() => void>();
-
-let global: GlobalSettings = stored(GLOBAL_KEY, {
-  theme: "system" as Theme,
-  historyMonths: 24 as HistoryMonths,
-});
-let screens: Record<string, Partial<ViewPreference>> = stored(
-  SCREENS_KEY,
-  {},
+const global = createStore<GlobalSettings>(
+  stored(GLOBAL_KEY, {
+    theme: "system" as Theme,
+    historyMonths: 24 as HistoryMonths,
+  }),
 );
-let settledHistory: HistoryMonths = global.historyMonths;
+const screens = createStore<Record<string, Partial<ViewPreference>>>(
+  stored(SCREENS_KEY, {}),
+);
+const settledHistory = createStore<HistoryMonths>(
+  global.read().historyMonths,
+);
 let settling: ReturnType<typeof setTimeout> | null = null;
 
-function announce(): void {
-  for (const listener of listeners) {
-    listener();
-  }
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
 export function changeGlobal(changes: Partial<GlobalSettings>): void {
-  global = { ...global, ...changes };
-  window.localStorage.setItem(GLOBAL_KEY, JSON.stringify(global));
-  announce();
+  global.write({ ...global.read(), ...changes });
+  window.localStorage.setItem(
+    GLOBAL_KEY,
+    JSON.stringify(global.read()),
+  );
 
   if (changes.historyMonths === undefined) {
     return;
@@ -121,8 +113,7 @@ export function changeGlobal(changes: Partial<GlobalSettings>): void {
   }
   settling = setTimeout(() => {
     settling = null;
-    settledHistory = global.historyMonths;
-    announce();
+    settledHistory.write(global.read().historyMonths);
   }, SETTLE_MILLISECONDS);
 }
 
@@ -130,31 +121,33 @@ export function changeScreen(
   key: string,
   changes: Partial<ViewPreference>,
 ): void {
-  screens = {
-    ...screens,
-    [key]: { ...screens[key], ...changes },
-  };
-  window.localStorage.setItem(SCREENS_KEY, JSON.stringify(screens));
-  announce();
+  screens.write({
+    ...screens.read(),
+    [key]: { ...screens.read()[key], ...changes },
+  });
+  window.localStorage.setItem(
+    SCREENS_KEY,
+    JSON.stringify(screens.read()),
+  );
 }
 
 export function currentGlobal(): GlobalSettings {
-  return global;
+  return global.read();
 }
 
 export function useGlobalSettings(): GlobalSettings {
-  return useSyncExternalStore(subscribe, () => global);
+  return useStore(global);
 }
 
 export function useSettledHistory(): HistoryMonths {
-  return useSyncExternalStore(subscribe, () => settledHistory);
+  return useStore(settledHistory);
 }
 
 export function useViewPreference(
   key: string,
   fallback: ViewPreference,
 ): [ViewPreference, (changes: Partial<ViewPreference>) => void] {
-  const saved = useSyncExternalStore(subscribe, () => screens[key]);
+  const saved = useStore(screens)[key];
   return [
     {
       groupBy: (saved?.groupBy ?? fallback.groupBy) as GroupByField,

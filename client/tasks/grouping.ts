@@ -1,7 +1,7 @@
 import { parseISO } from "date-fns";
 
-import type { Attribute } from "./attributes.ts";
-import { formatDueDate } from "./format.ts";
+import type { Attribute } from "../tasks/attributes.ts";
+import { formatDueDate } from "../tasks/format.ts";
 import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { canonicalName } from "@shared/names.ts";

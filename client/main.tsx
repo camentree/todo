@@ -7,8 +7,8 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "./App.tsx";
-import { currentGlobal } from "./settings.ts";
-import { applyTheme, followSystemTheme } from "./theme.ts";
+import { currentGlobal } from "./data/settings.ts";
+import { applyTheme, followSystemTheme } from "./data/theme.ts";
 import "./styles.css";
 
 const queryClient = new QueryClient({
