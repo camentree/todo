@@ -4,8 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import postgres from "postgres";
 
-const migrations_directory = new URL("../sql", import.meta.url)
-  .pathname;
+const migrations_directory = new URL(
+  "../migrations",
+  import.meta.url,
+).pathname;
 
 export async function migrate(): Promise<void> {
   const database_url = process.env.DATABASE_URL;
