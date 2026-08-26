@@ -330,8 +330,11 @@ export function useTaskActions(
       ],
       call: async () => {
         const written = await api.setState(task.id, next);
-        landed([written]);
-        return [written];
+        for (const task of written) {
+          addToLedger(task);
+        }
+        landed(written);
+        return written;
       },
       delay: HOLD_MILLISECONDS,
       doing: "tick that off",
@@ -366,10 +369,10 @@ export function useTaskActions(
         const written: CreatedTask[] = [];
         if (changes.stage !== undefined) {
           written.push(
-            await api.setState(
+            ...(await api.setState(
               taskId,
               changes.stage === "complete" ? "complete" : "to_do",
-            ),
+            )),
           );
         }
         if (Object.keys(changes).length > 0) {

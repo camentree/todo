@@ -1,9 +1,14 @@
 import { addDays, format, parseISO } from "date-fns";
 
 import { sql } from "../database.ts";
+import type { Transaction } from "../database.ts";
 import * as events from "./events.ts";
 import { canonicalName } from "@shared/names.ts";
-import { dueDatesBetween, toDateString } from "@shared/recurrence.ts";
+import {
+  latestDueDateOnOrBefore,
+  nextDueDateAfter,
+  toDateString,
+} from "@shared/recurrence.ts";
 import type { Schedule } from "@shared/recurrence.ts";
 import type { Frequency, RecurringTask } from "@shared/types.ts";
 
@@ -207,117 +212,182 @@ export async function configure(
   return updated;
 }
 
-export async function generateDue(): Promise<void> {
+export async function rollOver(): Promise<void> {
   const today = toDateString(new Date());
 
-  const pending = await sql<RecurringRow[]>`
+  const active = await sql<RecurringRow[]>`
     select ${COLUMNS}
     from todo.recurring_tasks
     where ended_at is null
-      and (generated_through is null or generated_through < ${today})
   `;
 
-  for (const recurring of pending) {
-    await generateOne({ recurring: recurring, today: today });
+  for (const recurring of active) {
+    await rollOverOne({ recurring: recurring, today: today });
   }
 }
 
-async function generateOne({
-  recurring,
-  today,
-}: {
-  recurring: RecurringRow;
-  today: string;
-}): Promise<void> {
-  const resumeFrom = recurring.generatedThrough
-    ? format(
-        addDays(parseISO(recurring.generatedThrough), 1),
-        "yyyy-MM-dd",
-      )
-    : recurring.startsOn;
-  const from =
-    resumeFrom > recurring.createdOn
-      ? resumeFrom
-      : recurring.createdOn;
-
-  const schedule: Schedule = {
+function scheduleOf(recurring: RecurringRow): Schedule {
+  return {
     frequency: recurring.frequency,
     repeatEvery: recurring.repeatEvery,
     weekdays: recurring.weekdays,
     dayOfMonth: recurring.dayOfMonth,
     startsOn: recurring.startsOn,
   };
+}
 
-  const dates =
-    from > today
-      ? []
-      : dueDatesBetween({
-          schedule: schedule,
-          from: from,
-          through: today,
-        });
+async function liveInstance(
+  recurringId: number,
+): Promise<{ id: number; dueDate: string | null } | null> {
+  const [live] = await sql<{ id: number; dueDate: string | null }[]>`
+    select id, due_date
+    from todo.tasks
+    where recurring_task_id = ${recurringId}
+      and parent_id is null
+      and state not in ('complete', 'missed', 'skipped', 'archived')
+    limit 1
+  `;
+  return live ?? null;
+}
+
+async function rollOverOne({
+  recurring,
+  today,
+}: {
+  recurring: RecurringRow;
+  today: string;
+}): Promise<void> {
+  const schedule = scheduleOf(recurring);
+  const live = await liveInstance(recurring.id);
+
+  if (live === null) {
+    const due =
+      latestDueDateOnOrBefore({
+        schedule: schedule,
+        onOrBefore: today,
+      }) ??
+      nextDueDateAfter({
+        schedule: schedule,
+        after: format(addDays(parseISO(today), -1), "yyyy-MM-dd"),
+      });
+    if (due !== null) {
+      await sql.begin((transaction) =>
+        createInstance({
+          recurring: recurring,
+          dueDate: due,
+          transaction: transaction,
+        }),
+      );
+    }
+    return;
+  }
+
+  if (live.dueDate === null) {
+    return;
+  }
+  const following = nextDueDateAfter({
+    schedule: schedule,
+    after: live.dueDate,
+  });
+  if (following === null || following > today) {
+    return;
+  }
 
   await sql.begin(async (transaction) => {
-    for (const dueDate of dates) {
-      const missed = await transaction<{ id: number }[]>`
-        update todo.tasks
-        set state = 'missed', finished_at = now(), updated_at = now()
-        where recurring_task_id = ${recurring.id}
-          and parent_id is null
-          and due_date < ${dueDate}
-          and state not in ('complete', 'missed', 'skipped')
-        returning id
-      `;
-
-      const [instance] = await transaction<{ id: number }[]>`
-        insert into todo.tasks (
-          list, recurring_task_id, title, note, tags, who, due_date, due_time,
-          sort_order
-        )
-        values (
-          ${recurring.list},
-          ${recurring.id},
-          ${recurring.title},
-          ${recurring.note},
-          ${recurring.tags},
-          ${recurring.who},
-          ${dueDate},
-          ${recurring.dueTime},
-          0
-        )
-        returning id
-      `;
-
-      if (instance) {
-        for (const [
-          position,
-          title,
-        ] of recurring.subtaskTitles.entries()) {
-          await transaction`
-            insert into todo.tasks (list, parent_id, title, sort_order)
-            values (${recurring.list}, ${instance.id}, ${title}, ${position})
-          `;
-        }
-      }
-
-      if (missed.length > 0) {
-        await transaction`
-          insert into todo.events (task_id, source, summary)
-          values (
-            ${instance?.id ?? null},
-            'system',
-            ${`"${recurring.title}" went unfinished and rolled over`}
-          )
-        `;
-      }
-    }
-
     await transaction`
-      update todo.recurring_tasks
-      set generated_through = ${today}, updated_at = now()
-      where id = ${recurring.id}
+      update todo.tasks
+      set state = 'missed', finished_at = now(), updated_at = now()
+      where id = ${live.id}
     `;
+    await createInstance({
+      recurring: recurring,
+      dueDate:
+        latestDueDateOnOrBefore({
+          schedule: schedule,
+          onOrBefore: today,
+        }) ?? following,
+      transaction: transaction,
+    });
   });
+
+  await events.record({
+    taskId: null,
+    source: "system",
+    summary: `"${recurring.title}" went unfinished and rolled over`,
+  });
+}
+
+async function createInstance({
+  recurring,
+  dueDate,
+  transaction,
+}: {
+  recurring: RecurringRow;
+  dueDate: string;
+  transaction: Transaction;
+}): Promise<number | null> {
+  const [instance] = await transaction<{ id: number }[]>`
+    insert into todo.tasks (
+      list, recurring_task_id, title, note, tags, who, due_date, due_time,
+      sort_order
+    )
+    values (
+      ${recurring.list},
+      ${recurring.id},
+      ${recurring.title},
+      ${recurring.note},
+      ${recurring.tags},
+      ${recurring.who},
+      ${dueDate},
+      ${recurring.dueTime},
+      0
+    )
+    on conflict do nothing
+    returning id
+  `;
+
+  if (!instance) {
+    return null;
+  }
+
+  for (const [
+    position,
+    title,
+  ] of recurring.subtaskTitles.entries()) {
+    await transaction`
+      insert into todo.tasks (list, parent_id, title, sort_order)
+      values (${recurring.list}, ${instance.id}, ${title}, ${position})
+    `;
+  }
+
+  return instance.id;
+}
+
+export async function nextInstanceAfter({
+  recurringId,
+  dueDate,
+}: {
+  recurringId: number;
+  dueDate: string | null;
+}): Promise<number | null> {
+  const recurring = await byId(recurringId);
+  if (!recurring || recurring.endedAt !== null || dueDate === null) {
+    return null;
+  }
+  const following = nextDueDateAfter({
+    schedule: scheduleOf(recurring),
+    after: dueDate,
+  });
+  if (following === null) {
+    return null;
+  }
+  return sql.begin((transaction) =>
+    createInstance({
+      recurring: recurring,
+      dueDate: following,
+      transaction: transaction,
+    }),
+  );
 }
 
 export async function end(id: number): Promise<void> {

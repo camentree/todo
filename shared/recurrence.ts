@@ -100,6 +100,58 @@ function occursOn({
   );
 }
 
+const FURTHEST_AHEAD_DAYS = 800;
+
+export function nextDueDateAfter({
+  schedule,
+  after,
+}: {
+  schedule: Schedule;
+  after: string;
+}): string | null {
+  const start = parseISO(schedule.startsOn);
+  const day = addDays(parseISO(after), 1);
+  let candidate = isBefore(day, start) ? start : day;
+
+  for (let step = 0; step <= FURTHEST_AHEAD_DAYS; step += 1) {
+    if (
+      occursOn({ schedule: schedule, start: start, date: candidate })
+    ) {
+      return toDateString(candidate);
+    }
+    candidate = addDays(candidate, 1);
+  }
+  return null;
+}
+
+export function latestDueDateOnOrBefore({
+  schedule,
+  onOrBefore,
+}: {
+  schedule: Schedule;
+  onOrBefore: string;
+}): string | null {
+  const start = parseISO(schedule.startsOn);
+  const asked = parseISO(onOrBefore);
+  if (isBefore(asked, start)) {
+    return null;
+  }
+
+  let candidate = asked;
+  for (let step = 0; step <= FURTHEST_AHEAD_DAYS; step += 1) {
+    if (isBefore(candidate, start)) {
+      return null;
+    }
+    if (
+      occursOn({ schedule: schedule, start: start, date: candidate })
+    ) {
+      return toDateString(candidate);
+    }
+    candidate = addDays(candidate, -1);
+  }
+  return null;
+}
+
 export function describeSchedule(schedule: Schedule): string {
   const every = schedule.repeatEvery;
 

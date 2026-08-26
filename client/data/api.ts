@@ -58,7 +58,9 @@ export const api = {
   updateTask: (id: number, body: Partial<Task>) =>
     send<CreatedTask>(`/tasks/${id}`, "PATCH", body),
   setState: (id: number, state: TaskState) =>
-    send<CreatedTask>(`/tasks/${id}/state`, "POST", { state: state }),
+    send<CreatedTask[]>(`/tasks/${id}/state`, "POST", {
+      state: state,
+    }),
   deleteTask: (id: number) =>
     request<{ removed: number[] }>(`/tasks/${id}`, {
       method: "DELETE",

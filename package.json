@@ -10,6 +10,7 @@
     "start": "NODE_ENV=production tsx server/main.ts",
     "test": "scripts/test",
     "migrate": "tsx --env-file=.env scripts/migrate.ts",
+    "roll-over": "tsx --env-file=.env scripts/roll-over.ts",
     "seed-test": "tsx --env-file=.env test/seed-test.ts"
   },
   "dependencies": {

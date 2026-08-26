@@ -3,7 +3,6 @@ import { Hono } from "hono";
 import * as comments from "./operations/comments.ts";
 import * as events from "./operations/events.ts";
 import * as lists from "./operations/lists.ts";
-import * as recurring from "./operations/recurring.ts";
 import * as tasks from "./operations/tasks.ts";
 import { TASK_STATES } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
@@ -47,7 +46,6 @@ api.get("/who", async (context) => {
 });
 
 api.get("/tasks", async (context) => {
-  await recurring.generateDue();
   return context.json(
     await tasks.query({ since: context.req.query("since") ?? null }),
   );
