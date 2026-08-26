@@ -1890,6 +1890,7 @@ a {
 .task-shell[data-drop="after"]::after {
   content: "";
   position: absolute;
+  z-index: 2;
   left: 0;
   right: 0;
   height: 2px;
@@ -1898,9 +1899,9 @@ a {
 }
 
 .task-shell[data-drop="before"]::before {
-  top: -1px;
+  top: 0;
 }
 
 .task-shell[data-drop="after"]::after {
-  bottom: -1px;
+  bottom: 0;
 }
