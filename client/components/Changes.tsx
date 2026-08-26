@@ -112,7 +112,7 @@ function EventRow({
         {event.taskTitle && (
           <div className="event-title">{event.taskTitle}</div>
         )}
-        <div>{event.summary}</div>
+        <div className="event-summary">{event.summary}</div>
         <div className="event-when">
           {formatWhen(event.createdAt)} · {event.source}
         </div>
