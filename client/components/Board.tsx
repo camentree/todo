@@ -795,17 +795,17 @@ function useMoveTask({
       const box = headerOf(row).getBoundingClientRect();
       return pointerY >= box.top && pointerY <= box.bottom;
     });
-    const openSubtasks = under
-      ?.querySelector("[data-subtasks]")
-      ?.closest('.collapsible[data-open="true"]');
+    const alreadyOpen =
+      under
+        ?.querySelector("[data-subtasks]")
+        ?.closest<HTMLElement>(".collapsible")?.dataset.open === "true";
     const shutId =
       under &&
       under.dataset.parent === undefined &&
       under.dataset.task !== undefined &&
-      !openSubtasks
+      !alreadyOpen
         ? Number(under.dataset.task)
         : null;
-
     if (shutId === null) {
       stopDwelling();
       return;
