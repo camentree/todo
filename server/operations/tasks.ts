@@ -102,6 +102,7 @@ export interface NewTask {
   dueTime?: string | null;
   schedule?: Schedule | null;
   archivedAt?: string | null;
+  resolvedAt?: string | null;
 }
 
 export async function create(
@@ -115,7 +116,7 @@ export async function create(
   const [created] = await sql<CreatedTask[]>`
     insert into todo.tasks (
       list, parent_id, recurring_task_id, title, note, state, stage, tags, who,
-      due_date, due_time, archived_at, sort_order
+      due_date, due_time, archived_at, resolved_at, sort_order
     )
     values (
       ${canonicalName(task.list)},
@@ -130,6 +131,7 @@ export async function create(
       ${task.dueDate ?? null},
       ${task.dueTime ?? null},
       ${task.archivedAt ?? null},
+      ${task.resolvedAt ?? null},
       coalesce((select max(sort_order) + 1 from todo.tasks), 0)
     )
     returning ${COLUMNS}
@@ -185,6 +187,7 @@ export interface TaskChanges {
   schedule?: Schedule | null;
   state?: TaskState;
   archivedAt?: string | null;
+  resolvedAt?: string | null;
 }
 
 const SHARED_WITH_SCHEDULE = [
