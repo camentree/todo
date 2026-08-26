@@ -1,4 +1,4 @@
-import { dismissFailure, useFailures } from "../failures.ts";
+import { dismissFailure, useFailures } from "../data/failures.ts";
 
 export function Failures() {
   const failures = useFailures().filter((failure) => failure.showing);
