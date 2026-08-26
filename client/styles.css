@@ -1683,6 +1683,10 @@ a {
     overscroll-behavior-x: contain;
   }
 
+  .board[data-layout="columns"]:has(.suggestions) {
+    padding-bottom: 14rem;
+  }
+
   .board[data-layout="columns"] .group + .group {
     margin-top: 0;
   }

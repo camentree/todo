@@ -31,6 +31,20 @@ function withIndentation({
   };
 }
 
+function scrollingAncestorOf(
+  element: HTMLElement,
+): HTMLElement | null {
+  let ancestor = element.parentElement;
+  while (ancestor) {
+    const overflow = window.getComputedStyle(ancestor).overflowY;
+    if (overflow === "auto" || overflow === "scroll") {
+      return ancestor;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return null;
+}
+
 export function Note({
   note,
   onCommit,
@@ -57,8 +71,14 @@ export function Note({
     if (!textarea) {
       return;
     }
+    const scroller = scrollingAncestorOf(textarea);
+    const wasScrolledTo = scroller?.scrollTop;
     textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    const wanted = `${textarea.scrollHeight}px`;
+    textarea.style.height = wanted;
+    if (scroller && wasScrolledTo !== undefined) {
+      scroller.scrollTop = wasScrolledTo;
+    }
   }, [draft]);
 
   return (
