@@ -240,7 +240,6 @@ export function Board({
     subtask: CreatedTask,
     index: number,
     group: TaskGroup,
-    siblingCount: number,
   ): ReactNode {
     return (
       <SubtaskRow
@@ -259,7 +258,6 @@ export function Board({
         dropAt={dropAt({
           parentId: subtask.parentId,
           index: index,
-          siblingCount: siblingCount,
         })}
         onLongPress={(pointerX, pointerY) =>
           startMove({
@@ -274,23 +272,26 @@ export function Board({
   }
 
   function dropAt({
+    groupKey,
     parentId,
     index,
-    siblingCount,
+    last = false,
   }: {
+    groupKey?: string;
     parentId: number | null;
     index: number;
-    siblingCount: number;
+    last?: boolean;
   }): "before" | "after" | undefined {
     if (!move || move.parentId !== parentId) {
+      return undefined;
+    }
+    if (parentId === null && move.toKey !== groupKey) {
       return undefined;
     }
     if (move.index === index) {
       return "before";
     }
-    return move.index >= siblingCount && index === siblingCount - 1
-      ? "after"
-      : undefined;
+    return last && move.index > index ? "after" : undefined;
   }
 
   function newSubtaskRow(parent: Task): ReactNode {
@@ -303,7 +304,6 @@ export function Board({
         dropAt={dropAt({
           parentId: parent.id,
           index: siblingCount,
-          siblingCount: siblingCount + 1,
         })}
       />
     );
@@ -323,9 +323,10 @@ export function Board({
         data-index={index}
         data-moving={move?.taskId === task.id}
         data-drop={dropAt({
+          groupKey: group.key,
           parentId: null,
           index: index,
-          siblingCount: group.tasks.length,
+          last: index === group.tasks.length - 1,
         })}
         data-focused={focusedId === task.id}
         onMouseEnter={() => hoverOn(task.id)}
@@ -386,12 +387,7 @@ export function Board({
           expanded={expanded.has(task.id)}
           onExpandedChange={(open) => expand(task.id, open)}
           renderSubtask={(child, childIndex) =>
-            subtaskRow(
-              child,
-              childIndex,
-              group,
-              (task.subtasks ?? []).length,
-            )
+            subtaskRow(child, childIndex, group)
           }
           renderNewSubtask={newSubtaskRow}
         />
