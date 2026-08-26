@@ -363,6 +363,67 @@ export async function setState(
   return next ? [updated, next] : [updated];
 }
 
+export async function reparent({
+  id,
+  parentId,
+}: {
+  id: number;
+  parentId: number | null;
+}): Promise<CreatedTask[]> {
+  if (parentId === null) {
+    const [freed] = await sql<CreatedTask[]>`
+      update todo.tasks
+      set parent_id = null, updated_at = now()
+      where id = ${id}
+      returning ${COLUMNS}
+    `;
+    if (!freed) {
+      throw new Error(`no task with id ${id}`);
+    }
+    return [freed];
+  }
+
+  if (parentId === id) {
+    throw new Error("a task cannot be its own subtask");
+  }
+  await requireCanHaveChildren(parentId);
+
+  const [{ count } = { count: 0 }] = await sql<{ count: number }[]>`
+    select count(*)::int as count
+    from todo.tasks
+    where parent_id = ${id}
+  `;
+  if (count > 0) {
+    throw new Error("a task with subtasks cannot become one");
+  }
+
+  const parent = await byId(parentId);
+  if (!parent) {
+    throw new Error(`no task with id ${parentId}`);
+  }
+
+  const [nested] = await sql<CreatedTask[]>`
+    update todo.tasks
+    set parent_id = ${parent.id},
+        list = ${parent.list},
+        tags = ${parent.tags},
+        who = ${parent.who},
+        stage = ${parent.stage},
+        due_date = ${parent.dueDate},
+        due_time = ${parent.dueTime},
+        recurring_task_id = null,
+        sort_order = ${(parent.subtasks ?? []).length},
+        updated_at = now()
+    where id = ${id}
+    returning ${COLUMNS}
+  `;
+  if (!nested) {
+    throw new Error(`no task with id ${id}`);
+  }
+
+  return [nested, parent];
+}
+
 export async function archive(ids: number[]): Promise<CreatedTask[]> {
   return sql<CreatedTask[]>`
     update todo.tasks

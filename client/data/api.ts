@@ -91,12 +91,18 @@ export const api = {
     send<CreatedTask[]>("/tasks/archive", "POST", { ids: ids }),
   unarchiveTasks: (ids: number[]) =>
     send<CreatedTask[]>("/tasks/unarchive", "POST", { ids: ids }),
+  reparentTask: (id: number, parentId: number | null) =>
+    send<CreatedTask[]>(`/tasks/${id}/parent`, "POST", {
+      parentId: parentId,
+    }),
   reorderTasks: (ids: number[]) =>
     send<CreatedTask[]>("/tasks/reorder", "POST", { ids: ids }),
 
-  unseenEvents: () => request<Event[]>("/events/unseen"),
+  recentEvents: () => request<Event[]>("/events"),
   markEventsSeen: () =>
     send<{ ok: true }>("/events/seen", "POST", {}),
   markEventSeen: (id: number) =>
     send<{ ok: true }>(`/events/${id}/seen`, "POST", {}),
+  markEventUnseen: (id: number) =>
+    send<{ ok: true }>(`/events/${id}/unseen`, "POST", {}),
 };

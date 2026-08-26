@@ -94,6 +94,44 @@ function without(tasks: CreatedTask[], ids: number[]): CreatedTask[] {
     );
 }
 
+function relocated({
+  tasks,
+  taskId,
+  parentId,
+}: {
+  tasks: CreatedTask[];
+  taskId: number;
+  parentId: number | null;
+}): CreatedTask[] {
+  const taken = findTask(tasks, taskId);
+  if (!taken) {
+    return tasks;
+  }
+  const moved = { ...taken, parentId: parentId };
+  const rest = without(tasks, [taskId]);
+  if (parentId === null) {
+    return [...rest, moved];
+  }
+  return rest.map((task) =>
+    task.id === parentId
+      ? { ...task, subtasks: [...(task.subtasks ?? []), moved] }
+      : task,
+  );
+}
+
+function subtasksInOrder(tasks: CreatedTask[]): CreatedTask[] {
+  return tasks.map((task) =>
+    task.subtasks
+      ? {
+          ...task,
+          subtasks: [...task.subtasks].sort(
+            (left, right) => left.sortOrder - right.sortOrder,
+          ),
+        }
+      : task,
+  );
+}
+
 function holdsTask(tasks: CreatedTask[], taskId: number): boolean {
   return tasks.some(
     (task) =>
@@ -141,6 +179,24 @@ export function useTaskActions(
 
   function takeBack(ids: number[]): void {
     eachCachedList((tasks) => without(tasks, ids));
+  }
+
+  function settleInPlace({
+    taskId,
+    parentId,
+  }: {
+    taskId: number;
+    parentId: number | null;
+  }): void {
+    eachCachedList((tasks) =>
+      subtasksInOrder(
+        relocated({
+          tasks: tasks,
+          taskId: taskId,
+          parentId: parentId,
+        }),
+      ),
+    );
   }
 
   function addToLedger(task: CreatedTask): void {
@@ -346,6 +402,62 @@ export function useTaskActions(
     });
   }
 
+  function reparent(
+    task: CreatedTask,
+    parentId: number | null,
+    orderedIds: number[] = [],
+  ): void {
+    const parent =
+      parentId === null ? undefined : committed(parentId);
+    const conferred: Partial<Task> =
+      parent === undefined
+        ? { parentId: parentId }
+        : {
+            parentId: parentId,
+            list: parent.list,
+            tags: parent.tags,
+            who: parent.who,
+            stage: parent.stage,
+            dueDate: parent.dueDate,
+            dueTime: parent.dueTime,
+            recurringTaskId: null,
+          };
+
+    const moving = committed(task.id) ?? task;
+    const held = (
+      orderedIds.length > 0 ? orderedIds : [task.id]
+    )
+      .map((id) => committed(id))
+      .filter((sibling): sibling is CreatedTask => sibling !== undefined);
+    const slots = reassignSlots(
+      held.map((sibling) => sibling.sortOrder),
+    );
+
+    defer({
+      edited: held.map((sibling, index) => ({
+        before: sibling,
+        showing: withChanges(sibling, {
+          ...(sibling.id === task.id ? conferred : {}),
+          sortOrder: slots[index] ?? sibling.sortOrder,
+        }),
+      })),
+      call: async () => {
+        const written = await api.reparentTask(task.id, parentId);
+        if (orderedIds.length > 1) {
+          written.push(...(await api.reorderTasks(orderedIds)));
+        }
+        landed(written);
+        settleInPlace({ taskId: moving.id, parentId: parentId });
+        return written;
+      },
+      delay: DEBOUNCED_MILLISECONDS,
+      doing:
+        parentId === null
+          ? "make that a task of its own"
+          : "move that task under another",
+    });
+  }
+
   function move(
     taskId: number,
     destination: Attribute[],
@@ -366,7 +478,7 @@ export function useTaskActions(
       edited: held.map((task, index) => ({
         before: task,
         showing: withChanges(task, {
-          ...(task.id === taskId ? changes : {}),
+          ...(task.id === taskId ? { ...changes, parentId: null } : {}),
           sortOrder: slots[index] ?? task.sortOrder,
         }),
       })),
@@ -380,13 +492,17 @@ export function useTaskActions(
             )),
           );
         }
-        if (Object.keys(changes).length > 0) {
-          written.push(await api.updateTask(taskId, changes));
-        }
+        written.push(
+          await api.updateTask(taskId, {
+            ...changes,
+            parentId: null,
+          }),
+        );
         if (orderedIds.length > 1) {
           written.push(...(await api.reorderTasks(orderedIds)));
         }
         landed(written);
+        settleInPlace({ taskId: taskId, parentId: null });
         return written;
       },
       delay: DEBOUNCED_MILLISECONDS,
@@ -415,5 +531,6 @@ export function useTaskActions(
     swipeLeft: (task: CreatedTask) => swipeLeft.mutate(task),
     swipeRight: (task: CreatedTask) => swipeRight.mutate(task),
     move: move,
+    reparent: reparent,
   };
 }

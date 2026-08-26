@@ -56,22 +56,50 @@ export function inLayout(
   if (held.size === 0) {
     return tasks;
   }
-  return tasks.map((task) => {
-    const pending = held.get(task.id);
-    const subtasks = task.subtasks
-      ? inLayout(task.subtasks, held)
-      : task.subtasks;
-    if (!pending) {
-      return { ...task, subtasks: subtasks };
+
+  const placed: { task: CreatedTask; parentId: number | null }[] = [];
+
+  function gather(
+    list: CreatedTask[],
+    parentId: number | null,
+  ): void {
+    for (const task of list) {
+      const pending = held.get(task.id);
+      const shown = pending
+        ? {
+            ...task,
+            ...pending,
+            state: task.state,
+            finishedAt: task.finishedAt,
+          }
+        : task;
+      placed.push({
+        task: shown,
+        parentId: pending ? shown.parentId : parentId,
+      });
+      gather(task.subtasks ?? [], task.id);
     }
-    return {
+  }
+
+  gather(tasks, null);
+
+  const children = new Map<number, CreatedTask[]>();
+  for (const { task, parentId } of placed) {
+    if (parentId === null) {
+      continue;
+    }
+    children.set(parentId, [...(children.get(parentId) ?? []), task]);
+  }
+
+  return placed
+    .filter(({ parentId }) => parentId === null)
+    .map(({ task }) => ({
       ...task,
-      ...pending,
-      state: task.state,
-      finishedAt: task.finishedAt,
-      subtasks: subtasks,
-    };
-  });
+      parentId: null,
+      subtasks: (children.get(task.id) ?? []).sort(
+        (left, right) => left.sortOrder - right.sortOrder,
+      ),
+    }));
 }
 
 function forget(taskIds: number[]): void {

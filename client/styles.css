@@ -575,12 +575,6 @@ a {
   color: var(--chip-text);
 }
 
-.drop-line {
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-  margin: 0.2rem 0;
-}
 
 .tag {
   color: var(--tag);
@@ -875,8 +869,15 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
+  max-height: min(60vh, 32rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   animation: drop-in var(--motion-menu) var(--ease);
   transform-origin: top;
+}
+
+.menu > * {
+  flex-shrink: 0;
 }
 
 .menu[data-anchor="title"] {
@@ -885,8 +886,13 @@ a {
 
 .menu[data-anchor="right"] {
   right: 0;
-  gap: 1.15rem;
   padding: 0.9rem;
+}
+
+.menu-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
 }
 
 .menu-reveal {
@@ -1020,13 +1026,6 @@ a {
   font-weight: 600;
 }
 
-.menu.changes {
-  width: min(22rem, 84vw);
-  max-height: 60vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  gap: 0;
-}
 
 .menu-head {
   display: flex;
@@ -1046,18 +1045,6 @@ a {
   margin: 0;
 }
 
-.menu.changes > * {
-  flex-shrink: 0;
-}
-
-.menu.changes .event {
-  padding: 0.7rem 0.55rem;
-  background: var(--raised);
-}
-
-.menu.changes .event-track:last-child .event {
-  border-bottom: 0;
-}
 
 .here-dot {
   width: 0.45rem;
@@ -1067,7 +1054,7 @@ a {
   flex-shrink: 0;
 }
 
-.task-shell[data-moving="true"] {
+.task-shell[data-moving="true"] > * {
   opacity: 0.25;
 }
 
@@ -1584,30 +1571,31 @@ a {
 .event-track {
   position: relative;
   overflow: hidden;
+  border-radius: 10px;
 }
 
-.event-action {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 1.15rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ground);
-  background: var(--accent);
-}
 
 .event {
   position: relative;
-  padding: 0.85rem 0;
-  border-bottom: 1px solid var(--hairline);
-  background: var(--ground);
+  padding: 0.55rem;
+  border-radius: 10px;
+  background: var(--raised);
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.event .here-dot {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.6rem;
+}
+
+.event-summary {
+  display: block;
+  padding-right: 1rem;
+  font-size: 0.88rem;
+  line-height: 1.35;
 }
 
 .event[data-swiping="false"] {
@@ -1872,4 +1860,28 @@ a {
   border: none;
   border-radius: 50%;
   background: var(--accent);
+}
+
+.task-shell {
+  position: relative;
+}
+
+.task-shell[data-drop="before"]::before,
+.task-shell[data-drop="after"]::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.task-shell[data-drop="before"]::before {
+  top: 0;
+}
+
+.task-shell[data-drop="after"]::after {
+  bottom: 0;
 }

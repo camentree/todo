@@ -67,6 +67,7 @@ export interface Event {
   source: EventSource;
   summary: string;
   createdAt: string;
+  seenAt: string | null;
 }
 
 export type GroupByField =

@@ -149,6 +149,16 @@ api.delete("/comments/:id", async (context) => {
   return context.json({ ok: true });
 });
 
+api.post("/tasks/:id/parent", async (context) => {
+  const body = await context.req.json();
+  return context.json(
+    await tasks.reparent({
+      id: numberParam(context.req.param("id")),
+      parentId: body.parentId === null ? null : Number(body.parentId),
+    }),
+  );
+});
+
 api.post("/tasks/archive", async (context) => {
   const body = await context.req.json();
   return context.json(await tasks.archive(body.ids));
@@ -164,8 +174,8 @@ api.post("/tasks/reorder", async (context) => {
   return context.json(await tasks.reorder(body.ids));
 });
 
-api.get("/events/unseen", async (context) => {
-  return context.json(await events.unseen());
+api.get("/events", async (context) => {
+  return context.json(await events.recent());
 });
 
 api.post("/events/seen", async (context) => {
@@ -175,5 +185,10 @@ api.post("/events/seen", async (context) => {
 
 api.post("/events/:id/seen", async (context) => {
   await events.markSeen(numberParam(context.req.param("id")));
+  return context.json({ ok: true });
+});
+
+api.post("/events/:id/unseen", async (context) => {
+  await events.markUnseen(numberParam(context.req.param("id")));
   return context.json({ ok: true });
 });

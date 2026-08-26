@@ -78,98 +78,100 @@ export function Settings({
 
   return (
     <Menu anchor="right" onClose={onClose}>
-      <Field label="Group by" row>
-        <Select
-          value={view.groupBy}
-          options={GROUP_OPTIONS.map((option) => ({
-            value: option.field,
-            label: option.label,
-          }))}
-          onChange={(groupBy) => onViewChange({ groupBy: groupBy })}
-        />
-      </Field>
+      <div className="menu-form">
+        <Field label="Group by" row>
+          <Select
+            value={view.groupBy}
+            options={GROUP_OPTIONS.map((option) => ({
+              value: option.field,
+              label: option.label,
+            }))}
+            onChange={(groupBy) => onViewChange({ groupBy: groupBy })}
+          />
+        </Field>
 
-      <Field label="Order by" row>
-        <Select
-          value={view.orderBy}
-          options={offered.map((option) => ({
-            value: option.field,
-            label: option.label,
-          }))}
-          onChange={(orderBy) => onViewChange({ orderBy: orderBy })}
-        />
-      </Field>
+        <Field label="Order by" row>
+          <Select
+            value={view.orderBy}
+            options={offered.map((option) => ({
+              value: option.field,
+              label: option.label,
+            }))}
+            onChange={(orderBy) => onViewChange({ orderBy: orderBy })}
+          />
+        </Field>
 
-      <div
-        className="collapsible menu-reveal"
-        data-open={ordering?.directional ?? false}
-      >
-        <div>
-          <MenuSwitch
-            label="Ascending"
-            on={view.orderDirection === "asc"}
-            onChange={(on) =>
-              onViewChange({ orderDirection: on ? "asc" : "desc" })
+        <div
+          className="collapsible menu-reveal"
+          data-open={ordering?.directional ?? false}
+        >
+          <div>
+            <MenuSwitch
+              label="Ascending"
+              on={view.orderDirection === "asc"}
+              onChange={(on) =>
+                onViewChange({ orderDirection: on ? "asc" : "desc" })
+              }
+            />
+          </div>
+        </div>
+
+        <div
+          className="collapsible menu-reveal"
+          data-wide-only={true}
+          data-open={view.groupBy !== "none"}
+        >
+          <div>
+            <MenuSwitch
+              label="Columns"
+              on={view.layout === "columns"}
+              onChange={(on) =>
+                onViewChange({ layout: on ? "columns" : "stacked" })
+              }
+            />
+          </div>
+        </div>
+
+        <Field
+          label={
+            <>
+              History{" "}
+              <span className="menu-note">
+                {historyLabel(historyMonths)}
+              </span>
+            </>
+          }
+        >
+          <input
+            type="range"
+            min={0}
+            max={HISTORY_STOPS.length - 1}
+            step={1}
+            value={HISTORY_STOPS.indexOf(historyMonths)}
+            onChange={(event) =>
+              changeGlobal({
+                historyMonths: historyAt(Number(event.target.value)),
+              })
             }
           />
-        </div>
-      </div>
+        </Field>
 
-      <div
-        className="collapsible menu-reveal"
-        data-wide-only={true}
-        data-open={view.groupBy !== "none"}
-      >
-        <div>
-          <MenuSwitch
-            label="Columns"
-            on={view.layout === "columns"}
-            onChange={(on) =>
-              onViewChange({ layout: on ? "columns" : "stacked" })
-            }
-          />
-        </div>
-      </div>
-
-      <Field
-        label={
-          <>
-            History{" "}
-            <span className="menu-note">
-              {historyLabel(historyMonths)}
-            </span>
-          </>
-        }
-      >
-        <input
-          type="range"
-          min={0}
-          max={HISTORY_STOPS.length - 1}
-          step={1}
-          value={HISTORY_STOPS.indexOf(historyMonths)}
-          onChange={(event) =>
-            changeGlobal({
-              historyMonths: historyAt(Number(event.target.value)),
-            })
+        <MenuSwitch
+          label="Custom appearance"
+          on={theme !== "system"}
+          onChange={(on) =>
+            onThemeChange(on ? preferredTheme() : "system")
           }
         />
-      </Field>
 
-      <MenuSwitch
-        label="Custom appearance"
-        on={theme !== "system"}
-        onChange={(on) =>
-          onThemeChange(on ? preferredTheme() : "system")
-        }
-      />
-
-      {theme !== "system" && (
-        <MenuSwitch
-          label="Dark mode"
-          on={theme === "dark"}
-          onChange={(on) => onThemeChange(on ? "dark" : "light")}
-        />
-      )}
+        {theme !== "system" && (
+          <MenuSwitch
+            label="Dark mode"
+            on={theme === "dark"}
+            onChange={(on) => onThemeChange(on ? "dark" : "light")}
+          />
+        )}
+      </div>
     </Menu>
   );
 }

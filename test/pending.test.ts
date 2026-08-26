@@ -111,3 +111,55 @@ describe("what layout sees while a change is waiting to be sent", () => {
     expect(inLayout(tasks, new Map())).toBe(tasks);
   });
 });
+
+describe("where layout puts a task that is being moved", () => {
+  test("a task waiting to become a subtask shows up under its new parent", () => {
+    const shown = inLayout(
+      [task({ id: 1 }), task({ id: 2, title: "moving" })],
+      pending(task({ id: 2, title: "moving", parentId: 1 })),
+    );
+
+    expect(shown.map((held) => held.id)).toEqual([1]);
+    expect(shown[0]?.subtasks?.map((held) => held.id)).toEqual([2]);
+  });
+
+  test("a subtask waiting to become a task shows up at the top level", () => {
+    const shown = inLayout(
+      [task({ id: 1, subtasks: [task({ id: 2, parentId: 1 })] })],
+      pending(task({ id: 2, parentId: null })),
+    );
+
+    expect(shown.map((held) => held.id)).toEqual([1, 2]);
+    expect(shown[0]?.subtasks).toEqual([]);
+  });
+
+  test("subtasks are shown in the order they are waiting to be in", () => {
+    const shown = inLayout(
+      [
+        task({
+          id: 1,
+          subtasks: [
+            task({ id: 2, parentId: 1, sortOrder: 0 }),
+            task({ id: 3, parentId: 1, sortOrder: 1 }),
+          ],
+        }),
+      ],
+      pending(task({ id: 3, parentId: 1, sortOrder: -1 })),
+    );
+
+    expect(shown[0]?.subtasks?.map((held) => held.id)).toEqual([3, 2]);
+  });
+
+  test("a task moved between parents leaves the one it came from", () => {
+    const shown = inLayout(
+      [
+        task({ id: 1, subtasks: [task({ id: 3, parentId: 1 })] }),
+        task({ id: 2, subtasks: [] }),
+      ],
+      pending(task({ id: 3, parentId: 2 })),
+    );
+
+    expect(shown[0]?.subtasks).toEqual([]);
+    expect(shown[1]?.subtasks?.map((held) => held.id)).toEqual([3]);
+  });
+});

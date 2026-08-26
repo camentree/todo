@@ -4,22 +4,26 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { useNavigate } from "react-router-dom";
+
 import { api } from "../data/api.ts";
 import { dismissFailure, useFailures } from "../data/failures.ts";
 import { formatWhen } from "../tasks/format.ts";
-import { usePointerSwipe } from "../hooks/usePointerSwipe.ts";
 import { Label } from "./ui/Label.tsx";
 import { Menu } from "./ui/Menu.tsx";
+import { Swipeable } from "./ui/Swipeable.tsx";
 import type { Event as TaskEvent } from "@shared/types.ts";
 
 export function Changes({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const failures = useFailures();
   const { data: events = [] } = useQuery({
-    queryKey: ["events", "unseen"],
-    queryFn: api.unseenEvents,
+    queryKey: ["events", "recent"],
+    queryFn: api.recentEvents,
     refetchInterval: 300_000,
   });
+  const unseen = events.filter((event) => event.seenAt === null);
 
   const markSeen = useMutation({
     mutationFn: api.markEventsSeen,
@@ -29,13 +33,21 @@ export function Changes({ onClose }: { onClose: () => void }) {
     },
   });
 
-  const seenOne = useMutation({
-    mutationFn: (id: number) => api.markEventSeen(id),
-    onMutate: (id: number) => {
+  const markOne = useMutation({
+    mutationFn: ({ id, seen }: { id: number; seen: boolean }) =>
+      seen ? api.markEventSeen(id) : api.markEventUnseen(id),
+    onMutate: ({ id, seen }) => {
       queryClient.setQueryData(
-        ["events", "unseen"],
+        ["events", "recent"],
         (cached: TaskEvent[] = []) =>
-          cached.filter((event) => event.id !== id),
+          cached.map((event) =>
+            event.id === id
+              ? {
+                  ...event,
+                  seenAt: seen ? new Date().toISOString() : null,
+                }
+              : event,
+          ),
       );
     },
     onSettled: () =>
@@ -46,7 +58,7 @@ export function Changes({ onClose }: { onClose: () => void }) {
     <Menu anchor="right" onClose={onClose}>
       <div className="menu-head">
         <Label>Changes</Label>
-        {events.length > 0 && (
+        {unseen.length > 0 && (
           <button
             type="button"
             className="link"
@@ -77,7 +89,19 @@ export function Changes({ onClose }: { onClose: () => void }) {
           <EventRow
             key={event.id}
             event={event}
-            onSeen={() => seenOne.mutate(event.id)}
+            onSeen={() =>
+              markOne.mutate({
+                id: event.id,
+                seen: event.seenAt === null,
+              })
+            }
+            onOpen={() => {
+              markOne.mutate({ id: event.id, seen: true });
+              if (event.taskId !== null) {
+                onClose();
+                navigate(`/${event.taskId}`);
+              }
+            }}
           />
         ))
       )}
@@ -88,35 +112,30 @@ export function Changes({ onClose }: { onClose: () => void }) {
 function EventRow({
   event,
   onSeen,
+  onOpen,
 }: {
   event: TaskEvent;
   onSeen: () => void;
+  onOpen: () => void;
 }) {
-  const swipe = usePointerSwipe({
-    onRight: onSeen,
-  });
+  const unread = event.seenAt === null;
 
   return (
-    <div className="event-track">
-      {swipe.swiping && <div className="event-action">Seen</div>}
-      <div
-        className="event"
-        ref={swipe.ref}
-        style={{ transform: `translateX(${swipe.offset}px)` }}
-        data-swiping={swipe.swiping}
-        onPointerDown={swipe.down}
-        onPointerMove={swipe.move}
-        onPointerUp={swipe.up}
-        onPointerCancel={swipe.up}
-      >
-        {event.taskTitle && (
-          <div className="event-title">{event.taskTitle}</div>
-        )}
-        <div>{event.summary}</div>
-        <div className="event-when">
-          {formatWhen(event.createdAt)} · {event.source}
-        </div>
+    <Swipeable
+      className="event"
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      right={{ name: unread ? "Seen" : "Unseen", action: onSeen }}
+    >
+      {event.seenAt === null && <span className="here-dot" />}
+      {event.taskTitle && (
+        <div className="event-title">{event.taskTitle}</div>
+      )}
+      <div className="event-summary">{event.summary}</div>
+      <div className="event-when">
+        {formatWhen(event.createdAt)} · {event.source}
       </div>
-    </div>
+    </Swipeable>
   );
 }

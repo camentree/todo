@@ -294,10 +294,15 @@ async function seed(): Promise<void> {
   await recurring.rollOver();
 
   await sql`
-    insert into todo.events (task_id, source, summary) values
-      (null, 'agent', 'Claude asked something on "Refactor the auth middleware"'),
-      (null, 'agent', '"Cache the health view refresh" moved to In Review'),
-      (null, 'mcp', 'Added "Order more coffee" from a conversation')
+    insert into todo.events (task_id, source, summary)
+    select id, 'agent', 'Claude asked something on "' || title || '"'
+    from todo.tasks where title = 'Refactor the auth middleware'
+    union all
+    select id, 'agent', '"' || title || '" moved to In Review'
+    from todo.tasks where title = 'Cache the health view refresh'
+    union all
+    select id, 'mcp', 'Added "' || title || '" from a conversation'
+    from todo.tasks where title = 'Order more coffee'
   `;
 
   await sql.end();
