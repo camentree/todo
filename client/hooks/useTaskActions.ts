@@ -334,6 +334,11 @@ export function useTaskActions(
           addToLedger(task);
         }
         landed(written);
+        if (before.recurringTaskId !== null && !isTerminal(next)) {
+          void queryClient.invalidateQueries({
+            queryKey: [TASKS_KEY],
+          });
+        }
         return written;
       },
       delay: HOLD_MILLISECONDS,

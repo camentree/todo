@@ -297,6 +297,20 @@ export async function setState(
   source: EventSource = "app",
 ): Promise<CreatedTask[]> {
   const updated = await sql.begin(async (transaction) => {
+    if (!isTerminal(state)) {
+      await transaction`
+        delete from todo.tasks as successor
+        using todo.tasks as undone
+        where undone.id = ${id}
+          and undone.recurring_task_id is not null
+          and successor.recurring_task_id = undone.recurring_task_id
+          and successor.parent_id is null
+          and successor.id <> undone.id
+          and successor.state not in
+            ('complete', 'missed', 'skipped', 'archived')
+      `;
+    }
+
     const [task] = await transaction<CreatedTask[]>`
       update todo.tasks
       set state = ${state},
