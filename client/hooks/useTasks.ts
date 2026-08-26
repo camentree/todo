@@ -1,12 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api } from "../api.ts";
-import { historyStartsOn, useSettledHistory } from "../settings.ts";
+import { api } from "../data/api.ts";
+import {
+  historyStartsOn,
+  useSettledHistory,
+} from "../data/settings.ts";
 import type { CreatedTask } from "@shared/types.ts";
 
 export const TASKS_KEY = "tasks";
 
-function findTask(
+export function findTask(
   tasks: CreatedTask[],
   taskId: number,
 ): CreatedTask | undefined {

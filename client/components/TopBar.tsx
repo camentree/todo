@@ -1,16 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
+import { MenuButton } from "./ui/MenuButton.tsx";
+import { Sprite } from "./ui/Sprite.tsx";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import {
-  BellIcon,
-  Chevron,
-  SearchIcon,
-  SlidersIcon,
-} from "./icons.tsx";
-import { ChangesMenu, ScopeMenu, ViewMenu } from "./menus.tsx";
-import { api } from "../api.ts";
-import { useFailures } from "../failures.ts";
+import { Changes } from "./Changes.tsx";
+import { ScopeMenu } from "./ScopeMenu.tsx";
+import { Settings } from "./Settings.tsx";
+import { api } from "../data/api.ts";
+import { useFailures } from "../data/failures.ts";
 import type { ViewPreference } from "@shared/types.ts";
 
 type OpenMenu = "none" | "scope" | "view" | "bell";
@@ -39,19 +37,6 @@ export function TopBar({
     refetchInterval: 300_000,
   });
 
-  useEffect(() => {
-    if (menu === "none") {
-      return;
-    }
-    function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        setMenu("none");
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [menu]);
-
   return (
     <>
       <div className="topbar">
@@ -61,7 +46,7 @@ export function TopBar({
           onClick={() => setMenu(menu === "scope" ? "none" : "scope")}
         >
           <span className="topbar-name">{title}</span>
-          <Chevron open={menu === "scope"} />
+          <Sprite name="chevron" open={menu === "scope"} />
         </button>
 
         <div className="topbar-date">
@@ -70,57 +55,53 @@ export function TopBar({
 
         <div className="topbar-actions">
           {onOpenSearch && !searching && (
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Search"
-              onClick={onOpenSearch}
-            >
-              <SearchIcon />
-            </button>
+            <MenuButton
+              icon="search"
+              label="Search"
+              onToggle={onOpenSearch}
+            />
           )}
 
           {view && onViewChange && (
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Arrange"
-              data-active={menu === "view"}
-              onClick={() =>
+            <MenuButton
+              icon="sliders"
+              label="Arrange"
+              active={menu === "view"}
+              onToggle={() =>
                 setMenu(menu === "view" ? "none" : "view")
               }
-            >
-              <SlidersIcon />
-            </button>
+            />
           )}
 
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Notifications"
-            data-active={menu === "bell"}
-            onClick={() => setMenu(menu === "bell" ? "none" : "bell")}
-          >
-            <BellIcon />
-            {(unseen.length > 0 || failed.length > 0) && (
-              <span className="dot" data-failed={failed.length > 0} />
-            )}
-          </button>
+          <MenuButton
+            icon="bell"
+            label="Notifications"
+            active={menu === "bell"}
+            badge={
+              (unseen.length > 0 || failed.length > 0) && (
+                <span className="dot" data-failed={failed.length > 0} />
+              )
+            }
+            onToggle={() =>
+              setMenu(menu === "bell" ? "none" : "bell")
+            }
+          />
         </div>
 
         {menu === "scope" && (
           <ScopeMenu onClose={() => setMenu("none")} />
         )}
         {menu === "view" && view && onViewChange && (
-          <ViewMenu
+          <Settings
             view={view}
             onViewChange={onViewChange}
             searching={searching}
             finished={finished}
+            onClose={() => setMenu("none")}
           />
         )}
         {menu === "bell" && (
-          <ChangesMenu onClose={() => setMenu("none")} />
+          <Changes onClose={() => setMenu("none")} />
         )}
       </div>
 

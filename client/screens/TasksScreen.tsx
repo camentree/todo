@@ -1,61 +1,40 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import {
   useLocation,
   useNavigate,
   useParams,
 } from "react-router-dom";
 
-import { api } from "../api.ts";
-import { recordFailure } from "../failures.ts";
-import {
-  recordArchiving, 
-  recordDeferral,
-  recordDeletion,
-  recordEdit,
-  recordHiding,
-  recordStateChange,
-  redo as redoLast,
-  undo as undoLast,
-} from "../history.ts";
-import { SearchField } from "../components/SearchField.tsx";
+import { api } from "../data/api.ts";
+import { inLayout, usePending } from "../data/pending.ts";
+import { Search } from "../components/Search.tsx";
 import { TopBar } from "../components/TopBar.tsx";
-import { Shortcuts } from "../components/Shortcuts.tsx";
-import { TaskBoard } from "../components/TaskBoard.tsx";
-import { AddButton } from "../components/TaskRow.tsx";
-import { asChanges } from "../attributes.ts";
-import type { Attribute } from "../attributes.ts";
-import { TaskInfo } from "../components/TaskInfo.tsx";
+import { Help } from "../components/Help.tsx";
+import { Board } from "../components/Board.tsx";
+import { AddButton } from "../components/Row.tsx";
+import type { Attribute } from "../tasks/attributes.ts";
+import { Info } from "../components/Info.tsx";
 import {
   asTitle,
   attributeText,
-  isDueToday,
   todayAsDateString,
-} from "../format.ts";
+} from "../tasks/format.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
-import { TASKS_KEY, useTasks } from "../hooks/useTasks.ts";
+import { useTaskActions } from "../hooks/useTaskActions.ts";
+import { useTasks } from "../hooks/useTasks.ts";
 import {
   defaultView,
   SEARCH_VIEW,
   SEARCH_VIEW_KEY,
   useViewPreference,
-} from "../settings.ts";
-import type { Scope } from "../settings.ts";
-import { reassignSlots } from "@shared/ordering.ts";
+} from "../data/settings.ts";
+import type { Scope } from "../data/settings.ts";
 import { asAttributeField } from "@shared/attributes.ts";
 import { canonicalName } from "@shared/names.ts";
 import { asStage } from "@shared/stages.ts";
-import { isTerminal, type TaskState } from "@shared/states.ts";
 import { searchTasks } from "@shared/search.ts";
-import type {
-  CreatedTask,
-  Task,
-  ViewPreference,
-} from "@shared/types.ts";
+import type { CreatedTask } from "@shared/types.ts";
 export function TasksScreen() {
   const parameters = useParams();
   const location = useLocation();
@@ -109,7 +88,12 @@ export function TasksScreen() {
     queryFn: api.lists,
   });
 
-  const { tasks: everything, isPending } = useTasks();
+  const { tasks: confirmed, isPending } = useTasks();
+  const pending = usePending();
+  const everything = useMemo(
+    () => inLayout(confirmed, pending),
+    [confirmed, pending],
+  );
 
   const tasks = useMemo(
     () => everything.filter((task) => within(task, scope)),
@@ -171,17 +155,16 @@ export function TasksScreen() {
       />
 
       {searchText !== null && (
-        <SearchField
+        <Search
           text={searchText}
           onChange={setSearchText}
           onClose={() => setSearchText(null)}
         />
       )}
 
-      <TaskBoard
+      <Board
         key={pathname}
         tasks={searchText === null ? tasks : results}
-        justToggled={actions.justToggled}
         view={view}
         lists={lists}
         hiddenAttributes={searchText === null ? scopedTo(scope) : []}
@@ -195,16 +178,9 @@ export function TasksScreen() {
         capturing={capturing}
         onCapturingChange={setCapturing}
         actions={{
-          toggle: actions.toggleTask,
+          ...actions,
           open: (task) =>
             navigate(`/${[...screen, task.id].join("/")}`),
-          rename: actions.rename,
-          create: actions.create,
-          remove: actions.remove,
-          swipeLeft: actions.swipeLeft,
-          swipeRight: actions.swipeRight,
-          undo: actions.undo,
-          redo: actions.redo,
         }}
         onMove={actions.move}
       />
@@ -214,13 +190,13 @@ export function TasksScreen() {
       )}
 
       {openTaskId !== null && (
-        <TaskInfo
+        <Info
           taskId={openTaskId}
           onClose={() => navigate(pathname)}
         />
       )}
 
-      {helping && <Shortcuts onClose={() => setHelping(false)} />}
+      {helping && <Help onClose={() => setHelping(false)} />}
     </>
   );
 }
@@ -384,422 +360,4 @@ function emptyFor(scope: Scope): string {
     return "Nothing finished yet.";
   }
   return "Nothing here.";
-}
-
-const HOLD_MILLISECONDS = 2000;
-const FLUSH_MILLISECONDS = 500;
-const LAST_LIST_KEY = "todo.lastList";
-
-function rememberList(list: string): void {
-  window.localStorage.setItem(LAST_LIST_KEY, list);
-}
-
-function lastUsedList(): string | null {
-  return window.localStorage.getItem(LAST_LIST_KEY);
-}
-
-type SwipeRightOutcome =
-  | "deleted"
-  | "unhidden"
-  | "deferred"
-  | "hidden";
-
-function recordSwipeRight({
-  task,
-  outcome,
-}: {
-  task: CreatedTask;
-  outcome: SwipeRightOutcome;
-}): void {
-  if (outcome === "deleted") {
-    recordDeletion(task);
-    return;
-  }
-  if (outcome === "deferred") {
-    recordDeferral(task);
-    return;
-  }
-  recordHiding({ task: task, hiding: outcome === "hidden" });
-}
-
-interface QueuedMove {
-  taskId: number;
-  destinationAttributes: Partial<Task>;
-  orderedIds: number[];
-}
-
-function without(
-  tasks: CreatedTask[],
-  ids: number[],
-): CreatedTask[] {
-  return tasks
-    .filter((task) => !ids.includes(task.id))
-    .map((task) =>
-      task.subtasks
-        ? { ...task, subtasks: without(task.subtasks, ids) }
-        : task,
-    );
-}
-
-function holdsTask(tasks: CreatedTask[], taskId: number): boolean {
-  return tasks.some(
-    (task) =>
-      task.id === taskId || holdsTask(task.subtasks ?? [], taskId),
-  );
-}
-
-function looksLikeTasks(value: unknown): value is CreatedTask[] {
-  return (
-    Array.isArray(value) &&
-    (value.length === 0 ||
-      (typeof value[0] === "object" &&
-        value[0] !== null &&
-        "state" in value[0] &&
-        "list" in value[0]))
-  );
-}
-
-function patched({
-  tasks,
-  id,
-  changes,
-}: {
-  tasks: CreatedTask[];
-  id: number;
-  changes: Partial<Task>;
-}): CreatedTask[] {
-  return tasks.map((task): CreatedTask => {
-    const subtasks = task.subtasks
-      ? patched({ tasks: task.subtasks, id: id, changes: changes })
-      : task.subtasks;
-
-    if (task.id !== id) {
-      return { ...task, subtasks: subtasks };
-    }
-
-    return {
-      ...task,
-      ...changes,
-      id: task.id,
-      list: changes.list ?? task.list,
-      subtasks:
-        changes.state === "complete" && subtasks
-          ? subtasks.map((subtask) => ({
-              ...subtask,
-              state: "complete" as TaskState,
-            }))
-          : subtasks,
-    };
-  });
-}
-
-function useTaskActions(
-  onManualOrder?: (changes: Partial<ViewPreference>) => void,
-) {
-  const queryClient = useQueryClient();
-  const [justToggled, setJustToggled] = useState<
-    Map<number, TaskState>
-  >(new Map());
-  const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
-  const pendingMoves = useRef<QueuedMove[]>([]);
-  const moveTimer = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
-  function patchEverywhere(id: number, changes: Partial<Task>): void {
-    queryClient.setQueriesData({ queryKey: [TASKS_KEY] }, (cached: unknown) =>
-      looksLikeTasks(cached)
-        ? patched({ tasks: cached, id: id, changes: changes })
-        : cached,
-    );
-  }
-
-  function takeBack(ids: number[]): void {
-    queryClient.setQueriesData({ queryKey: [TASKS_KEY] }, (cached: unknown) =>
-      looksLikeTasks(cached) ? without(cached, ids) : cached,
-    );
-  }
-
-  function addToLedger(task: CreatedTask): void {
-    queryClient.setQueriesData(
-      { queryKey: [TASKS_KEY] },
-      (cached: unknown) => {
-        if (!looksLikeTasks(cached) || holdsTask(cached, task.id)) {
-          return cached;
-        }
-        if (task.parentId === null) {
-          return [...cached, task];
-        }
-        return cached.map((held) =>
-          held.id === task.parentId
-            ? { ...held, subtasks: [...(held.subtasks ?? []), task] }
-            : held,
-        );
-      },
-    );
-  }
-
-  function landed(written: CreatedTask[]): void {
-    for (const task of written) {
-      patchEverywhere(task.id, task);
-    }
-  }
-
-  function report(doing: string) {
-    return (error: unknown) =>
-      recordFailure({ doing: doing, error: error });
-  }
-
-  function toggleState(task: CreatedTask): void {
-    const showing = justToggled.get(task.id) ?? task.state;
-    const next: TaskState = isTerminal(showing)
-      ? "to_do"
-      : "complete";
-
-    const running = timers.current.get(task.id);
-    if (running) {
-      clearTimeout(running);
-    }
-    const written = api.setState(task.id, next).then(
-      (updated: CreatedTask) => ({ updated: updated, error: null }),
-      (error: unknown) => ({ updated: null, error: error }),
-    );
-
-    setJustToggled((current) => new Map(current).set(task.id, next));
-    timers.current.set(
-      task.id,
-      setTimeout(() => {
-        timers.current.delete(task.id);
-        void written.then(({ updated, error }) => {
-          setJustToggled((current) => {
-            const settled = new Map(current);
-            settled.delete(task.id);
-            return settled;
-          });
-          if (updated) {
-            patchEverywhere(updated.id, updated);
-            recordStateChange({ task: task, next: next });
-            return;
-          }
-          report("tick that off")(error);
-        });
-      }, HOLD_MILLISECONDS),
-    );
-  }
-
-  function someList(): string {
-    const known = queryClient.getQueryData<string[]>(["lists"]) ?? [];
-    const remembered = lastUsedList();
-    return remembered && known.includes(remembered)
-      ? remembered
-      : (known[0] ?? "");
-  }
-
-  const create = useMutation({
-    mutationFn: (changes: Partial<Task>) =>
-      api.createTask({
-        ...changes,
-        title: changes.title ?? "",
-        list: changes.list || someList(),
-      }),
-    onSuccess: (task: CreatedTask) => {
-      rememberList(task.list);
-      addToLedger(task);
-      void queryClient.invalidateQueries({ queryKey: ["lists"] });
-    },
-    onError: report("add that task"),
-  });
-
-  const rename = useMutation({
-    mutationFn: ({
-      task,
-      changes,
-    }: {
-      task: CreatedTask;
-      changes: Partial<Task>;
-    }) => api.updateTask(task.id, changes),
-    onMutate: ({ task, changes }) => {
-      recordEdit({ task: task, changes: changes });
-      patchEverywhere(task.id, changes);
-    },
-    onSuccess: (written: CreatedTask) =>
-      patchEverywhere(written.id, written),
-    onError: (error: unknown, { task }) => {
-      patchEverywhere(task.id, task);
-      report("save that edit")(error);
-    },
-  });
-
-  const remove = useMutation({
-    mutationFn: (task: CreatedTask) => api.deleteTask(task.id),
-    onSuccess: ({ removed }, task: CreatedTask) => {
-      takeBack(removed);
-      recordDeletion(task);
-    },
-    onError: report("delete that task"),
-  });
-
-  const swipeLeft = useMutation({
-    mutationFn: (task: CreatedTask) =>
-      task.archivedAt
-        ? api.unarchiveTasks([task.id])
-        : api.archiveTasks([task.id]),
-    onSuccess: (written: CreatedTask[], task: CreatedTask) => {
-      landed(written);
-      recordArchiving({
-        task: task,
-        archiving: task.archivedAt === null,
-      });
-    },
-    onError: report("archive that task"),
-  });
-
-  const swipeRight = useMutation({
-    mutationFn: async (
-      task: CreatedTask,
-    ): Promise<{
-      outcome: SwipeRightOutcome;
-      written: CreatedTask[];
-    }> => {
-      if (task.archivedAt) {
-        const { removed } = await api.deleteTask(task.id);
-        takeBack(removed);
-        return { outcome: "deleted", written: [] };
-      }
-      if (task.state === "hidden") {
-        return {
-          outcome: "unhidden",
-          written: await api.unhideTask(task.id),
-        };
-      }
-      if (task.recurringTaskId || isDueToday(task.dueDate)) {
-        return {
-          outcome: "deferred",
-          written: await api.deferTask(task.id),
-        };
-      }
-      return {
-        outcome: "hidden",
-        written: await api.hideTask(task.id),
-      };
-    },
-    onSuccess: ({ outcome, written }, task: CreatedTask) => {
-      landed(written);
-      recordSwipeRight({ task: task, outcome: outcome });
-    },
-    onError: report("put that task away"),
-  });
-
-  function reorderInMemory(orderedIds: number[]): void {
-    queryClient.setQueriesData(
-      { queryKey: [TASKS_KEY] },
-      (cached: unknown) => {
-        if (!looksLikeTasks(cached)) {
-          return cached;
-        }
-        const held = orderedIds
-          .map((id) => cached.find((task) => task.id === id))
-          .filter((task): task is CreatedTask => task !== undefined);
-        if (held.length !== orderedIds.length) {
-          return cached;
-        }
-        const slots = reassignSlots(
-          held.map((task) => task.sortOrder),
-        );
-        const moved = new Map(
-          orderedIds.map((id, index) => [id, slots[index] ?? 0]),
-        );
-        return cached.map((task) =>
-          moved.has(task.id)
-            ? {
-                ...task,
-                sortOrder: moved.get(task.id) ?? task.sortOrder,
-              }
-            : task,
-        );
-      },
-    );
-  }
-
-  function flushMoves(): void {
-    const queued = [...pendingMoves.current];
-    pendingMoves.current = [];
-
-    void (async () => {
-      for (const { taskId, destinationAttributes, orderedIds } of queued) {
-        if (destinationAttributes.stage !== undefined) {
-          landed([
-            await api.setState(
-              taskId,
-              destinationAttributes.stage === "complete" ? "complete" : "to_do",
-            ),
-          ]);
-        }
-        if (Object.keys(destinationAttributes).length > 0) {
-          landed([await api.updateTask(taskId, destinationAttributes)]);
-        }
-        if (orderedIds.length > 1) {
-          landed(await api.reorderTasks(orderedIds));
-        }
-      }
-    })().catch(report("move that task"));
-  }
-
-  function move(
-    taskId: number,
-    destination: Attribute[],
-    orderedIds: number[],
-  ): void {
-    const destinationAttributes = asChanges(destination);
-    if (Object.keys(destinationAttributes).length > 0) {
-      patchEverywhere(taskId, {
-        ...destinationAttributes,
-        ...(destinationAttributes.stage === "complete"
-          ? { state: "complete" as TaskState }
-          : {}),
-      });
-    }
-    reorderInMemory(orderedIds);
-
-    pendingMoves.current.push({
-      taskId: taskId,
-      destinationAttributes: destinationAttributes,
-      orderedIds: orderedIds,
-    });
-    if (moveTimer.current) {
-      clearTimeout(moveTimer.current);
-    }
-    moveTimer.current = setTimeout(flushMoves, FLUSH_MILLISECONDS);
-  }
-
-  return {
-    justToggled: justToggled,
-    undo: async () => {
-      if (await undoLast()) {
-        void queryClient.invalidateQueries();
-      }
-    },
-    redo: async () => {
-      if (await redoLast()) {
-        void queryClient.invalidateQueries();
-      }
-    },
-    toggleTask: toggleState,
-    rename: (task: CreatedTask, changes: Partial<Task>) =>
-      rename.mutate({ task: task, changes: changes }),
-    create: (changes: Partial<Task>) => create.mutateAsync(changes),
-    remove: (task: CreatedTask) => remove.mutate(task),
-    swipeLeft: (task: CreatedTask) => swipeLeft.mutate(task),
-    swipeRight: (task: CreatedTask) => swipeRight.mutate(task),
-    move: (
-      taskId: number,
-      destination: Attribute[],
-      orderedIds: number[],
-    ) => {
-      onManualOrder?.({ orderBy: "manual", orderDirection: "asc" });
-      move(taskId, destination, orderedIds);
-    },
-  };
 }

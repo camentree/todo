@@ -1,20 +1,24 @@
 import { useEffect, useRef, useState } from "react";
+import { Sprite } from "./ui/Sprite.tsx";
 import type { ReactNode, RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Chevron, InfoIcon } from "./icons.tsx";
-import { ParseableTitle } from "./ParseableTitle.tsx";
+import { Title } from "./Title.tsx";
 import {
   AttributeChips,
   attributesOf,
   withoutAttribute,
-} from "./TaskAttributes.tsx";
+} from "./Attributes.tsx";
+import { Note } from "./ui/Note.tsx";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { useKeyboardSwipe } from "../hooks/useKeyboardSwipe.ts";
-import { SWIPE_FRACTION, usePointerSwipe } from "../hooks/usePointerSwipe.ts";
-import { renameChanges } from "../taskLine.ts";
-import { linkTo } from "../attributes.ts";
-import type { Attribute } from "../attributes.ts";
+import {
+  SWIPE_FRACTION,
+  usePointerSwipe,
+} from "../hooks/usePointerSwipe.ts";
+import { renameChanges } from "../tasks/taskLine.ts";
+import { linkTo } from "../tasks/attributes.ts";
+import type { Attribute } from "../tasks/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
 
@@ -25,7 +29,7 @@ export interface SwipeAction {
   action: () => void;
 }
 
-export function TaskRow({
+export function Row({
   task,
   isEditing,
   isFocused = false,
@@ -230,7 +234,9 @@ export function TaskRow({
     <div className="swipe-track">
       <div className="swipe-band">
         {revealing === "left" && (
-          <div className="swipe-action archive">{swipeLeft?.name}</div>
+          <div className="swipe-action archive">
+            {swipeLeft?.name}
+          </div>
         )}
         {revealing === "right" && (
           <div className="swipe-action defer">{swipeRight?.name}</div>
@@ -327,7 +333,7 @@ export function TaskRow({
                   onInfoOpen();
                 }}
               >
-                <InfoIcon />
+                <Sprite name="info" />
               </button>
             )}
 
@@ -346,7 +352,7 @@ export function TaskRow({
                     {finished}/{children.length}
                   </span>
                 )}
-                <Chevron open={expanded} />
+                <Sprite name="chevron" open={expanded} />
               </button>
             )}
           </div>
@@ -381,6 +387,7 @@ export function TaskRow({
           <div>
             {note.length > 0 && (
               <Note
+                className="task-note"
                 note={note}
                 onCommit={(next) => onCommit({ note: next })}
               />
@@ -395,76 +402,6 @@ export function TaskRow({
         </div>
       )}
     </div>
-  );
-}
-
-function Note({
-  note,
-  onCommit,
-}: {
-  note: string;
-  onCommit: (next: string | null) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(note);
-  const [caretAt, setCaretAt] = useState<number | null>(null);
-  const noteRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!editing) {
-      return;
-    }
-    noteRef.current?.focus({ preventScroll: true });
-    if (caretAt !== null) {
-      noteRef.current?.setSelectionRange(caretAt, caretAt);
-    }
-  }, [editing, caretAt]);
-
-  useEffect(() => {
-    const textarea = noteRef.current;
-    if (!textarea) {
-      return;
-    }
-    textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, [draft, editing]);
-
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        className="task-note"
-        onClick={(event) => {
-          setDraft(note);
-          setCaretAt(caretIndexAt(event));
-          setEditing(true);
-        }}
-      >
-        {note}
-      </button>
-    );
-  }
-
-  return (
-    <textarea
-      ref={noteRef}
-      className="task-note editing"
-      rows={1}
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          setDraft(note);
-          setEditing(false);
-        }
-      }}
-      onBlur={() => {
-        setEditing(false);
-        if (draft.trim() !== note) {
-          onCommit(draft.trim() || null);
-        }
-      }}
-    />
   );
 }
 
@@ -505,7 +442,7 @@ function TitleField({
   }, [takeFocus, caretAt, inputRef]);
 
   return (
-    <ParseableTitle
+    <Title
       value={value}
       onChange={onChange}
       inputRef={inputRef}

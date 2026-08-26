@@ -8,17 +8,100 @@ import type {
   SyntheticEvent,
 } from "react";
 
-import { api } from "../api.ts";
-import {
-  sigilBefore,
-  suggestionStep,
-  suggestionsFor,
-} from "../suggestions.ts";
+import { api } from "../data/api.ts";
 import { SEARCHABLE_STATES } from "@shared/states.ts";
+
+const MOST_SUGGESTIONS = 5;
+
+interface Opening {
+  sigil: string;
+  typed: string;
+  start: number;
+}
+
+function sigilBefore({
+  input,
+  caret,
+}: {
+  input: string;
+  caret: number;
+}): Opening | null {
+  const before = input.slice(0, caret);
+  const found = before.match(/(?:^|\s)([#@/!:])(\S*)$/);
+  const sigil = found?.[1];
+  const typed = found?.[2];
+  if (!sigil || typed === undefined) {
+    return null;
+  }
+  return {
+    sigil: sigil,
+    typed: typed.toLowerCase(),
+    start: before.length - typed.length - 1,
+  };
+}
+
+function suggestionsFor({
+  opening,
+  lists,
+  knownTags,
+  knownWho,
+  stages,
+  states,
+}: {
+  opening: Opening | null;
+  lists: string[];
+  knownTags: string[];
+  knownWho: string[];
+  stages: string[];
+  states: readonly string[];
+}): string[] {
+  if (!opening) {
+    return [];
+  }
+  const candidates = {
+    "/": lists,
+    "#": knownTags,
+    "@": knownWho,
+    "!": stages,
+    ":": states,
+  }[opening.sigil];
+
+  return (candidates ?? [])
+    .filter(
+      (candidate) =>
+        candidate.toLowerCase().startsWith(opening.typed) &&
+        candidate.toLowerCase() !== opening.typed,
+    )
+    .slice(0, MOST_SUGGESTIONS);
+}
+
+function suggestionStep(
+  event: KeyboardEvent<HTMLElement>,
+): number {
+  if (event.ctrlKey) {
+    if (event.key === "n") {
+      return 1;
+    }
+    if (event.key === "p") {
+      return -1;
+    }
+    return 0;
+  }
+  if (event.key === "ArrowDown") {
+    return 1;
+  }
+  if (event.key === "ArrowUp") {
+    return -1;
+  }
+  if (event.key === "Tab") {
+    return event.shiftKey ? -1 : 1;
+  }
+  return 0;
+}
 
 type TitleElement = HTMLInputElement | HTMLTextAreaElement;
 
-export function ParseableTitle({
+export function Title({
   value,
   onChange,
   inputRef,

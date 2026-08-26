@@ -1,9 +1,9 @@
 import { useRef } from "react";
 
-import { CrossIcon, SearchIcon } from "./icons.tsx";
-import { ParseableTitle } from "./ParseableTitle.tsx";
+import { Sprite } from "./ui/Sprite.tsx";
+import { Title } from "./Title.tsx";
 
-export function SearchField({
+export function Search({
   text,
   onChange,
   onClose,
@@ -16,8 +16,8 @@ export function SearchField({
 
   return (
     <div className="search-field">
-      <SearchIcon />
-      <ParseableTitle
+      <Sprite name="search" />
+      <Title
         value={text}
         onChange={onChange}
         inputRef={fieldRef}
@@ -45,7 +45,7 @@ export function SearchField({
         aria-label="Close search"
         onClick={onClose}
       >
-        <CrossIcon />
+        <Sprite name="cross" />
       </button>
     </div>
   );

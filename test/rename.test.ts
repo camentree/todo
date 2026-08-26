@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { renameChanges } from "../client/taskLine.ts";
+import { renameChanges } from "../client/tasks/taskLine.ts";
 
 describe("renameChanges", () => {
   test("takes sigils out of the title and applies them", () => {

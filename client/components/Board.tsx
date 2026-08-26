@@ -1,45 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
-import { Chevron } from "./icons.tsx";
-import { TaskRow } from "./TaskRow.tsx";
-import { isDueToday } from "../format.ts";
-import { buildGroups, HIDDEN_GROUP } from "../grouping.ts";
-import type { TaskGroup } from "../grouping.ts";
+import { Row } from "./Row.tsx";
+import {
+  BLANK_TASK,
+  NewSubtaskRow,
+  SubtaskRow,
+} from "./Subtasks.tsx";
+import { isDueToday } from "../tasks/format.ts";
+import { buildGroups, HIDDEN_GROUP } from "../tasks/grouping.ts";
+import type { TaskGroup } from "../tasks/grouping.ts";
 import { easeToTop } from "../hooks/useEaseIntoView.ts";
+import { Collapsible } from "./ui/Collapsible.tsx";
+import { usePending } from "../data/pending.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
-import { renameChanges, taskAsLine } from "../taskLine.ts";
-import { asChanges } from "../attributes.ts";
-import type { Attribute } from "../attributes.ts";
-import type { TaskState } from "@shared/states.ts";
+import { renameChanges, taskAsLine } from "../tasks/taskLine.ts";
+import { asChanges } from "../tasks/attributes.ts";
+import type { Attribute } from "../tasks/attributes.ts";
 import type {
   CreatedTask,
   Task,
   ViewPreference,
 } from "@shared/types.ts";
-
-const BLANK_TASK: Task = {
-  id: null,
-  list: null,
-  parentId: null,
-  recurringTaskId: null,
-  title: "",
-  note: null,
-  state: "to_do",
-  stage: null,
-  tags: [],
-  who: null,
-  dueDate: null,
-  dueTime: null,
-  sortOrder: 0,
-  resolvedAt: null,
-  archivedAt: null,
-  createdAt: "",
-  updatedAt: "",
-  commentCount: 0,
-  schedule: null,
-  subtasks: [],
-};
 
 export interface RowActions {
   toggle: (task: CreatedTask) => void;
@@ -53,12 +35,11 @@ export interface RowActions {
   redo: () => void;
 }
 
-export interface TaskBoardProps {
+export interface BoardProps {
   tasks: CreatedTask[];
   view: ViewPreference;
   lists: string[];
   hiddenAttributes: Attribute[];
-  justToggled: ReadonlyMap<number, TaskState>;
   showFinished: boolean;
   pending: boolean;
   emptyMessage: string;
@@ -73,12 +54,11 @@ export interface TaskBoardProps {
   ) => void;
 }
 
-export function TaskBoard({
+export function Board({
   tasks,
   view,
   lists,
   hiddenAttributes,
-  justToggled,
   showFinished,
   pending,
   emptyMessage,
@@ -87,7 +67,7 @@ export function TaskBoard({
   capturing,
   onCapturingChange,
   onMove,
-}: TaskBoardProps) {
+}: BoardProps) {
   const groups = useMemo(
     () =>
       buildGroups({
@@ -112,6 +92,7 @@ export function TaskBoard({
     number | null
   >(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const held = usePending();
   const copied = useRef<string | null>(null);
   const { move, startMove } = useMoveTask({
     groups: groups,
@@ -245,50 +226,23 @@ export function TaskBoard({
 
   function subtaskRow(subtask: CreatedTask): ReactNode {
     return (
-      <TaskRow
+      <SubtaskRow
         key={subtask.id}
-        task={showing({ task: subtask, justToggled: justToggled })}
-        isEditing={editingId === subtask.id}
+        subtask={subtask}
+        actions={actions}
+        editing={editingId === subtask.id}
         onEditingChange={(editing) =>
           setEditingId(editing ? subtask.id : null)
-        }
-        onCommit={(changes) =>
-          saveTask({
-            task: subtask,
-            changes: changes,
-            actions: actions,
-          })
         }
         onTab={(backwards) =>
           editBeside(subtask.id, backwards ? -1 : 1)
         }
-        swipeLeft={{
-          name: "Delete",
-          action: () => actions.remove(subtask),
-        }}
-        showAttributes={false}
-        parseAttributes={false}
       />
     );
   }
 
   function newSubtaskRow(parent: Task): ReactNode {
-    return (
-      <TaskRow
-        task={{
-          ...BLANK_TASK,
-          parentId: parent.id,
-          list: parent.list,
-        }}
-        isEditing={true}
-        onEditingChange={() => {}}
-        onCommit={(changes) =>
-          actions.create({ ...changes, list: parent.list })
-        }
-        showAttributes={false}
-        parseAttributes={false}
-      />
-    );
+    return <NewSubtaskRow parent={parent} actions={actions} />;
   }
 
   function taskRow(
@@ -308,8 +262,8 @@ export function TaskBoard({
         onMouseEnter={() => hoverOn(task.id)}
         onMouseLeave={() => hoverOn(null)}
       >
-        <TaskRow
-          task={showing({ task: task, justToggled: justToggled })}
+        <Row
+          task={{ ...task, ...held.get(task.id) }}
           isEditing={editingId === task.id}
           isFocused={focusedId === task.id}
           onEditingChange={(editing) =>
@@ -369,7 +323,7 @@ export function TaskBoard({
     onDismiss?: () => void;
   }): ReactNode {
     return (
-      <TaskRow
+      <Row
         task={{ ...BLANK_TASK, ...seed }}
         isEditing={true}
         focusOnMount={true}
@@ -518,21 +472,17 @@ function GroupedTasks({
 
   return (
     <div className="group" data-group-key={group.key}>
-      {group.label && (
-        <button
-          type="button"
-          className="group-head"
-          onClick={onToggleCollapsed}
-        >
-          <Chevron open={!collapsed} />
-          <span className="group-name">{group.label}</span>
-          {collapsed && (
+      <Collapsible
+        tone="group"
+        label={group.label}
+        badge={
+          collapsed && (
             <span className="group-count">{group.tasks.length}</span>
-          )}
-        </button>
-      )}
-
-      <div className="collapsible" data-open={!collapsed}>
+          )
+        }
+        open={!collapsed}
+        onToggle={onToggleCollapsed}
+      >
         <div>
           <div className="tasks">
             {group.tasks.map((task, index) => (
@@ -575,7 +525,7 @@ function GroupedTasks({
             )}
           </div>
         </div>
-      </div>
+      </Collapsible>
     </div>
   );
 }
@@ -594,17 +544,6 @@ export function rightSwipeLabel(task: CreatedTask): string {
 
 export function leftSwipeLabel(task: CreatedTask): string {
   return task.archivedAt ? "Unarchive" : "Archive";
-}
-
-function showing({
-  task,
-  justToggled,
-}: {
-  task: CreatedTask;
-  justToggled: ReadonlyMap<number, TaskState>;
-}): CreatedTask {
-  const held = justToggled.get(task.id);
-  return held === undefined ? task : { ...task, state: held };
 }
 
 function saveTask({
@@ -748,7 +687,8 @@ function useMoveTask({
         ? []
         : [...target.guessedAttributes, ...target.groupedBy];
     const destinationAttributes: Attribute[] =
-      conferred.some((attribute) => attribute.field === "tag") && moving
+      conferred.some((attribute) => attribute.field === "tag") &&
+      moving
         ? [
             ...conferred,
             ...moving.tags.map((tag) => ({

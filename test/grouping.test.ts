@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { buildGroups, sortTasks } from "../client/grouping.ts";
-import type { TaskGroup } from "../client/grouping.ts";
+import { buildGroups, sortTasks } from "../client/tasks/grouping.ts";
+import type { TaskGroup } from "../client/tasks/grouping.ts";
 import type { AttributeField } from "@shared/attributes.ts";
 import type { CreatedTask, ViewPreference } from "@shared/types.ts";
 

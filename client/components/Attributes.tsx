@@ -2,9 +2,9 @@ import {
   cadenceOf,
   formatDueDate,
   formatDueTime,
-} from "../format.ts";
-import { renameChanges } from "../taskLine.ts";
-import type { Attribute } from "../attributes.ts";
+} from "../tasks/format.ts";
+import { Chip } from "./ui/Chip.tsx";
+import type { Attribute } from "../tasks/attributes.ts";
 import type { AttributeField } from "@shared/attributes.ts";
 import { parse, type ParsedToken } from "@shared/parser.ts";
 import { stageLabel } from "@shared/stages.ts";
@@ -94,16 +94,6 @@ export function attributesOf(task: DescribedTask): Attribute[] {
   return items.filter((item): item is Attribute => item !== null);
 }
 
-export function asRenamed({
-  task,
-  draft,
-}: {
-  task: Task;
-  draft: string;
-}): Task {
-  return { ...task, ...renameChanges(draft) };
-}
-
 export function AttributeText({ task }: { task: DescribedTask }) {
   const attributes = attributesOf(task);
   if (attributes.length === 0) {
@@ -133,36 +123,19 @@ export function AttributeChips({
 
   return (
     <span className="task-meta">
-      {attributes.map((attribute) =>
-        onRemove && attribute.field !== "list" ? (
-          <span
-            key={`${attribute.field}-${attribute.label}`}
-            className="capture-chip removable"
-            data-field={attribute.field}
-          >
-            {sigilFor(attribute.field)}
-            {attribute.label.toLowerCase()}
-            <button
-              type="button"
-              className="chip-remove"
-              aria-label={`Remove ${attribute.label}`}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onRemove(attribute)}
-            >
-              ×
-            </button>
-          </span>
-        ) : (
-          <span
-            key={`${attribute.field}-${attribute.label}`}
-            className="capture-chip"
-            data-field={attribute.field}
-          >
-            {sigilFor(attribute.field)}
-            {attribute.label.toLowerCase()}
-          </span>
-        ),
-      )}
+      {attributes.map((attribute) => (
+        <Chip
+          key={`${attribute.field}-${attribute.label}`}
+          label={attribute.label}
+          sigil={sigilFor(attribute.field)}
+          field={attribute.field}
+          onRemove={
+            onRemove && attribute.field !== "list"
+              ? () => onRemove(attribute)
+              : undefined
+          }
+        />
+      ))}
     </span>
   );
 }
