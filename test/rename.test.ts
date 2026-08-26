@@ -24,12 +24,11 @@ describe("renameChanges", () => {
     });
   });
 
-  test("archived is not a state, so it sets the timestamp", () => {
-    const changes = renameChanges("Old thing :archived");
-
-    expect(changes.title).toBe("Old thing");
-    expect(changes.state).toBeUndefined();
-    expect(typeof changes.archivedAt).toBe("string");
+  test("archived is a state like any other", () => {
+    expect(renameChanges("Old thing :archived")).toEqual({
+      title: "Old thing",
+      state: "archived",
+    });
   });
 
   test("tags replace the ones already there", () => {

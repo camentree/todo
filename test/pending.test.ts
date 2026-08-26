@@ -18,8 +18,7 @@ function task(overrides: Partial<CreatedTask>): CreatedTask {
     dueDate: null,
     dueTime: null,
     sortOrder: 0,
-    resolvedAt: null,
-    archivedAt: null,
+    finishedAt: null,
     createdAt: "2026-08-01T09:00:00Z",
     updatedAt: "2026-08-01T09:00:00Z",
     schedule: null,
@@ -44,11 +43,11 @@ describe("what layout sees while a change is waiting to be sent", () => {
 
   test("the moment it was finished is held back with the state", () => {
     const [shown] = inLayout(
-      [task({ id: 1, resolvedAt: null })],
-      pending(task({ id: 1, resolvedAt: "2026-08-25T10:00:00Z" })),
+      [task({ id: 1, finishedAt: null })],
+      pending(task({ id: 1, finishedAt: "2026-08-25T10:00:00Z" })),
     );
 
-    expect(shown?.resolvedAt).toBeNull();
+    expect(shown?.finishedAt).toBeNull();
   });
 
   test("a new sort order is taken, so a dropped row stays where it landed", () => {

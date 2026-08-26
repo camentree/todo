@@ -20,8 +20,7 @@ function task(overrides: Partial<CreatedTask>): CreatedTask {
     dueDate: null,
     dueTime: null,
     sortOrder: 0,
-    resolvedAt: null,
-    archivedAt: null,
+    finishedAt: null,
     createdAt: "2026-08-01T09:00:00Z",
     updatedAt: "2026-08-01T09:00:00Z",
     schedule: null,
@@ -33,7 +32,7 @@ function task(overrides: Partial<CreatedTask>): CreatedTask {
 function view(overrides: Partial<ViewPreference>): ViewPreference {
   return {
     groupBy: "none",
-    orderBy: "resolved_at",
+    orderBy: "finished_at",
     orderDirection: "desc",
     layout: "stacked",
     ...overrides,
@@ -43,9 +42,9 @@ function view(overrides: Partial<ViewPreference>): ViewPreference {
 describe("sorting by when a task was finished", () => {
   const earlier = task({
     id: 1,
-    resolvedAt: "2026-08-18T11:00:00Z",
+    finishedAt: "2026-08-18T11:00:00Z",
   });
-  const later = task({ id: 2, resolvedAt: "2026-08-20T08:00:00Z" });
+  const later = task({ id: 2, finishedAt: "2026-08-20T08:00:00Z" });
 
   test("newest first when descending", () => {
     expect(
@@ -69,7 +68,7 @@ describe("sorting by when a task was finished", () => {
     const unfinished = task({
       id: 3,
       state: "to_do",
-      resolvedAt: null,
+      finishedAt: null,
     });
 
     expect(

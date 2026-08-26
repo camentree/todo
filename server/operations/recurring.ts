@@ -261,7 +261,7 @@ async function generateOne({
     for (const dueDate of dates) {
       const missed = await transaction<{ id: number }[]>`
         update todo.tasks
-        set state = 'missed', updated_at = now()
+        set state = 'missed', finished_at = now(), updated_at = now()
         where recurring_task_id = ${recurring.id}
           and parent_id is null
           and due_date < ${dueDate}

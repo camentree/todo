@@ -15,7 +15,9 @@ interface Waiting {
 }
 
 const waiting = new Map<number, Waiting>();
-const shown = createStore<ReadonlyMap<number, CreatedTask>>(new Map());
+const shown = createStore<ReadonlyMap<number, CreatedTask>>(
+  new Map(),
+);
 
 let newest: number[] = [];
 
@@ -66,7 +68,7 @@ export function inLayout(
       ...task,
       ...pending,
       state: task.state,
-      resolvedAt: task.resolvedAt,
+      finishedAt: task.finishedAt,
       subtasks: subtasks,
     };
   });

@@ -21,8 +21,7 @@ function task(
     dueDate: null,
     dueTime: null,
     sortOrder: 0,
-    resolvedAt: null,
-    archivedAt: null,
+    finishedAt: null,
     createdAt: "2026-08-01T00:00:00Z",
     updatedAt: "2026-08-01T00:00:00Z",
     schedule: null,
@@ -167,17 +166,10 @@ describe("searchTasks", () => {
       task({ id: 1, title: "Ship it" }),
       task({ id: 2, title: "Book a table", state: "complete" }),
       task({ id: 3, title: "Call the vet", state: "skipped" }),
-      task({
-        id: 4,
-        title: "Old thing",
-        archivedAt: "2026-08-01T00:00:00Z",
-      }),
+      task({ id: 4, title: "Old thing", state: "archived" }),
     ];
 
-    expect(titlesFor(":to-do", tasks)).toEqual([
-      "Ship it",
-      "Old thing",
-    ]);
+    expect(titlesFor(":to-do", tasks)).toEqual(["Ship it"]);
     expect(titlesFor(":complete", tasks)).toEqual(["Book a table"]);
     expect(titlesFor(":skipped", tasks)).toEqual(["Call the vet"]);
     expect(titlesFor(":archived", tasks)).toEqual(["Old thing"]);
@@ -196,11 +188,7 @@ describe("searchTasks", () => {
     const tasks = [
       task({ id: 1, title: "Ship it" }),
       task({ id: 2, title: "Book a table", state: "complete" }),
-      task({
-        id: 3,
-        title: "Old thing",
-        archivedAt: "2026-08-01T00:00:00Z",
-      }),
+      task({ id: 3, title: "Old thing", state: "archived" }),
     ];
 
     expect(titlesFor("-:complete -:archived", tasks)).toEqual([

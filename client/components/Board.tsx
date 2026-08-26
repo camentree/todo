@@ -501,7 +501,7 @@ function GroupedTasks({
             {capturable &&
               capturingUnseeded &&
               renderCapture({
-                seed: {},
+                seed: asChanges(group.guessedAttributes),
                 onCreated: onLanded,
                 onDismiss: onCaptureDone,
               })}
@@ -531,7 +531,7 @@ function GroupedTasks({
 }
 
 export function rightSwipeLabel(task: CreatedTask): string {
-  if (task.archivedAt) {
+  if (task.state === "archived") {
     return "Delete";
   }
   if (task.state === "hidden") {
@@ -543,7 +543,7 @@ export function rightSwipeLabel(task: CreatedTask): string {
 }
 
 export function leftSwipeLabel(task: CreatedTask): string {
-  return task.archivedAt ? "Unarchive" : "Archive";
+  return task.state === "archived" ? "Unarchive" : "Archive";
 }
 
 function saveTask({

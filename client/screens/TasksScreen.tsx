@@ -33,6 +33,7 @@ import type { Scope } from "../data/settings.ts";
 import { asAttributeField } from "@shared/attributes.ts";
 import { canonicalName } from "@shared/names.ts";
 import { asStage } from "@shared/stages.ts";
+import { isTerminal } from "@shared/states.ts";
 import { searchTasks } from "@shared/search.ts";
 import type { CreatedTask } from "@shared/types.ts";
 export function TasksScreen() {
@@ -137,11 +138,13 @@ export function TasksScreen() {
   });
 
   const captureSeed =
-    searchText !== null || archived || finished
+    archived || finished
       ? null
-      : scope.field && scope.field !== view.groupBy
-        ? seedFor(scope)
-        : {};
+      : searchText !== null
+        ? {}
+        : scope.field && scope.field !== view.groupBy
+          ? seedFor(scope)
+          : {};
 
   return (
     <>
@@ -168,7 +171,7 @@ export function TasksScreen() {
         view={view}
         lists={lists}
         hiddenAttributes={searchText === null ? scopedTo(scope) : []}
-        showFinished={finished || searchText !== null}
+        showFinished={archived || finished || searchText !== null}
         pending={searchText === null && isPending}
         emptyMessage={emptyMessageFor({
           searchText: searchText,
@@ -185,7 +188,7 @@ export function TasksScreen() {
         onMove={actions.move}
       />
 
-      {!archived && !finished && searchText === null && (
+      {!archived && !finished && (
         <AddButton onClick={() => setCapturing(true)} />
       )}
 
@@ -217,15 +220,15 @@ function emptyMessageFor({
 function within(task: CreatedTask, scope: Scope): boolean {
   if (scope.today) {
     return (
-      task.archivedAt === null &&
+      task.state !== "archived" &&
       task.state !== "missed" &&
       dueOnOrBefore(task.dueDate, todayAsDateString())
     );
   }
   if (scope.field === "archived") {
-    return (task.archivedAt !== null) === (scope.value === "true");
+    return (task.state === "archived") === (scope.value === "true");
   }
-  if (task.archivedAt !== null) {
+  if (task.state === "archived") {
     return false;
   }
   if (scope.field === null) {
@@ -269,12 +272,12 @@ function matches(task: CreatedTask, scope: Scope): boolean {
 }
 
 function notLongResolved(task: CreatedTask): boolean {
-  if (task.state !== "complete" && task.state !== "skipped") {
+  if (!isTerminal(task.state)) {
     return true;
   }
   return (
-    task.resolvedAt !== null &&
-    task.resolvedAt.slice(0, 10) === todayAsDateString()
+    task.finishedAt !== null &&
+    task.finishedAt.slice(0, 10) === todayAsDateString()
   );
 }
 

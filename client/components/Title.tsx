@@ -9,7 +9,7 @@ import type {
 } from "react";
 
 import { api } from "../data/api.ts";
-import { SEARCHABLE_STATES } from "@shared/states.ts";
+import { TASK_STATES } from "@shared/states.ts";
 
 const MOST_SUGGESTIONS = 5;
 
@@ -75,9 +75,7 @@ function suggestionsFor({
     .slice(0, MOST_SUGGESTIONS);
 }
 
-function suggestionStep(
-  event: KeyboardEvent<HTMLElement>,
-): number {
+function suggestionStep(event: KeyboardEvent<HTMLElement>): number {
   if (event.ctrlKey) {
     if (event.key === "n") {
       return 1;
@@ -92,9 +90,6 @@ function suggestionStep(
   }
   if (event.key === "ArrowUp") {
     return -1;
-  }
-  if (event.key === "Tab") {
-    return event.shiftKey ? -1 : 1;
   }
   return 0;
 }
@@ -161,7 +156,7 @@ export function Title({
     knownTags: knownTags,
     knownWho: knownWho,
     stages: stages,
-    states: SEARCHABLE_STATES,
+    states: TASK_STATES,
   });
 
   useEffect(() => {
@@ -223,8 +218,9 @@ export function Title({
         );
         return;
       }
-      if (event.key === "Enter") {
+      if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
+        event.stopPropagation();
         pick(matches[highlighted] ?? "");
         return;
       }

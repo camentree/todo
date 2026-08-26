@@ -117,7 +117,7 @@ export function Row({
         }
       : null,
     right:
-      swipeRight && task.archivedAt === null
+      swipeRight && task.state !== "archived"
         ? {
             key: "s",
             action: () => {

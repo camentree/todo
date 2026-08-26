@@ -52,7 +52,7 @@ const BY_DUE: ViewPreference = {
 
 const BY_FINISHED: ViewPreference = {
   groupBy: "none",
-  orderBy: "resolved_at",
+  orderBy: "finished_at",
   orderDirection: "desc",
   layout: "stacked",
 };
@@ -78,10 +78,16 @@ export function defaultView(scope: Scope): ViewPreference {
 function stored<T>(key: string, fallback: T): T {
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+    return raw
+      ? { ...fallback, ...JSON.parse(renamedOrderBy(raw)) }
+      : fallback;
   } catch {
     return fallback;
   }
+}
+
+function renamedOrderBy(raw: string): string {
+  return raw.replaceAll('"resolved_at"', '"finished_at"');
 }
 
 const global = createStore<GlobalSettings>(

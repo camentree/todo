@@ -22,7 +22,7 @@ export function InfoScreen() {
 }
 
 function findScreen(task: CreatedTask): string {
-  if (task.archivedAt !== null) {
+  if (task.state === "archived") {
     return "/archived/true";
   }
   if (task.state === "complete") {

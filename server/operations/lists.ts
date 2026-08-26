@@ -7,7 +7,7 @@ async function distinctValues(
   const rows = await sql<{ value: string }[]>`
     select distinct ${sql(column)} as value
     from todo.tasks
-    where ${sql(column)} is not null and archived_at is null
+    where ${sql(column)} is not null and state <> 'archived'
     order by value
   `;
   return rows.map((row) => row.value);
@@ -27,7 +27,7 @@ export async function knownWho(
   const rows = await sql<{ who: string }[]>`
     select distinct who
     from todo.tasks
-    where who is not null and archived_at is null
+    where who is not null and state <> 'archived'
       ${list ? sql`and list = ${list}` : sql``}
     order by who
   `;
@@ -38,7 +38,7 @@ export async function tagsOf(list: string | null): Promise<string[]> {
   const rows = await sql<{ tag: string }[]>`
     select distinct unnest(tags) as tag
     from todo.tasks
-    where archived_at is null
+    where state <> 'archived'
       ${list ? sql`and list = ${canonicalName(list)}` : sql``}
     order by tag
   `;

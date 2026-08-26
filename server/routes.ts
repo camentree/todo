@@ -78,7 +78,7 @@ api.post("/tasks", async (context) => {
       dueTime: body.dueTime,
       schedule: body.schedule,
       state: body.state ? taskState(body.state) : undefined,
-      archivedAt: body.archivedAt,
+      finishedAt: body.finishedAt,
     }),
   );
 });

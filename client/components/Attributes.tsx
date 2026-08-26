@@ -18,7 +18,7 @@ export type DescribedTask = Pick<
   | "dueDate"
   | "dueTime"
   | "stage"
-  | "archivedAt"
+  | "state"
   | "schedule"
 >;
 
@@ -35,7 +35,7 @@ export function typedTask({
     dueDate: null,
     dueTime: null,
     stage: null,
-    archivedAt: null,
+    state: "to_do",
     schedule: null,
     ...changes,
     list: list,
@@ -43,7 +43,7 @@ export function typedTask({
 }
 
 export function attributesOf(task: DescribedTask): Attribute[] {
-  const archived = task.archivedAt !== null;
+  const archived = task.state === "archived";
   const due = archived ? null : formatDueDate(task.dueDate);
   const time = archived ? null : formatDueTime(task.dueTime);
 

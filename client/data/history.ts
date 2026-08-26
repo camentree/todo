@@ -37,8 +37,7 @@ function fieldsOf(task: CreatedTask): Partial<Task> & {
     dueDate: task.dueDate,
     dueTime: task.dueTime,
     state: task.state,
-    archivedAt: task.archivedAt,
-    resolvedAt: task.resolvedAt,
+    finishedAt: task.finishedAt,
   };
 }
 

@@ -20,7 +20,9 @@ import { asChanges } from "../tasks/attributes.ts";
 import type { Attribute } from "../tasks/attributes.ts";
 import { isDueToday } from "../tasks/format.ts";
 import { findTask, TASKS_KEY } from "./useTasks.ts";
+import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
+import type { TaskStage } from "@shared/stages.ts";
 import { isTerminal, type TaskState } from "@shared/states.ts";
 import type {
   CreatedTask,
@@ -170,13 +172,41 @@ export function useTaskActions(
       : (known[0] ?? "");
   }
 
+  function everyTaskInListIsStaged(list: string): boolean {
+    const wanted = canonicalName(list);
+    const inList: CreatedTask[] = [];
+    for (const [, cached] of queryClient.getQueriesData({
+      queryKey: [TASKS_KEY],
+    })) {
+      if (!looksLikeTasks(cached)) {
+        continue;
+      }
+      for (const task of cached) {
+        if (
+          task.parentId === null &&
+          canonicalName(task.list) === wanted
+        ) {
+          inList.push(task);
+        }
+      }
+    }
+    return (
+      inList.length > 0 && inList.every((task) => task.stage !== null)
+    );
+  }
+
   const create = useMutation({
-    mutationFn: (changes: Partial<Task>) =>
-      api.createTask({
+    mutationFn: (changes: Partial<Task>) => {
+      const list = changes.list || someList();
+      const staged =
+        changes.parentId == null && everyTaskInListIsStaged(list);
+      return api.createTask({
         ...changes,
         title: changes.title ?? "",
-        list: changes.list || someList(),
-      }),
+        list: list,
+        stage: changes.stage ?? (staged ? "to_do" : null),
+      });
+    },
     onSuccess: (task: CreatedTask) => {
       rememberList(task.list);
       addToLedger(task);
@@ -197,7 +227,7 @@ export function useTaskActions(
 
   const swipeLeft = useMutation({
     mutationFn: (task: CreatedTask) =>
-      task.archivedAt
+      task.state === "archived"
         ? api.unarchiveTasks([task.id])
         : api.archiveTasks([task.id]),
     onSuccess: (written: CreatedTask[], task: CreatedTask) => {
@@ -222,7 +252,7 @@ export function useTaskActions(
       outcome: SwipeRightOutcome;
       written: CreatedTask[];
     }> => {
-      if (task.archivedAt) {
+      if (task.state === "archived") {
         const { removed } = await api.deleteTask(task.id);
         takeBack(removed);
         return { outcome: "deleted", written: [] };
@@ -285,9 +315,18 @@ export function useTaskActions(
     const next: TaskState = isTerminal(shown.state)
       ? "to_do"
       : "complete";
+    const stage: TaskStage | null =
+      shown.stage === null
+        ? null
+        : next === "complete"
+          ? "complete"
+          : "to_do";
     defer({
       edited: [
-        { before: before, showing: { ...shown, state: next } },
+        {
+          before: before,
+          showing: { ...shown, state: next, stage: stage },
+        },
       ],
       call: async () => {
         const written = await api.setState(task.id, next);

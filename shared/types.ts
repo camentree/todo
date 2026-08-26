@@ -27,8 +27,7 @@ export interface Task {
   dueDate: string | null;
   dueTime: string | null;
   sortOrder: number;
-  resolvedAt: string | null;
-  archivedAt: string | null;
+  finishedAt: string | null;
   createdAt: string;
   updatedAt: string;
   commentCount: number;
@@ -84,7 +83,7 @@ export type OrderByField =
   | "due_date"
   | "title"
   | "created_at"
-  | "resolved_at";
+  | "finished_at";
 
 export type OrderDirection = "asc" | "desc";
 

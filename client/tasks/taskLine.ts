@@ -53,12 +53,7 @@ export function renameChanges(input: string): Partial<Task> {
     ...(who === null ? {} : { who: who === "" ? null : who }),
     ...(list ? { list: list } : {}),
     ...(stage === null ? {} : { stage: stage === "" ? null : stage }),
-    ...(state === null || state === "archived"
-      ? {}
-      : { state: state }),
-    ...(state === "archived"
-      ? { archivedAt: new Date().toISOString() }
-      : {}),
+    ...(state === null ? {} : { state: state }),
     ...(dueDate ? { dueDate: dueDate } : {}),
     ...(dueTime ? { dueTime: dueTime } : {}),
   };

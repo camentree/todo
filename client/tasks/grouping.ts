@@ -334,13 +334,13 @@ function compare({
       parseISO(right.createdAt).getTime()
     );
   }
-  if (view.orderBy === "resolved_at") {
-    if (!left.resolvedAt && !right.resolvedAt) {
+  if (view.orderBy === "finished_at") {
+    if (!left.finishedAt && !right.finishedAt) {
       return left.sortOrder - right.sortOrder;
     }
-    if (!left.resolvedAt) return 1;
-    if (!right.resolvedAt) return -1;
-    return left.resolvedAt.localeCompare(right.resolvedAt);
+    if (!left.finishedAt) return 1;
+    if (!right.finishedAt) return -1;
+    return left.finishedAt.localeCompare(right.finishedAt);
   }
   if (view.orderBy === "due_date") {
     if (!left.dueDate && !right.dueDate) {

@@ -13,7 +13,7 @@ import type {
 
 const COLUMNS = sql`
   id, list, parent_id, recurring_task_id, title, note, state, stage, tags, who,
-  due_date, due_time, sort_order, resolved_at, archived_at, created_at,
+  due_date, due_time, sort_order, finished_at, created_at,
   updated_at,
   (select count(*)::int from todo.comments where task_id = todo.tasks.id)
     as comment_count,
@@ -36,7 +36,6 @@ export async function query({
 }: {
   since: string | null;
 }): Promise<CreatedTask[]> {
-  const finishedOn = sql`greatest(resolved_at, archived_at)`;
   const parents = await sql<CreatedTask[]>`
     select ${COLUMNS}
     from todo.tasks
@@ -45,7 +44,7 @@ export async function query({
         since === null
           ? sql``
           : sql`and (
-              ${finishedOn} is null or ${finishedOn} >= ${since}::date
+              finished_at is null or finished_at >= ${since}::date
             )`
       }
     order by sort_order asc, id asc
@@ -65,7 +64,7 @@ async function attachSubtasks(
   const children = await sql<CreatedTask[]>`
     select ${COLUMNS}
     from todo.tasks
-    where parent_id = any(${parentIds}) and archived_at is null
+    where parent_id = any(${parentIds}) and state <> 'archived'
     order by sort_order asc, id asc
   `;
 
@@ -101,8 +100,7 @@ export interface NewTask {
   dueDate?: string | null;
   dueTime?: string | null;
   schedule?: Schedule | null;
-  archivedAt?: string | null;
-  resolvedAt?: string | null;
+  finishedAt?: string | null;
 }
 
 export async function create(
@@ -116,7 +114,7 @@ export async function create(
   const [created] = await sql<CreatedTask[]>`
     insert into todo.tasks (
       list, parent_id, recurring_task_id, title, note, state, stage, tags, who,
-      due_date, due_time, archived_at, resolved_at, sort_order
+      due_date, due_time, finished_at, sort_order
     )
     values (
       ${canonicalName(task.list)},
@@ -130,8 +128,7 @@ export async function create(
       ${task.who ? canonicalName(task.who) : null},
       ${task.dueDate ?? null},
       ${task.dueTime ?? null},
-      ${task.archivedAt ?? null},
-      ${task.resolvedAt ?? null},
+      ${task.finishedAt ?? null},
       coalesce((select max(sort_order) + 1 from todo.tasks), 0)
     )
     returning ${COLUMNS}
@@ -186,8 +183,7 @@ export interface TaskChanges {
   parentId?: number | null;
   schedule?: Schedule | null;
   state?: TaskState;
-  archivedAt?: string | null;
-  resolvedAt?: string | null;
+  finishedAt?: string | null;
 }
 
 const SHARED_WITH_SCHEDULE = [
@@ -303,7 +299,7 @@ export async function setState(
     const [task] = await transaction<CreatedTask[]>`
       update todo.tasks
       set state = ${state},
-          resolved_at = ${isTerminal(state) ? sql`now()` : sql`null`},
+          finished_at = ${isTerminal(state) ? sql`now()` : sql`null`},
           stage = ${
             state === "complete"
               ? sql`case when stage is null then null else 'complete' end`
@@ -317,7 +313,7 @@ export async function setState(
     if (task && state === "complete") {
       await transaction`
         update todo.tasks
-        set state = 'complete', resolved_at = now(), updated_at = now()
+        set state = 'complete', finished_at = now(), updated_at = now()
         where parent_id = ${id} and state <> 'complete'
       `;
     }
@@ -343,7 +339,7 @@ export async function setState(
 export async function archive(ids: number[]): Promise<CreatedTask[]> {
   return sql<CreatedTask[]>`
     update todo.tasks
-    set archived_at = now(), updated_at = now()
+    set state = 'archived', finished_at = now(), updated_at = now()
     where id = any(${ids}) or parent_id = any(${ids})
     returning ${COLUMNS}
   `;
@@ -354,8 +350,9 @@ export async function unarchive(
 ): Promise<CreatedTask[]> {
   return sql<CreatedTask[]>`
     update todo.tasks
-    set archived_at = null, updated_at = now()
-    where id = any(${ids}) or parent_id = any(${ids})
+    set state = 'to_do', finished_at = null, updated_at = now()
+    where (id = any(${ids}) or parent_id = any(${ids}))
+      and state = 'archived'
     returning ${COLUMNS}
   `;
 }

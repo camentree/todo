@@ -35,7 +35,7 @@ const SORT_OPTIONS: {
   { field: "due_date", label: "Due date", directional: true },
   { field: "title", label: "Title", directional: true },
   { field: "created_at", label: "Added", directional: true },
-  { field: "resolved_at", label: "Finished", directional: true },
+  { field: "finished_at", label: "Finished", directional: true },
 ];
 
 function historyAt(index: number): HistoryMonths {
@@ -66,7 +66,7 @@ export function Settings({
     if (option.field === "relevance") {
       return searching;
     }
-    if (option.field === "resolved_at") {
+    if (option.field === "finished_at") {
       return finished;
     }
     return true;

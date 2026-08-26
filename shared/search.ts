@@ -91,8 +91,15 @@ function rankedFor({
     typed: typed,
     field: "note",
   }).filter((task) => !byTitle.includes(task));
+  const bySubtask = rankedOn({
+    tasks: tasks,
+    typed: typed,
+    field: "subtasks.title",
+  }).filter(
+    (task) => !byTitle.includes(task) && !byNote.includes(task),
+  );
 
-  return [...byTitle, ...byNote];
+  return [...byTitle, ...byNote, ...bySubtask];
 }
 
 function rankedOn({
@@ -102,7 +109,7 @@ function rankedOn({
 }: {
   tasks: CreatedTask[];
   typed: string;
-  field: "title" | "note";
+  field: "title" | "note" | "subtasks.title";
 }): CreatedTask[] {
   return new Fuse(tasks, { ...MATCHING, keys: [field] })
     .search(typed)
@@ -222,8 +229,7 @@ function isOverdue(task: CreatedTask, today: string): boolean {
 }
 
 function standingOf(task: CreatedTask): string[] {
-  const states = [spaced(task.state)];
-  return task.archivedAt === null ? states : [...states, "archived"];
+  return [spaced(task.state)];
 }
 
 function tagsOf(task: CreatedTask): string[] {
@@ -231,7 +237,10 @@ function tagsOf(task: CreatedTask): string[] {
 }
 
 function writtenIn(task: CreatedTask): string {
-  return `${task.title} ${task.note ?? ""}`.toLowerCase();
+  const subtaskTitles = (task.subtasks ?? [])
+    .map((subtask) => subtask.title)
+    .join(" ");
+  return `${task.title} ${task.note ?? ""} ${subtaskTitles}`.toLowerCase();
 }
 
 function anyContains(values: string[], wanted: string[]): boolean {
