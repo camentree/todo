@@ -330,8 +330,16 @@ export function useTaskActions(
       ],
       call: async () => {
         const written = await api.setState(task.id, next);
-        landed([written]);
-        return [written];
+        for (const task of written) {
+          addToLedger(task);
+        }
+        landed(written);
+        if (before.recurringTaskId !== null && !isTerminal(next)) {
+          void queryClient.invalidateQueries({
+            queryKey: [TASKS_KEY],
+          });
+        }
+        return written;
       },
       delay: HOLD_MILLISECONDS,
       doing: "tick that off",
@@ -421,10 +429,10 @@ export function useTaskActions(
         const written: CreatedTask[] = [];
         if (changes.stage !== undefined) {
           written.push(
-            await api.setState(
+            ...(await api.setState(
               taskId,
               changes.stage === "complete" ? "complete" : "to_do",
-            ),
+            )),
           );
         }
         written.push(

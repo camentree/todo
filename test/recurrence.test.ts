@@ -3,6 +3,8 @@ import { describe, expect, test } from "vitest";
 import {
   describeSchedule,
   dueDatesBetween,
+  latestDueDateOnOrBefore,
+  nextDueDateAfter,
   type Schedule,
 } from "@shared/recurrence.ts";
 
@@ -131,5 +133,74 @@ describe("describeSchedule", () => {
         }),
       ),
     ).toBe("monthly on the 1st");
+  });
+});
+
+describe("finding the one occurrence either side of a day", () => {
+  test("a daily schedule rolls to the next day", () => {
+    expect(
+      nextDueDateAfter({
+        schedule: schedule({}),
+        after: "2026-08-12",
+      }),
+    ).toBe("2026-08-13");
+  });
+
+  test("a weekly schedule waits a week", () => {
+    expect(
+      nextDueDateAfter({
+        schedule: schedule({
+          frequency: "weekly",
+          weekdays: [1],
+          startsOn: "2026-08-10",
+        }),
+        after: "2026-08-10",
+      }),
+    ).toBe("2026-08-17");
+  });
+
+  test("nothing is due before the schedule starts", () => {
+    expect(
+      latestDueDateOnOrBefore({
+        schedule: schedule({ startsOn: "2026-08-10" }),
+        onOrBefore: "2026-08-09",
+      }),
+    ).toBeNull();
+  });
+
+  test("the latest daily occurrence is the day asked about", () => {
+    expect(
+      latestDueDateOnOrBefore({
+        schedule: schedule({}),
+        onOrBefore: "2026-08-20",
+      }),
+    ).toBe("2026-08-20");
+  });
+
+  test("a weekly schedule looks back to its own weekday", () => {
+    expect(
+      latestDueDateOnOrBefore({
+        schedule: schedule({
+          frequency: "weekly",
+          weekdays: [1],
+          startsOn: "2026-08-10",
+        }),
+        onOrBefore: "2026-08-20",
+      }),
+    ).toBe("2026-08-17");
+  });
+
+  test("a monthly schedule every three months skips the months between", () => {
+    expect(
+      nextDueDateAfter({
+        schedule: schedule({
+          frequency: "monthly",
+          repeatEvery: 3,
+          dayOfMonth: 10,
+          startsOn: "2026-08-10",
+        }),
+        after: "2026-08-10",
+      }),
+    ).toBe("2026-11-10");
   });
 });

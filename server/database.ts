@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import type { TransactionSql } from "postgres";
 
 const database_url = process.env.DATABASE_URL;
 
@@ -23,3 +24,8 @@ export const sql = postgres(database_url, {
     },
   },
 });
+
+export type Transaction = TransactionSql<{
+  bigint: number;
+  date: string;
+}>;

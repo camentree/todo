@@ -291,7 +291,7 @@ async function seed(): Promise<void> {
     dayOfMonth: 1,
   });
 
-  await recurring.generateDue();
+  await recurring.rollOver();
 
   await sql`
     insert into todo.events (task_id, source, summary) values

@@ -3,6 +3,7 @@ import * as events from "./events.ts";
 import * as recurring from "./recurring.ts";
 import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
+import { toDateString } from "@shared/recurrence.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { TaskState } from "@shared/states.ts";
 import type {
@@ -294,8 +295,22 @@ export async function setState(
   id: number,
   state: TaskState,
   source: EventSource = "app",
-): Promise<CreatedTask> {
+): Promise<CreatedTask[]> {
   const updated = await sql.begin(async (transaction) => {
+    if (!isTerminal(state)) {
+      await transaction`
+        delete from todo.tasks as successor
+        using todo.tasks as undone
+        where undone.id = ${id}
+          and undone.recurring_task_id is not null
+          and successor.recurring_task_id = undone.recurring_task_id
+          and successor.parent_id is null
+          and successor.id <> undone.id
+          and successor.state not in
+            ('complete', 'missed', 'skipped', 'archived')
+      `;
+    }
+
     const [task] = await transaction<CreatedTask[]>`
       update todo.tasks
       set state = ${state},
@@ -333,7 +348,19 @@ export async function setState(
     });
   }
 
-  return updated;
+  const following =
+    isTerminal(state) && updated.recurringTaskId !== null
+      ? await recurring.nextInstanceAfter({
+          recurringId: updated.recurringTaskId,
+          dueDate: updated.dueDate,
+        })
+      : null;
+  if (following === null) {
+    return [updated];
+  }
+
+  const next = await byId(following);
+  return next ? [updated, next] : [updated];
 }
 
 export async function reparent({
@@ -446,6 +473,18 @@ export async function unhide(id: number): Promise<CreatedTask[]> {
 export async function deferByOneDay(
   id: number,
 ): Promise<CreatedTask[]> {
+  const task = await byId(id);
+  if (!task) {
+    throw new Error(`no task with id ${id}`);
+  }
+  if (
+    task.recurringTaskId !== null &&
+    (task.dueDate === null ||
+      task.dueDate > toDateString(new Date()))
+  ) {
+    throw new Error("that is not due yet");
+  }
+
   return sql<CreatedTask[]>`
     update todo.tasks
     set due_date = coalesce(due_date, current_date) + 1, updated_at = now()

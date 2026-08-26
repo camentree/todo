@@ -7,7 +7,10 @@ import {
   NewSubtaskRow,
   SubtaskRow,
 } from "./Subtasks.tsx";
-import { isDueToday } from "../tasks/format.ts";
+import {
+  isDueToday,
+  todayAsDateString,
+} from "../tasks/format.ts";
 import { buildGroups, HIDDEN_GROUP } from "../tasks/grouping.ts";
 import type { TaskGroup } from "../tasks/grouping.ts";
 import { easeToTop } from "../hooks/useEaseIntoView.ts";
@@ -346,10 +349,14 @@ export function Board({
             name: leftSwipeLabel(task),
             action: () => actions.swipeLeft(task),
           }}
-          swipeRight={{
-            name: rightSwipeLabel(task),
-            action: () => actions.swipeRight(task),
-          }}
+          swipeRight={
+            rightSwipeLabel(task)
+              ? {
+                  name: rightSwipeLabel(task),
+                  action: () => actions.swipeRight(task),
+                }
+              : undefined
+          }
           onLongPress={(pointerX, pointerY) =>
             startMove({
               taskId: task.id,
@@ -587,9 +594,17 @@ export function rightSwipeLabel(task: CreatedTask): string {
   if (task.state === "hidden") {
     return "Unhide";
   }
-  return task.recurringTaskId || isDueToday(task.dueDate)
-    ? "Skip"
-    : "Hide";
+  if (task.recurringTaskId) {
+    return canSkip(task) ? "Skip" : "";
+  }
+  return isDueToday(task.dueDate) ? "Skip" : "Hide";
+}
+
+function canSkip(task: CreatedTask): boolean {
+  return (
+    task.dueDate !== null &&
+    task.dueDate <= todayAsDateString()
+  );
 }
 
 export function leftSwipeLabel(task: CreatedTask): string {

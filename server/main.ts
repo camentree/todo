@@ -2,7 +2,10 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 
+import * as recurring from "./operations/recurring.ts";
 import { api } from "./routes.ts";
+
+const ROLL_OVER_MINUTES = 10;
 
 const app = new Hono();
 
@@ -20,9 +23,20 @@ if (process.env.NODE_ENV === "production") {
 
 const port = Number.parseInt(process.env.PORT ?? "8790", 10);
 
+async function rollOver(): Promise<void> {
+  try {
+    await recurring.rollOver();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 serve(
   { fetch: app.fetch, port: port, hostname: "0.0.0.0" },
   (info) => {
     console.log(`listening on http://0.0.0.0:${info.port}`);
   },
 );
+
+void rollOver();
+setInterval(() => void rollOver(), ROLL_OVER_MINUTES * 60_000);
