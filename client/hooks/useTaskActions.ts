@@ -418,8 +418,9 @@ export function useTaskActions(
             tags: parent.tags,
             who: parent.who,
             stage: parent.stage,
-            dueDate: null,
-            dueTime: null,
+            dueDate: parent.dueDate,
+            dueTime: parent.dueTime,
+            recurringTaskId: null,
           };
 
     const moving = committed(task.id) ?? task;

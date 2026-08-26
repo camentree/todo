@@ -409,8 +409,8 @@ export async function reparent({
         tags = ${parent.tags},
         who = ${parent.who},
         stage = ${parent.stage},
-        due_date = null,
-        due_time = null,
+        due_date = ${parent.dueDate},
+        due_time = ${parent.dueTime},
         recurring_task_id = null,
         sort_order = ${(parent.subtasks ?? []).length},
         updated_at = now()
