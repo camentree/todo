@@ -341,15 +341,14 @@ export function useTaskActions(
   function reparent(
     task: CreatedTask,
     parentId: number | null,
+    orderedIds: number[] = [],
   ): void {
-    const before = committed(task.id) ?? task;
     const parent =
       parentId === null ? undefined : committed(parentId);
-    const showing =
+    const conferred: Partial<Task> =
       parent === undefined
-        ? { ...before, parentId: parentId }
+        ? { parentId: parentId }
         : {
-            ...before,
             parentId: parentId,
             list: parent.list,
             tags: parent.tags,
@@ -357,14 +356,32 @@ export function useTaskActions(
             stage: parent.stage,
             dueDate: null,
             dueTime: null,
-            recurringTaskId: null,
           };
 
+    const moving = committed(task.id) ?? task;
+    const held = (
+      orderedIds.length > 0 ? orderedIds : [task.id]
+    )
+      .map((id) => committed(id))
+      .filter((sibling): sibling is CreatedTask => sibling !== undefined);
+    const slots = reassignSlots(
+      held.map((sibling) => sibling.sortOrder),
+    );
+
     defer({
-      edited: [{ before: before, showing: showing }],
+      edited: held.map((sibling, index) => ({
+        before: sibling,
+        showing: withChanges(sibling, {
+          ...(sibling.id === task.id ? conferred : {}),
+          sortOrder: slots[index] ?? sibling.sortOrder,
+        }),
+      })),
       call: async () => {
         const written = await api.reparentTask(task.id, parentId);
-        takeBack([task.id]);
+        if (orderedIds.length > 1) {
+          written.push(...(await api.reorderTasks(orderedIds)));
+        }
+        takeBack([moving.id]);
         void queryClient.invalidateQueries({ queryKey: [TASKS_KEY] });
         return written;
       },
@@ -410,9 +427,12 @@ export function useTaskActions(
             ),
           );
         }
-        if (Object.keys(changes).length > 0) {
-          written.push(await api.updateTask(taskId, changes));
-        }
+        written.push(
+          await api.updateTask(taskId, {
+            ...changes,
+            parentId: null,
+          }),
+        );
         if (orderedIds.length > 1) {
           written.push(...(await api.reorderTasks(orderedIds)));
         }

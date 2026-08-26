@@ -53,7 +53,11 @@ export interface BoardProps {
     destinationAttributes: Attribute[],
     orderedIds: number[],
   ) => void;
-  onNest: (taskId: number, parentId: number) => void;
+  onNest: (
+    taskId: number,
+    parentId: number,
+    orderedIds: number[],
+  ) => void;
 }
 
 export function Board({
@@ -102,6 +106,7 @@ export function Board({
     boardRef: boardRef,
     onMove: onMove,
     onNest: onNest,
+    onExpand: (taskId) => expand(taskId, true),
   });
 
   const shown = groups
@@ -228,11 +233,17 @@ export function Board({
     }
   });
 
-  function subtaskRow(subtask: CreatedTask): ReactNode {
+  function subtaskRow(
+    subtask: CreatedTask,
+    index: number,
+    group: TaskGroup,
+    siblingCount: number,
+  ): ReactNode {
     return (
       <SubtaskRow
         key={subtask.id}
         subtask={subtask}
+        index={index}
         actions={actions}
         editing={editingId === subtask.id}
         onEditingChange={(editing) =>
@@ -241,8 +252,42 @@ export function Board({
         onTab={(backwards) =>
           editBeside(subtask.id, backwards ? -1 : 1)
         }
+        moving={move?.taskId === subtask.id}
+        dropAt={dropAt({
+          parentId: subtask.parentId,
+          index: index,
+          siblingCount: siblingCount,
+        })}
+        onLongPress={(pointerX, pointerY) =>
+          startMove({
+            taskId: subtask.id,
+            fromKey: group.key,
+            pointerX: pointerX,
+            pointerY: pointerY,
+          })
+        }
       />
     );
+  }
+
+  function dropAt({
+    parentId,
+    index,
+    siblingCount,
+  }: {
+    parentId: number | null;
+    index: number;
+    siblingCount: number;
+  }): "before" | "after" | undefined {
+    if (!move || move.parentId !== parentId) {
+      return undefined;
+    }
+    if (move.index === index) {
+      return "before";
+    }
+    return move.index >= siblingCount && index === siblingCount - 1
+      ? "after"
+      : undefined;
   }
 
   function newSubtaskRow(parent: Task): ReactNode {
@@ -262,7 +307,11 @@ export function Board({
         data-group={group.key}
         data-index={index}
         data-moving={move?.taskId === task.id}
-        data-nesting={move?.intoTaskId === task.id}
+        data-drop={dropAt({
+          parentId: null,
+          index: index,
+          siblingCount: group.tasks.length,
+        })}
         data-focused={focusedId === task.id}
         onMouseEnter={() => hoverOn(task.id)}
         onMouseLeave={() => hoverOn(null)}
@@ -311,7 +360,14 @@ export function Board({
           hiddenAttributes={group.hiddenAttributes}
           expanded={expanded.has(task.id)}
           onExpandedChange={(open) => expand(task.id, open)}
-          renderSubtask={subtaskRow}
+          renderSubtask={(child, childIndex) =>
+            subtaskRow(
+              child,
+              childIndex,
+              group,
+              (task.subtasks ?? []).length,
+            )
+          }
           renderNewSubtask={newSubtaskRow}
         />
       </div>
@@ -400,7 +456,6 @@ export function Board({
               return next;
             })
           }
-          move={move}
         />
       ))}
 
@@ -449,7 +504,6 @@ function GroupedTasks({
   onLanded,
   collapsed,
   onToggleCollapsed,
-  move,
 }: {
   group: TaskGroup;
   renderTask: (
@@ -471,7 +525,6 @@ function GroupedTasks({
   onLanded: (taskId: number) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  move: Move | null;
 }) {
   const capturable = canCapture && group.key !== HIDDEN_GROUP;
 
@@ -491,18 +544,8 @@ function GroupedTasks({
         <div>
           <div className="tasks">
             {group.tasks.map((task, index) => (
-              <div key={task.id}>
-                {move?.toKey === group.key &&
-                  move.index === index && (
-                    <div className="drop-line" />
-                  )}
-                {renderTask(task, group, index)}
-              </div>
+              <div key={task.id}>{renderTask(task, group, index)}</div>
             ))}
-            {move?.toKey === group.key &&
-              move.index >= group.tasks.length && (
-                <div className="drop-line" />
-              )}
             {capturable &&
               capturingUnseeded &&
               renderCapture({
@@ -567,14 +610,14 @@ function saveTask({
   actions.rename(task, changes);
 }
 
-const NESTING_BAND = 0.3;
+const HOLD_TO_EXPAND_MILLISECONDS = 600;
 
 interface Move {
   taskId: number;
   fromKey: string;
   toKey: string;
+  parentId: number | null;
   index: number;
-  intoTaskId: number | null;
 }
 
 function useMoveTask({
@@ -582,6 +625,7 @@ function useMoveTask({
   boardRef,
   onMove,
   onNest,
+  onExpand,
 }: {
   groups: TaskGroup[];
   boardRef: RefObject<HTMLDivElement | null>;
@@ -590,7 +634,12 @@ function useMoveTask({
     destinationAttributes: Attribute[],
     orderedIds: number[],
   ) => void;
-  onNest: (taskId: number, parentId: number) => void;
+  onNest: (
+    taskId: number,
+    parentId: number,
+    orderedIds: number[],
+  ) => void;
+  onExpand: (taskId: number) => void;
 }): {
   move: Move | null;
   startMove: (start: {
@@ -603,6 +652,52 @@ function useMoveTask({
   const [move, setMove] = useState<Move | null>(null);
   const moveRef = useRef<Move | null>(null);
   const finishLatest = useRef<() => void>(() => {});
+  const dwelling = useRef<{
+    taskId: number;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  function droppableRows(pointerX: number): HTMLElement[] {
+    return [
+      ...(boardRef.current?.querySelectorAll<HTMLElement>(
+        "[data-row]",
+      ) ?? []),
+    ].filter((row) => {
+      const box = headerOf(row).getBoundingClientRect();
+      return (
+        onScreen(row) &&
+        pointerX >= box.left &&
+        pointerX <= box.right
+      );
+    });
+  }
+
+  function headerOf(row: HTMLElement): HTMLElement {
+    return row.querySelector<HTMLElement>(".task") ?? row;
+  }
+
+  function onScreen(row: HTMLElement): boolean {
+    return (
+      headerOf(row).getBoundingClientRect().height > 0 &&
+      row.closest('.collapsible[data-open="false"]') === null
+    );
+  }
+
+  function placeNear(
+    row: HTMLElement,
+    after: boolean,
+    taskId: number,
+    fromKey: string,
+  ): Move {
+    const parent = row.dataset.parent;
+    return {
+      taskId: taskId,
+      fromKey: fromKey,
+      toKey: row.dataset.group ?? fromKey,
+      parentId: parent === undefined ? null : Number(parent),
+      index: Number(row.dataset.index ?? 0) + (after ? 1 : 0),
+    };
+  }
 
   function placeAt(
     pointerX: number,
@@ -610,68 +705,27 @@ function useMoveTask({
     taskId: number,
     fromKey: string,
   ): Move {
-    const rows = [
-      ...(boardRef.current?.querySelectorAll<HTMLElement>(
-        "[data-row]",
-      ) ?? []),
-    ].filter((row) => {
-      const box = row.getBoundingClientRect();
-      return pointerX >= box.left && pointerX <= box.right;
-    });
+    const rows = droppableRows(pointerX);
 
     for (const row of rows) {
-      const box = row.getBoundingClientRect();
-      const over = Number(row.dataset.task ?? 0);
-      const nesting =
-        over !== taskId &&
-        canHoldSubtasks(over) &&
-        pointerY > box.top + box.height * NESTING_BAND &&
-        pointerY < box.bottom - box.height * NESTING_BAND;
-      if (nesting) {
-        return {
-          taskId: taskId,
-          fromKey: fromKey,
-          toKey: row.dataset.group ?? fromKey,
-          index: Number(row.dataset.index ?? 0),
-          intoTaskId: over,
-        };
-      }
+      const box = headerOf(row).getBoundingClientRect();
       if (pointerY < box.top + box.height / 2) {
-        return {
-          taskId: taskId,
-          fromKey: fromKey,
-          toKey: row.dataset.group ?? fromKey,
-          index: Number(row.dataset.index ?? 0),
-          intoTaskId: null,
-        };
+        return placeNear(row, false, taskId, fromKey);
       }
     }
 
     const last = rows.at(-1);
     if (last) {
-      return {
-        taskId: taskId,
-        fromKey: fromKey,
-        toKey: last.dataset.group ?? fromKey,
-        index: Number(last.dataset.index ?? 0) + 1,
-        intoTaskId: null,
-      };
+      return placeNear(last, true, taskId, fromKey);
     }
 
     return {
       taskId: taskId,
       fromKey: fromKey,
       toKey: emptyGroupUnder(pointerX) ?? fromKey,
+      parentId: null,
       index: 0,
-      intoTaskId: null,
     };
-  }
-
-  function canHoldSubtasks(taskId: number): boolean {
-    const over = groups
-      .flatMap((group) => group.tasks)
-      .find((task) => task.id === taskId);
-    return over !== undefined && over.parentId === null;
   }
 
   function emptyGroupUnder(pointerX: number): string | null {
@@ -691,13 +745,89 @@ function useMoveTask({
     return null;
   }
 
+  function everyTask(): CreatedTask[] {
+    return groups.flatMap((group) => group.tasks);
+  }
+
+  function stopDwelling(): void {
+    if (dwelling.current) {
+      clearTimeout(dwelling.current.timer);
+      dwelling.current = null;
+    }
+  }
+
+  function considerExpanding(
+    pointerX: number,
+    pointerY: number,
+  ): void {
+    const under = droppableRows(pointerX).find((row) => {
+      const box = headerOf(row).getBoundingClientRect();
+      return pointerY >= box.top && pointerY <= box.bottom;
+    });
+    const shutId =
+      under &&
+      under.dataset.parent === undefined &&
+      under
+        .querySelector("[data-subtasks]")
+        ?.closest('.collapsible[data-open="false"]')
+        ? Number(under.dataset.task)
+        : null;
+
+    if (shutId === null) {
+      stopDwelling();
+      return;
+    }
+    if (dwelling.current?.taskId === shutId) {
+      return;
+    }
+    stopDwelling();
+    dwelling.current = {
+      taskId: shutId,
+      timer: setTimeout(() => {
+        dwelling.current = null;
+        onExpand(shutId);
+      }, HOLD_TO_EXPAND_MILLISECONDS),
+    };
+  }
+
+  function siblingsAfterDrop(dropped: Move): number[] {
+    const parent =
+      dropped.parentId === null
+        ? null
+        : everyTask().find((task) => task.id === dropped.parentId);
+    const siblings =
+      dropped.parentId === null
+        ? (groups.find((group) => group.key === dropped.toKey)
+            ?.tasks ?? [])
+        : (parent?.subtasks ?? []);
+
+    const ids = siblings
+      .map((task) => task.id)
+      .filter((id) => id !== dropped.taskId);
+    ids.splice(
+      Math.min(dropped.index, ids.length),
+      0,
+      dropped.taskId,
+    );
+    return ids;
+  }
+
   function finishMove(): void {
     const dropped = moveRef.current;
     moveRef.current = null;
+    stopDwelling();
     setMove(null);
     if (!dropped) {
       return;
     }
+
+    const ids = siblingsAfterDrop(dropped);
+
+    if (dropped.parentId !== null) {
+      onNest(dropped.taskId, dropped.parentId, ids);
+      return;
+    }
+
     const target = groups.find(
       (group) => group.key === dropped.toKey,
     );
@@ -708,18 +838,7 @@ function useMoveTask({
       return;
     }
 
-    if (dropped.intoTaskId !== null) {
-      onNest(dropped.taskId, dropped.intoTaskId);
-      return;
-    }
-
-    const ids = target.tasks
-      .map((task) => task.id)
-      .filter((id) => id !== dropped.taskId);
-    const at = Math.min(dropped.index, ids.length);
-    ids.splice(at, 0, dropped.taskId);
-
-    const moving = source.tasks.find(
+    const moving = everyTask().find(
       (task) => task.id === dropped.taskId,
     );
     const conferred: Attribute[] =
@@ -739,7 +858,9 @@ function useMoveTask({
           ]
         : conferred;
 
+    const cameFromASubtask = moving?.parentId != null;
     const unchanged =
+      !cameFromASubtask &&
       target.key === source.key &&
       target.tasks.every((task, index) => task.id === ids[index]);
 
@@ -764,6 +885,7 @@ function useMoveTask({
     pointerY: number;
   }): void {
     function track(atX: number, atY: number): void {
+      considerExpanding(atX, atY);
       const next = placeAt(atX, atY, taskId, fromKey);
       moveRef.current = next;
       setMove(next);

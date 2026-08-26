@@ -186,12 +186,10 @@ export function TasksScreen() {
             navigate(`/${[...screen, task.id].join("/")}`),
         }}
         onMove={actions.move}
-        onNest={(taskId, parentId) => {
-          const moving = everything.find(
-            (task) => task.id === taskId,
-          );
+        onNest={(taskId, parentId, orderedIds) => {
+          const moving = findAnywhere(everything, taskId);
           if (moving) {
-            actions.reparent(moving, parentId);
+            actions.reparent(moving, parentId, orderedIds);
           }
         }}
       />
@@ -371,4 +369,20 @@ function emptyFor(scope: Scope): string {
     return "Nothing finished yet.";
   }
   return "Nothing here.";
+}
+
+function findAnywhere(
+  tasks: CreatedTask[],
+  taskId: number,
+): CreatedTask | undefined {
+  for (const task of tasks) {
+    if (task.id === taskId) {
+      return task;
+    }
+    const nested = findAnywhere(task.subtasks ?? [], taskId);
+    if (nested) {
+      return nested;
+    }
+  }
+  return undefined;
 }

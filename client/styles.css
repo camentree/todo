@@ -575,12 +575,6 @@ a {
   color: var(--chip-text);
 }
 
-.drop-line {
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-  margin: 0.2rem 0;
-}
 
 .tag {
   color: var(--tag);
@@ -1874,8 +1868,25 @@ a {
   background: var(--accent);
 }
 
-.task-shell[data-nesting="true"] {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  border-radius: 12px;
+.task-shell {
+  position: relative;
+}
+
+.task-shell[data-drop="before"]::before,
+.task-shell[data-drop="after"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.task-shell[data-drop="before"]::before {
+  top: -1px;
+}
+
+.task-shell[data-drop="after"]::after {
+  bottom: -1px;
 }

@@ -36,47 +36,66 @@ export interface SubtaskActions {
 
 export function SubtaskRow({
   subtask,
+  index,
   actions,
   editing,
   onEditingChange,
   expanded,
   onExpandedChange,
   onTab,
+  dropAt,
+  moving = false,
+  onLongPress,
 }: {
   subtask: CreatedTask;
+  index: number;
   actions: SubtaskActions;
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
   onTab?: (backwards: boolean) => void;
+  dropAt?: "before" | "after";
+  moving?: boolean;
+  onLongPress?: (pointerX: number, pointerY: number) => void;
 }): ReactNode {
   const pending = usePending();
 
   return (
-    <Row
-      task={{ ...subtask, ...pending.get(subtask.id) }}
-      isEditing={editing}
-      onEditingChange={onEditingChange}
-      expanded={expanded}
-      onExpandedChange={onExpandedChange}
-      onTab={onTab}
-      onCommit={(changes) =>
-        "state" in changes
-          ? actions.toggle(subtask)
-          : actions.rename(subtask, changes)
-      }
-      swipeLeft={{
-        name: "Delete",
-        action: () => actions.remove(subtask),
-      }}
-      swipeRight={{
-        name: "Own task",
-        action: () => actions.reparent(subtask, null),
-      }}
-      showAttributes={false}
-      parseAttributes={false}
-    />
+    <div
+      className="task-shell"
+      data-row="true"
+      data-task={subtask.id}
+      data-parent={subtask.parentId ?? undefined}
+      data-index={index}
+      data-drop={dropAt}
+      data-moving={moving}
+    >
+      <Row
+        task={{ ...subtask, ...pending.get(subtask.id) }}
+        onLongPress={onLongPress}
+        isEditing={editing}
+        onEditingChange={onEditingChange}
+        expanded={expanded}
+        onExpandedChange={onExpandedChange}
+        onTab={onTab}
+        onCommit={(changes) =>
+          "state" in changes
+            ? actions.toggle(subtask)
+            : actions.rename(subtask, changes)
+        }
+        swipeLeft={{
+          name: "Delete",
+          action: () => actions.remove(subtask),
+        }}
+        swipeRight={{
+          name: "Own task",
+          action: () => actions.reparent(subtask, null),
+        }}
+        showAttributes={false}
+        parseAttributes={false}
+      />
+    </div>
   );
 }
 

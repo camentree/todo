@@ -68,7 +68,10 @@ export function Row({
   parseAttributes?: boolean;
   hiddenAttributes?: Attribute[];
   focusOnMount?: boolean;
-  renderSubtask?: (subtask: CreatedTask) => ReactNode;
+  renderSubtask?: (
+    subtask: CreatedTask,
+    index: number,
+  ) => ReactNode;
   renderNewSubtask?: (parent: Task) => ReactNode;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
@@ -393,8 +396,10 @@ export function Row({
               />
             )}
             {(renderSubtask || renderNewSubtask) && (
-              <div className="subtasks">
-                {children.map((child) => renderSubtask?.(child))}
+              <div className="subtasks" data-subtasks={task.id}>
+                {children.map((child, index) =>
+                  renderSubtask?.(child, index),
+                )}
                 {renderNewSubtask?.(task)}
               </div>
             )}

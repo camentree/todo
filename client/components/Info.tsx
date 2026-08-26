@@ -200,6 +200,7 @@ export function Info({
     <SubtaskRow
       key={subtask.id}
       subtask={subtask}
+      index={subtasks.indexOf(subtask)}
       actions={actions}
       editing={editingSubtaskId === subtask.id}
       onEditingChange={(editing) =>
