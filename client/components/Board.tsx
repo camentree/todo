@@ -568,20 +568,13 @@ function GroupedTasks({
               <div key={task.id}>{renderTask(task, group, index)}</div>
             ))}
             {capturable &&
-              capturingUnseeded &&
-              renderCapture({
-                seed: asChanges(group.guessedAttributes),
-                onCreated: onLanded,
-                onDismiss: onCaptureDone,
-              })}
-
-            {capturable &&
-              !capturingUnseeded &&
-              capturingHere &&
+              (capturingUnseeded || capturingHere) &&
               renderCapture({
                 seed: seed,
                 onCreated: onLanded,
-                onDismiss: () => onCaptureHere(false),
+                onDismiss: capturingUnseeded
+                  ? onCaptureDone
+                  : () => onCaptureHere(false),
               })}
 
             {capturable && !capturingUnseeded && !capturingHere && (
@@ -875,9 +868,7 @@ function useMoveTask({
       (task) => task.id === dropped.taskId,
     );
     const conferred: Attribute[] =
-      target.key === source.key
-        ? []
-        : [...target.guessedAttributes, ...target.groupedBy];
+      target.key === source.key ? [] : target.groupedBy;
     const destinationAttributes: Attribute[] =
       conferred.some((attribute) => attribute.field === "tag") &&
       moving

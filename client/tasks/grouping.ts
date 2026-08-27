@@ -107,6 +107,29 @@ function withGuesses(group: GroupBeforeGuessing): TaskGroup {
     });
   }
 
+  if (
+    !grouping.has("due_date") &&
+    first.dueDate !== null &&
+    rest.every((task) => task.dueDate === first.dueDate)
+  ) {
+    guessed.push({
+      field: "due_date",
+      value: first.dueDate,
+      label: formatDueDate(first.dueDate) ?? first.dueDate,
+    });
+  }
+  if (
+    !grouping.has("due_time") &&
+    first.dueTime !== null &&
+    rest.every((task) => task.dueTime === first.dueTime)
+  ) {
+    guessed.push({
+      field: "due_time",
+      value: first.dueTime,
+      label: first.dueTime,
+    });
+  }
+
   const groupingTags = group.groupedBy
     .filter((attribute) => attribute.field === "tag")
     .map((attribute) => attribute.value ?? "");
