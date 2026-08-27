@@ -83,6 +83,7 @@ export type OrderByField =
   | "relevance"
   | "due_date"
   | "title"
+  | "tag"
   | "created_at"
   | "finished_at";
 

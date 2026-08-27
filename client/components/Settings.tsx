@@ -34,6 +34,7 @@ const SORT_OPTIONS: {
   { field: "relevance", label: "Best match", directional: false },
   { field: "due_date", label: "Due date", directional: true },
   { field: "title", label: "Title", directional: true },
+  { field: "tag", label: "Tag", directional: true },
   { field: "created_at", label: "Added", directional: true },
   { field: "finished_at", label: "Finished", directional: true },
 ];

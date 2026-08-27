@@ -80,6 +80,53 @@ describe("sorting by when a task was finished", () => {
   });
 });
 
+describe("sorting by tag", () => {
+  const alphabetical = view({
+    orderBy: "tag",
+    orderDirection: "asc",
+  });
+
+  test("the first tag is the one that counts", () => {
+    const wrenchThenApple = task({
+      id: 1,
+      state: "to_do",
+      tags: ["wrench", "apple"],
+    });
+    const banana = task({ id: 2, state: "to_do", tags: ["banana"] });
+
+    expect(
+      sortTasks({
+        tasks: [wrenchThenApple, banana],
+        view: alphabetical,
+      }).map((sorted) => sorted.id),
+    ).toEqual([2, 1]);
+  });
+
+  test("case does not change where a tag lands", () => {
+    const shouty = task({ id: 1, state: "to_do", tags: ["Apple"] });
+    const quiet = task({ id: 2, state: "to_do", tags: ["banana"] });
+
+    expect(
+      sortTasks({
+        tasks: [quiet, shouty],
+        view: alphabetical,
+      }).map((sorted) => sorted.id),
+    ).toEqual([1, 2]);
+  });
+
+  test("an untagged task sinks below the tagged ones", () => {
+    const untagged = task({ id: 1, state: "to_do", tags: [] });
+    const tagged = task({ id: 2, state: "to_do", tags: ["zebra"] });
+
+    expect(
+      sortTasks({
+        tasks: [untagged, tagged],
+        view: alphabetical,
+      }).map((sorted) => sorted.id),
+    ).toEqual([2, 1]);
+  });
+});
+
 describe("a ticked task once the ledger catches up", () => {
   const ticked = task({ id: 1, state: "complete" });
   const waiting = task({ id: 2, state: "to_do" });

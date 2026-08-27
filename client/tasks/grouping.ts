@@ -343,6 +343,18 @@ function compare({
   if (view.orderBy === "title") {
     return left.title.localeCompare(right.title);
   }
+  if (view.orderBy === "tag") {
+    const leftTag = left.tags[0];
+    const rightTag = right.tags[0];
+    if (!leftTag && !rightTag) {
+      return left.sortOrder - right.sortOrder;
+    }
+    if (!leftTag) return 1;
+    if (!rightTag) return -1;
+    return canonicalName(leftTag).localeCompare(
+      canonicalName(rightTag),
+    );
+  }
   if (view.orderBy === "created_at") {
     return (
       parseISO(left.createdAt).getTime() -
