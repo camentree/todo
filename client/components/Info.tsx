@@ -280,7 +280,7 @@ export function Info({
             input={{
               className: "info-title",
               "aria-label": "Title",
-              autoCapitalize: "none",
+              autoCapitalize: "sentences",
               onFocus: () => setTitleFocused(true),
               onBlur: () => {
                 setTitleFocused(false);

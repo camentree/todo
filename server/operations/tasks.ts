@@ -449,6 +449,9 @@ export async function reparent({
 }
 
 export async function archive(ids: number[]): Promise<CreatedTask[]> {
+  for (const scheduleId of await schedulesBehind(ids)) {
+    await recurring.end(scheduleId);
+  }
   return sql<CreatedTask[]>`
     update todo.tasks
     set state = 'archived', finished_at = now(), updated_at = now()
@@ -457,9 +460,23 @@ export async function archive(ids: number[]): Promise<CreatedTask[]> {
   `;
 }
 
+async function schedulesBehind(ids: number[]): Promise<number[]> {
+  const rows = await sql<{ recurringTaskId: number }[]>`
+    select distinct recurring_task_id
+    from todo.tasks
+    where id = any(${ids})
+      and parent_id is null
+      and recurring_task_id is not null
+  `;
+  return rows.map((row) => row.recurringTaskId);
+}
+
 export async function unarchive(
   ids: number[],
 ): Promise<CreatedTask[]> {
+  for (const scheduleId of await schedulesBehind(ids)) {
+    await recurring.resume(scheduleId);
+  }
   return sql<CreatedTask[]>`
     update todo.tasks
     set state = 'to_do', finished_at = null, updated_at = now()
@@ -470,6 +487,9 @@ export async function unarchive(
 }
 
 export async function remove(id: number): Promise<number[]> {
+  for (const scheduleId of await schedulesBehind([id])) {
+    await recurring.end(scheduleId);
+  }
   const removed = await sql<{ id: number }[]>`
     delete from todo.tasks
     where id = ${id} or parent_id = ${id}

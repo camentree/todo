@@ -440,6 +440,14 @@ export async function nextInstanceAfter({
   );
 }
 
+export async function resume(id: number): Promise<void> {
+  await sql`
+    update todo.recurring_tasks
+    set ended_at = null, generated_through = null, updated_at = now()
+    where id = ${id}
+  `;
+}
+
 export async function end(id: number): Promise<void> {
   await sql`
     update todo.recurring_tasks

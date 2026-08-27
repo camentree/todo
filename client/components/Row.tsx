@@ -409,7 +409,7 @@ function TitleField({
         className: "task-title editing",
         "aria-label": "Title",
         enterKeyHint: "done",
-        autoCapitalize: "none",
+        autoCapitalize: "sentences",
       }}
     />
   );
