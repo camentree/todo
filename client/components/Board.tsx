@@ -19,6 +19,7 @@ import { usePending } from "../data/pending.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { renameChanges, taskAsLine } from "../tasks/taskLine.ts";
 import { asChanges } from "../tasks/attributes.ts";
+import { isTerminal } from "@shared/states.ts";
 import type { Attribute } from "../tasks/attributes.ts";
 import type {
   CreatedTask,
@@ -362,10 +363,14 @@ export function Board({
           }
           onAddSubtask={() => addSubtaskTo(task.id)}
           onCopy={() => copy(task)}
-          swipeLeft={{
-            name: leftSwipeLabel(task),
-            action: () => actions.swipeLeft(task),
-          }}
+          swipeLeft={
+            leftSwipeLabel(task)
+              ? {
+                  name: leftSwipeLabel(task),
+                  action: () => actions.swipeLeft(task),
+                }
+              : undefined
+          }
           swipeRight={
             rightSwipeLabel(task)
               ? {
@@ -594,10 +599,13 @@ function GroupedTasks({
 
 export function rightSwipeLabel(task: CreatedTask): string {
   if (task.state === "archived") {
-    return "Delete";
+    return "Unarchive";
   }
   if (task.state === "hidden") {
     return "Unhide";
+  }
+  if (isTerminal(task.state)) {
+    return "";
   }
   if (task.recurringTaskId) {
     return canSkip(task) ? "Skip" : "";
@@ -613,7 +621,10 @@ function canSkip(task: CreatedTask): boolean {
 }
 
 export function leftSwipeLabel(task: CreatedTask): string {
-  return task.state === "archived" ? "Unarchive" : "Archive";
+  if (task.state === "archived") {
+    return "Delete";
+  }
+  return isTerminal(task.state) ? "" : "Archive";
 }
 
 function saveTask({

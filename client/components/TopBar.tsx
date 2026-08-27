@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MenuButton } from "./ui/MenuButton.tsx";
 import { Sprite } from "./ui/Sprite.tsx";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 import { Changes } from "./Changes.tsx";
@@ -29,6 +30,7 @@ export function TopBar({
   onOpenSearch?: () => void;
 }) {
   const [menu, setMenu] = useState<OpenMenu>("none");
+  const navigate = useNavigate();
   const failed = useFailures();
 
   const { data: changes = [] } = useQuery({
@@ -50,9 +52,14 @@ export function TopBar({
           <Sprite name="chevron" open={menu === "scope"} />
         </button>
 
-        <div className="topbar-date">
+        <button
+          type="button"
+          className="topbar-date"
+          aria-label="Today"
+          onClick={() => navigate("/today")}
+        >
           {format(new Date(), "d MMM")}
-        </div>
+        </button>
 
         <div className="topbar-actions">
           {onOpenSearch && !searching && (

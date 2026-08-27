@@ -207,7 +207,7 @@ export function Row({
         className="task"
         left={swipeLeft}
         right={swipeRight}
-        enabled={!isTerminal(task.state) && !isEditing}
+        enabled={!isEditing}
         swipingTo={swipingTo}
         onLongPress={onLongPress}
         data-done={isTerminal(task.state)}

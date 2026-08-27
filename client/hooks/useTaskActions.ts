@@ -32,12 +32,6 @@ import type {
 
 const LAST_LIST_KEY = "todo.lastList";
 
-type SwipeRightOutcome =
-  | "deleted"
-  | "unhidden"
-  | "deferred"
-  | "hidden";
-
 function rememberList(list: string): void {
   window.localStorage.setItem(LAST_LIST_KEY, list);
 }
@@ -282,10 +276,14 @@ export function useTaskActions(
   });
 
   const swipeLeft = useMutation({
-    mutationFn: (task: CreatedTask) =>
-      task.state === "archived"
-        ? api.unarchiveTasks([task.id])
-        : api.archiveTasks([task.id]),
+    mutationFn: async (task: CreatedTask): Promise<CreatedTask[]> => {
+      if (task.state === "archived") {
+        const { removed } = await api.deleteTask(task.id);
+        takeBack(removed);
+        return [];
+      }
+      return api.archiveTasks([task.id]);
+    },
     onSuccess: (written: CreatedTask[], task: CreatedTask) => {
       landed(written);
       record({
@@ -298,49 +296,30 @@ export function useTaskActions(
         ],
       });
     },
-    onError: report("archive that task"),
+    onError: report("delete that task"),
   });
 
   const swipeRight = useMutation({
-    mutationFn: async (
-      task: CreatedTask,
-    ): Promise<{
-      outcome: SwipeRightOutcome;
-      written: CreatedTask[];
-    }> => {
+    mutationFn: async (task: CreatedTask): Promise<CreatedTask[]> => {
       if (task.state === "archived") {
-        const { removed } = await api.deleteTask(task.id);
-        takeBack(removed);
-        return { outcome: "deleted", written: [] };
+        return api.unarchiveTasks([task.id]);
       }
       if (task.state === "hidden") {
-        return {
-          outcome: "unhidden",
-          written: await api.unhideTask(task.id),
-        };
+        return api.unhideTask(task.id);
       }
       if (task.recurringTaskId || isDueToday(task.dueDate)) {
-        return {
-          outcome: "deferred",
-          written: await api.deferTask(task.id),
-        };
+        return api.deferTask(task.id);
       }
-      return {
-        outcome: "hidden",
-        written: await api.hideTask(task.id),
-      };
+      return api.hideTask(task.id);
     },
-    onSuccess: ({ outcome, written }, task: CreatedTask) => {
+    onSuccess: (written: CreatedTask[], task: CreatedTask) => {
       landed(written);
       record({
         edits: [
           {
             before: task,
             after:
-              outcome === "deleted"
-                ? null
-                : (written.find((held) => held.id === task.id) ??
-                  null),
+              written.find((held) => held.id === task.id) ?? null,
           },
         ],
       });
