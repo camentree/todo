@@ -82,10 +82,10 @@ Seeding truncates every table, so anything that seeds must point somewhere else.
 There is a guard against seeding the live database, but do not rely on it — set
 the connection string to a throwaway database deliberately, every time.
 
-Migrations are numbered files, applied by hand and recorded so later runs skip
-them. **Nothing applies them automatically** — a merged migration has not run
-until someone runs it, and it needs to go out with the deploy that needs it, not
-after.
+Migrations are numbered files, recorded so later runs skip them. The deploy runs
+them, between moving the ref and building, so a migration goes out with the push
+that carries it and needs nothing done by hand. Run `npm run migrate` yourself
+only against a database you are working on.
 
 ## Tests
 
