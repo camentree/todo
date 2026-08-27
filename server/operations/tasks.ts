@@ -182,6 +182,7 @@ export interface TaskChanges {
   dueDate?: string | null;
   dueTime?: string | null;
   parentId?: number | null;
+  recurringTaskId?: number | null;
   schedule?: Schedule | null;
   state?: TaskState;
   finishedAt?: string | null;
@@ -349,7 +350,9 @@ export async function setState(
   }
 
   const following =
-    isTerminal(state) && updated.recurringTaskId !== null
+    isTerminal(state) &&
+    updated.parentId === null &&
+    updated.recurringTaskId !== null
       ? await recurring.nextInstanceAfter({
           recurringId: updated.recurringTaskId,
           dueDate: updated.dueDate,
@@ -373,7 +376,9 @@ export async function reparent({
   if (parentId === null) {
     const [freed] = await sql<CreatedTask[]>`
       update todo.tasks
-      set parent_id = null, updated_at = now()
+      set parent_id = null,
+          recurring_task_id = null,
+          updated_at = now()
       where id = ${id}
       returning ${COLUMNS}
     `;
@@ -411,7 +416,7 @@ export async function reparent({
         stage = ${parent.stage},
         due_date = ${parent.dueDate},
         due_time = ${parent.dueTime},
-        recurring_task_id = null,
+        recurring_task_id = ${parent.recurringTaskId},
         sort_order = ${(parent.subtasks ?? []).length},
         updated_at = now()
     where id = ${id}

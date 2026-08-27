@@ -349,8 +349,21 @@ async function createInstance({
     title,
   ] of recurring.subtaskTitles.entries()) {
     await transaction`
-      insert into todo.tasks (list, parent_id, title, sort_order)
-      values (${recurring.list}, ${instance.id}, ${title}, ${position})
+      insert into todo.tasks (
+        list, parent_id, recurring_task_id, title, tags, who, due_date,
+        due_time, sort_order
+      )
+      values (
+        ${recurring.list},
+        ${instance.id},
+        ${recurring.id},
+        ${title},
+        ${recurring.tags},
+        ${recurring.who},
+        ${dueDate},
+        ${recurring.dueTime},
+        ${position}
+      )
     `;
   }
 

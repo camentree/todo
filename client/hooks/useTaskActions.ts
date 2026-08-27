@@ -420,7 +420,7 @@ export function useTaskActions(
             stage: parent.stage,
             dueDate: parent.dueDate,
             dueTime: parent.dueTime,
-            recurringTaskId: null,
+            recurringTaskId: parent.recurringTaskId,
           };
 
     const moving = committed(task.id) ?? task;
@@ -466,6 +466,10 @@ export function useTaskActions(
     onManualOrder?.({ orderBy: "manual", orderDirection: "asc" });
 
     const changes = asChanges(destination);
+    const leavingAParent = committed(taskId)?.parentId != null;
+    const freed: Partial<Task> = leavingAParent
+      ? { parentId: null, recurringTaskId: null }
+      : { parentId: null };
     const held = orderedIds
       .map((id) => committed(id))
       .filter((task): task is CreatedTask => task !== undefined);
@@ -478,7 +482,7 @@ export function useTaskActions(
       edited: held.map((task, index) => ({
         before: task,
         showing: withChanges(task, {
-          ...(task.id === taskId ? { ...changes, parentId: null } : {}),
+          ...(task.id === taskId ? { ...changes, ...freed } : {}),
           sortOrder: slots[index] ?? task.sortOrder,
         }),
       })),
@@ -493,10 +497,7 @@ export function useTaskActions(
           );
         }
         written.push(
-          await api.updateTask(taskId, {
-            ...changes,
-            parentId: null,
-          }),
+          await api.updateTask(taskId, { ...changes, ...freed }),
         );
         if (orderedIds.length > 1) {
           written.push(...(await api.reorderTasks(orderedIds)));
