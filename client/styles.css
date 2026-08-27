@@ -708,6 +708,7 @@ a {
   flex-direction: column;
   gap: 0.9rem;
   pointer-events: none;
+  will-change: transform;
 }
 
 .floating-row {
