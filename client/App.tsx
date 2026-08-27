@@ -14,6 +14,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<TasksScreen />} />
         <Route path="/today" element={<TasksScreen />} />
+        <Route path="/today/:taskId" element={<TasksScreen />} />
         <Route
           path="/due_date/today"
           element={<Navigate to="/today" replace />}
