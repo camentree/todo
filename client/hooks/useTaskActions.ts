@@ -31,6 +31,36 @@ import type {
 } from "@shared/types.ts";
 
 const LAST_LIST_KEY = "todo.lastList";
+const LAST_IN_ORDER = Number.MAX_SAFE_INTEGER;
+
+let provisionalTasks = 0;
+
+function provisionalTask(
+  written: Partial<Task> & { title: string; list: string },
+): CreatedTask {
+  provisionalTasks += 1;
+  const now = new Date().toISOString();
+  return {
+    parentId: null,
+    recurringTaskId: null,
+    note: null,
+    state: "to_do",
+    stage: null,
+    tags: [],
+    who: null,
+    dueDate: null,
+    dueTime: null,
+    finishedAt: null,
+    commentCount: 0,
+    schedule: null,
+    subtasks: [],
+    ...written,
+    id: -provisionalTasks,
+    sortOrder: LAST_IN_ORDER,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 function rememberList(list: string): void {
   window.localStorage.setItem(LAST_LIST_KEY, list);
@@ -245,26 +275,35 @@ export function useTaskActions(
     );
   }
 
-  const create = useMutation({
-    mutationFn: (changes: Partial<Task>) => {
-      const list = changes.list || someList();
-      const staged =
-        changes.parentId == null && everyTaskInListIsStaged(list);
-      return api.createTask({
-        ...changes,
-        title: changes.title ?? "",
-        list: list,
-        stage: changes.stage ?? (staged ? "to_do" : null),
-      });
-    },
-    onSuccess: (task: CreatedTask) => {
+  async function create(
+    changes: Partial<Task>,
+  ): Promise<CreatedTask> {
+    const list = changes.list || someList();
+    const staged =
+      changes.parentId == null && everyTaskInListIsStaged(list);
+    const written = {
+      ...changes,
+      title: changes.title ?? "",
+      list: list,
+      stage: changes.stage ?? (staged ? "to_do" : null),
+    };
+    const provisional = provisionalTask(written);
+    addToLedger(provisional);
+
+    try {
+      const task = await api.createTask(written);
+      takeBack([provisional.id]);
       rememberList(task.list);
       addToLedger(task);
       record({ edits: [{ before: null, after: task }] });
       void queryClient.invalidateQueries({ queryKey: ["lists"] });
-    },
-    onError: report("add that task"),
-  });
+      return task;
+    } catch (error) {
+      takeBack([provisional.id]);
+      recordFailure({ doing: "add that task", error: error });
+      throw error;
+    }
+  }
 
   const remove = useMutation({
     mutationFn: (task: CreatedTask) => api.deleteTask(task.id),
@@ -499,7 +538,7 @@ export function useTaskActions(
     },
     toggle: toggle,
     rename: rename,
-    create: (changes: Partial<Task>) => create.mutateAsync(changes),
+    create: create,
     remove: (task: CreatedTask) => remove.mutate(task),
     swipeLeft: (task: CreatedTask) => swipeLeft.mutate(task),
     swipeRight: (task: CreatedTask) => {
