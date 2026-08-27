@@ -467,9 +467,7 @@ export function useTaskActions(
 
     const changes = asChanges(destination);
     const leavingAParent = committed(taskId)?.parentId != null;
-    const freed: Partial<Task> = leavingAParent
-      ? { parentId: null, recurringTaskId: null }
-      : { parentId: null };
+    const freed: Partial<Task> = { parentId: null };
     const held = orderedIds
       .map((id) => committed(id))
       .filter((task): task is CreatedTask => task !== undefined);
@@ -488,6 +486,9 @@ export function useTaskActions(
       })),
       call: async () => {
         const written: CreatedTask[] = [];
+        if (leavingAParent) {
+          written.push(...(await api.reparentTask(taskId, null)));
+        }
         if (changes.stage !== undefined) {
           written.push(
             ...(await api.setState(

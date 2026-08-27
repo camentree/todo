@@ -366,6 +366,22 @@ export async function setState(
   return next ? [updated, next] : [updated];
 }
 
+async function splitFrom(
+  freed: CreatedTask,
+  sharedId: number | null,
+): Promise<CreatedTask | null> {
+  if (sharedId === null) {
+    return null;
+  }
+  const own = await recurring.splitOff({
+    taskId: freed.id,
+    fromRecurringId: sharedId,
+    title: freed.title,
+    dueDate: freed.dueDate,
+  });
+  return own === null ? null : await byId(freed.id);
+}
+
 export async function reparent({
   id,
   parentId,
@@ -373,24 +389,27 @@ export async function reparent({
   id: number;
   parentId: number | null;
 }): Promise<CreatedTask[]> {
+  const before = await byId(id);
+  const sharedSchedule =
+    before?.parentId != null ? before.recurringTaskId : null;
+
   if (parentId === null) {
     const [freed] = await sql<CreatedTask[]>`
       update todo.tasks
-      set parent_id = null,
-          recurring_task_id = null,
-          updated_at = now()
+      set parent_id = null, recurring_task_id = null, updated_at = now()
       where id = ${id}
       returning ${COLUMNS}
     `;
     if (!freed) {
       throw new Error(`no task with id ${id}`);
     }
-    return [freed];
+    return [(await splitFrom(freed, sharedSchedule)) ?? freed];
   }
 
   if (parentId === id) {
     throw new Error("a task cannot be its own subtask");
   }
+
   await requireCanHaveChildren(parentId);
 
   const [{ count } = { count: 0 }] = await sql<{ count: number }[]>`

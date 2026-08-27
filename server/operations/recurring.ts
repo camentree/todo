@@ -370,6 +370,49 @@ async function createInstance({
   return instance.id;
 }
 
+export async function splitOff({
+  taskId,
+  fromRecurringId,
+  title,
+  dueDate,
+}: {
+  taskId: number;
+  fromRecurringId: number;
+  title: string;
+  dueDate: string | null;
+}): Promise<number | null> {
+  const shared = await byId(fromRecurringId);
+  if (!shared || shared.endedAt !== null) {
+    return null;
+  }
+
+  const startsOn = dueDate ?? shared.startsOn;
+  const own = await create({
+    list: shared.list,
+    title: title,
+    tags: shared.tags,
+    who: shared.who,
+    dueTime: shared.dueTime,
+    frequency: shared.frequency,
+    repeatEvery: shared.repeatEvery,
+    weekdays: shared.weekdays,
+    dayOfMonth: shared.dayOfMonth,
+    startsOn: startsOn,
+  });
+
+  await sql`
+    update todo.recurring_tasks
+    set generated_through = ${startsOn}
+    where id = ${own.id}
+  `;
+  await sql`
+    update todo.tasks
+    set recurring_task_id = ${own.id}, updated_at = now()
+    where id = ${taskId}
+  `;
+  return own.id;
+}
+
 export async function nextInstanceAfter({
   recurringId,
   dueDate,
