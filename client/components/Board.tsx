@@ -11,7 +11,7 @@ import {
   isDueToday,
   todayAsDateString,
 } from "../tasks/format.ts";
-import { buildGroups, HIDDEN_GROUP } from "../tasks/grouping.ts";
+import { buildGroups, COMPLETED_GROUP } from "../tasks/grouping.ts";
 import type { TaskGroup } from "../tasks/grouping.ts";
 import { easeToTop } from "../hooks/useEaseIntoView.ts";
 import { Collapsible } from "./ui/Collapsible.tsx";
@@ -96,7 +96,7 @@ export function Board({
   );
   const [editingId, setEditingId] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(
-    new Set([HIDDEN_GROUP]),
+    new Set([COMPLETED_GROUP]),
   );
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [addingSubtaskTo, setAddingSubtaskTo] = useState<
@@ -428,7 +428,7 @@ export function Board({
   }
 
   const lastGroupKey = groups
-    .filter((group) => group.key !== HIDDEN_GROUP)
+    .filter((group) => group.key !== COMPLETED_GROUP)
     .at(-1)?.key;
 
   if (pending) {
@@ -552,7 +552,7 @@ function GroupedTasks({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
-  const capturable = canCapture && group.key !== HIDDEN_GROUP;
+  const capturable = canCapture && group.key !== COMPLETED_GROUP;
 
   return (
     <div className="group" data-group-key={group.key}>
@@ -601,16 +601,13 @@ export function rightSwipeLabel(task: CreatedTask): string {
   if (task.state === "archived") {
     return "Unarchive";
   }
-  if (task.state === "hidden") {
-    return "Unhide";
-  }
   if (isTerminal(task.state)) {
     return "";
   }
   if (task.recurringTaskId) {
     return canSkip(task) ? "Skip" : "";
   }
-  return isDueToday(task.dueDate) ? "Skip" : "Hide";
+  return isDueToday(task.dueDate) ? "Not today" : "Today";
 }
 
 function canSkip(task: CreatedTask): boolean {

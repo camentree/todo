@@ -498,22 +498,6 @@ export async function remove(id: number): Promise<number[]> {
   return removed.map((row) => row.id);
 }
 
-export async function hide(id: number): Promise<CreatedTask[]> {
-  return sql<CreatedTask[]>`
-    update todo.tasks set state = 'hidden', updated_at = now() where id = ${id}
-    returning ${COLUMNS}
-  `;
-}
-
-export async function unhide(id: number): Promise<CreatedTask[]> {
-  return sql<CreatedTask[]>`
-    update todo.tasks
-    set state = 'to_do', updated_at = now()
-    where id = ${id} and state = 'hidden'
-    returning ${COLUMNS}
-  `;
-}
-
 export async function deferByOneDay(
   id: number,
 ): Promise<CreatedTask[]> {

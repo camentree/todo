@@ -84,7 +84,7 @@ describe("a ticked task once the ledger catches up", () => {
   const ticked = task({ id: 1, state: "complete" });
   const waiting = task({ id: 2, state: "to_do" });
 
-  test("drops into the hidden group", () => {
+  test("drops into the completed group", () => {
     expect(
       buildGroups({
         tasks: [ticked, waiting],
@@ -96,7 +96,7 @@ describe("a ticked task once the ledger catches up", () => {
       })),
     ).toEqual([
       { key: "all", ids: [2] },
-      { key: "hidden", ids: [1] },
+      { key: "completed", ids: [1] },
     ]);
   });
 });

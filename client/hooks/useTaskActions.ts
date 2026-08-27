@@ -18,7 +18,7 @@ import {
 } from "../data/pending.ts";
 import { asChanges } from "../tasks/attributes.ts";
 import type { Attribute } from "../tasks/attributes.ts";
-import { isDueToday } from "../tasks/format.ts";
+import { isDueToday, todayAsDateString } from "../tasks/format.ts";
 import { findTask, TASKS_KEY } from "./useTasks.ts";
 import { canonicalName } from "@shared/names.ts";
 import { reassignSlots } from "@shared/ordering.ts";
@@ -299,19 +299,11 @@ export function useTaskActions(
     onError: report("delete that task"),
   });
 
-  const swipeRight = useMutation({
-    mutationFn: async (task: CreatedTask): Promise<CreatedTask[]> => {
-      if (task.state === "archived") {
-        return api.unarchiveTasks([task.id]);
-      }
-      if (task.state === "hidden") {
-        return api.unhideTask(task.id);
-      }
-      if (task.recurringTaskId || isDueToday(task.dueDate)) {
-        return api.deferTask(task.id);
-      }
-      return api.hideTask(task.id);
-    },
+  const unarchiveOrSkip = useMutation({
+    mutationFn: (task: CreatedTask): Promise<CreatedTask[]> =>
+      task.state === "archived"
+        ? api.unarchiveTasks([task.id])
+        : api.deferTask(task.id),
     onSuccess: (written: CreatedTask[], task: CreatedTask) => {
       landed(written);
       record({
@@ -324,7 +316,7 @@ export function useTaskActions(
         ],
       });
     },
-    onError: report("put that task away"),
+    onError: report("move that task on"),
   });
 
   function rename(task: CreatedTask, changes: Partial<Task>): void {
@@ -510,7 +502,17 @@ export function useTaskActions(
     create: (changes: Partial<Task>) => create.mutateAsync(changes),
     remove: (task: CreatedTask) => remove.mutate(task),
     swipeLeft: (task: CreatedTask) => swipeLeft.mutate(task),
-    swipeRight: (task: CreatedTask) => swipeRight.mutate(task),
+    swipeRight: (task: CreatedTask) => {
+      if (task.state === "archived" || task.recurringTaskId) {
+        unarchiveOrSkip.mutate(task);
+        return;
+      }
+      rename(task, {
+        dueDate: isDueToday(task.dueDate)
+          ? null
+          : todayAsDateString(),
+      });
+    },
     move: move,
     reparent: reparent,
   };

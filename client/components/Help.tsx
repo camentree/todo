@@ -13,7 +13,7 @@ const KEYS = [
   { keys: ["enter"], does: "info" },
   { keys: ["+"], does: "add subtask" },
   { keys: ["a"], does: "archive" },
-  { keys: ["s"], does: "skip/hide" },
+  { keys: ["s"], does: "today/skip" },
   { keys: ["z"], does: "undo" },
   { keys: ["r"], does: "redo" },
   { keys: ["c"], does: "copy" },

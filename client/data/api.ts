@@ -66,10 +66,6 @@ export const api = {
       method: "DELETE",
     }),
 
-  hideTask: (id: number) =>
-    send<CreatedTask[]>(`/tasks/${id}/hide`, "POST", {}),
-  unhideTask: (id: number) =>
-    send<CreatedTask[]>(`/tasks/${id}/unhide`, "POST", {}),
   deferTask: (id: number) =>
     send<CreatedTask[]>(`/tasks/${id}/defer`, "POST", {}),
 

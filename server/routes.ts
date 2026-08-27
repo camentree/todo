@@ -104,18 +104,6 @@ api.post("/tasks/:id/state", async (context) => {
   );
 });
 
-api.post("/tasks/:id/hide", async (context) => {
-  return context.json(
-    await tasks.hide(numberParam(context.req.param("id"))),
-  );
-});
-
-api.post("/tasks/:id/unhide", async (context) => {
-  return context.json(
-    await tasks.unhide(numberParam(context.req.param("id"))),
-  );
-});
-
 api.post("/tasks/:id/defer", async (context) => {
   return context.json(
     await tasks.deferByOneDay(numberParam(context.req.param("id"))),

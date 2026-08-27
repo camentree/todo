@@ -3,7 +3,6 @@ export const TASK_STATES = [
   "complete",
   "missed",
   "skipped",
-  "hidden",
   "archived",
 ] as const;
 

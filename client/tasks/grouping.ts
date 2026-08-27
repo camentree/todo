@@ -11,7 +11,7 @@ import type {
   ViewPreference,
 } from "@shared/types.ts";
 
-export const HIDDEN_GROUP = "hidden";
+export const COMPLETED_GROUP = "completed";
 
 export interface TaskGroup {
   key: string;
@@ -41,8 +41,8 @@ export function buildGroups({
 
   const screenWide = hiddenAttributes;
   const setAside = (task: CreatedTask) =>
-    !showFinished && putAway(task);
-  const hidden = sorted.filter(setAside);
+    !showFinished && isTerminal(task.state);
+  const finished = sorted.filter(setAside);
 
   const groups = groupsOf({
     sorted: sorted.filter((task) => !setAside(task)),
@@ -51,18 +51,18 @@ export function buildGroups({
     screenWide: screenWide,
   });
 
-  if (hidden.length === 0) {
+  if (finished.length === 0) {
     return groups.map(withGuesses);
   }
 
   return [
     ...groups,
     {
-      key: HIDDEN_GROUP,
-      label: "Hidden",
+      key: COMPLETED_GROUP,
+      label: "Completed",
       groupedBy: [],
       hiddenAttributes: screenWide,
-      tasks: hidden,
+      tasks: finished,
     },
   ].map(withGuesses);
 }
@@ -150,10 +150,6 @@ function holdsTag(tags: string[], wanted: string): boolean {
   return tags.some(
     (tag) => canonicalName(tag) === canonicalName(wanted),
   );
-}
-
-function putAway(task: CreatedTask): boolean {
-  return task.state === "hidden" || isTerminal(task.state);
 }
 
 function groupsOf({
@@ -310,10 +306,6 @@ function stageOf(task: CreatedTask): TaskStage {
   return task.stage ?? "to_do";
 }
 
-function sinks(task: CreatedTask): boolean {
-  return isTerminal(task.state) || task.state === "hidden";
-}
-
 export function sortTasks({
   tasks,
   view,
@@ -328,8 +320,8 @@ export function sortTasks({
   const direction = view.orderDirection === "desc" ? -1 : 1;
 
   return [...tasks].sort((left, right) => {
-    const leftDone = sinks(left);
-    const rightDone = sinks(right);
+    const leftDone = isTerminal(left.state);
+    const rightDone = isTerminal(right.state);
     if (leftDone !== rightDone) {
       return leftDone ? 1 : -1;
     }
