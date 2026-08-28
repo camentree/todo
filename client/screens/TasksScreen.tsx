@@ -187,6 +187,7 @@ export function TasksScreen() {
           ...actions,
           open: (task) =>
             navigate(`/${[...screen, task.id].join("/")}`),
+          search: setSearchText,
           toggle: noticing(actions.toggle),
           remove: noticing(actions.remove),
           archive: noticing(actions.archive),

@@ -9,10 +9,23 @@ export interface Attribute {
   label: string;
 }
 
-export function linkTo(attribute: Attribute): string | null {
-  return attribute.value === null
-    ? null
-    : `/${attribute.field}/${encodeURIComponent(attribute.value)}`;
+export function searchFor(attribute: Attribute): string | null {
+  if (attribute.value === null) {
+    return null;
+  }
+  if (attribute.field === "tag") {
+    return `#${attribute.value}`;
+  }
+  if (attribute.field === "who") {
+    return `@${attribute.value}`;
+  }
+  if (attribute.field === "list") {
+    return `/${attribute.value}`;
+  }
+  if (attribute.field === "stage") {
+    return `!${attribute.value}`;
+  }
+  return null;
 }
 
 export function asChanges(attributes: Attribute[]): Partial<Task> {

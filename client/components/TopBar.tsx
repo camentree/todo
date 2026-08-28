@@ -97,7 +97,7 @@ export function TopBar({
                 autoCapitalize: "none",
                 autoCorrect: "off",
                 spellCheck: false,
-                autoFocus: true,
+                autoFocus: searchText === "",
                 "data-search-field": true,
               }}
             />

@@ -25,6 +25,7 @@ import type {
 export interface RowActions extends SwipeHandlers {
   toggle: (task: CreatedTask) => void;
   open: (task: CreatedTask) => void;
+  search: (term: string) => void;
   rename: (task: CreatedTask, changes: Partial<Task>) => void;
   create: (changes: Partial<Task>) => Promise<CreatedTask>;
   remove: (task: CreatedTask) => void;
@@ -346,6 +347,7 @@ export function Board({
             }
           }}
           onInfoOpen={() => actions.open(task)}
+          onSearch={actions.search}
           onFocusNext={() =>
             focusAt(shown.findIndex((row) => row.id === task.id) + 1)
           }
@@ -415,7 +417,9 @@ export function Board({
 }
 
 function sharedAcross(group: TaskGroup): Attribute[] {
-  return group.tasks.length > 1 ? group.guessedAttributes : [];
+  return group.label && group.tasks.length > 1
+    ? group.guessedAttributes
+    : [];
 }
 
 function movement(event: KeyboardEvent): number {

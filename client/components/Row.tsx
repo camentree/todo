@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Sprite } from "./ui/Sprite.tsx";
 import type { ReactNode, RefObject } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { Title } from "./Title.tsx";
 import {
@@ -16,7 +15,7 @@ import { useKeyboardSwipe } from "../hooks/useKeyboardSwipe.ts";
 import { Swipeable } from "./ui/Swipeable.tsx";
 import type { SwipeAction } from "./ui/Swipeable.tsx";
 import { renameChanges } from "../tasks/taskLine.ts";
-import { linkTo } from "../tasks/attributes.ts";
+import { searchFor } from "../tasks/attributes.ts";
 import type { Attribute } from "../tasks/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
@@ -28,6 +27,7 @@ export function Row({
   onEditingChange,
   onCommit,
   onInfoOpen,
+  onSearch,
   onFocusNext,
   onAddSubtask,
   onCopy,
@@ -50,6 +50,7 @@ export function Row({
   onEditingChange: (editing: boolean) => void;
   onCommit: (changes: Partial<Task>) => void;
   onInfoOpen?: () => void;
+  onSearch?: (term: string) => void;
   onFocusNext?: () => void;
   onAddSubtask?: () => void;
   onCopy?: () => void;
@@ -338,7 +339,11 @@ export function Row({
               />
             )
           : showAttributes && (
-              <Attributes task={task} omit={hiddenAttributes} />
+              <Attributes
+                task={task}
+                omit={hiddenAttributes}
+                onSearch={onSearch}
+              />
             )}
       </Swipeable>
 
@@ -430,12 +435,12 @@ function TitleField({
 function Attributes({
   task,
   omit,
+  onSearch,
 }: {
   task: Task;
   omit: Attribute[];
+  onSearch?: (term: string) => void;
 }) {
-  const navigate = useNavigate();
-
   const shown = attributesOf(task).filter(
     (item) =>
       !omit.some(
@@ -452,19 +457,14 @@ function Attributes({
   return (
     <span className="task-meta">
       {shown.map((attribute) => {
-        const to = linkTo(attribute);
+        const term = onSearch && searchFor(attribute);
         return (
           <button
             type="button"
             key={`${attribute.field}-${attribute.label}`}
             className={attribute.field === "tag" ? "tag" : undefined}
-            data-clickable={Boolean(to)}
-            onClick={() => {
-              if (!to) {
-                return;
-              }
-              navigate(to);
-            }}
+            data-clickable={Boolean(term)}
+            onClick={() => term && onSearch?.(term)}
           >
             {attribute.label.toLowerCase()}
           </button>

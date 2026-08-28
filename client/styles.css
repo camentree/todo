@@ -1232,15 +1232,14 @@ a {
   bottom: 0;
   z-index: 45;
   height: min(82dvh, calc(100dvh - 2.5rem));
+  scroll-behavior: auto;
   background: var(--ground);
   border-radius: 18px 18px 0 0;
   border-top: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
   animation: slide-up var(--motion-slow) var(--ease);
-  transition:
-    transform var(--motion-slow) var(--ease),
-    height var(--motion) var(--ease);
+  transition: transform var(--motion-slow) var(--ease);
   touch-action: none;
 }
 
@@ -1410,7 +1409,13 @@ a {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-behavior: auto;
+  scroll-padding-block: 1.75rem;
   padding-bottom: 1rem;
+}
+
+.sheet :is(input, textarea) {
+  scroll-margin-block: 1.75rem;
 }
 
 .sheet-body > .choice {
