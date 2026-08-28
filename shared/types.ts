@@ -89,11 +89,8 @@ export type OrderByField =
 
 export type OrderDirection = "asc" | "desc";
 
-export type Layout = "stacked" | "columns";
-
 export interface ViewPreference {
   groupBy: GroupByField;
   orderBy: OrderByField;
   orderDirection: OrderDirection;
-  layout: Layout;
 }

@@ -34,7 +34,6 @@ function view(overrides: Partial<ViewPreference>): ViewPreference {
     groupBy: "none",
     orderBy: "finished_at",
     orderDirection: "desc",
-    layout: "stacked",
     ...overrides,
   };
 }

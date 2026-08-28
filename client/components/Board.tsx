@@ -7,10 +7,7 @@ import {
   NewSubtaskRow,
   SubtaskRow,
 } from "./Subtasks.tsx";
-import {
-  isDueToday,
-  todayAsDateString,
-} from "../tasks/format.ts";
+import { isDueToday, todayAsDateString } from "../tasks/format.ts";
 import { buildGroups, COMPLETED_GROUP } from "../tasks/grouping.ts";
 import type { TaskGroup } from "../tasks/grouping.ts";
 import { easeToTop } from "../hooks/useEaseIntoView.ts";
@@ -444,12 +441,7 @@ export function Board({
   }
 
   return (
-    <div
-      className="board"
-      key={view.layout}
-      data-layout={view.layout}
-      ref={boardRef}
-    >
+    <div className="board" ref={boardRef}>
       {groups.map((group) => (
         <GroupedTasks
           key={group.key}
@@ -570,7 +562,9 @@ function GroupedTasks({
         <div>
           <div className="tasks">
             {group.tasks.map((task, index) => (
-              <div key={task.id}>{renderTask(task, group, index)}</div>
+              <div key={task.id}>
+                {renderTask(task, group, index)}
+              </div>
             ))}
             {capturable &&
               (capturingUnseeded || capturingHere) &&
@@ -611,10 +605,7 @@ export function rightSwipeLabel(task: CreatedTask): string {
 }
 
 function canSkip(task: CreatedTask): boolean {
-  return (
-    task.dueDate !== null &&
-    task.dueDate <= todayAsDateString()
-  );
+  return task.dueDate !== null && task.dueDate <= todayAsDateString();
 }
 
 export function leftSwipeLabel(task: CreatedTask): string {
@@ -695,9 +686,7 @@ function useMoveTask({
     ].filter((row) => {
       const box = headerOf(row).getBoundingClientRect();
       return (
-        onScreen(row) &&
-        pointerX >= box.left &&
-        pointerX <= box.right
+        onScreen(row) && pointerX >= box.left && pointerX <= box.right
       );
     });
   }
@@ -799,7 +788,8 @@ function useMoveTask({
     const alreadyOpen =
       under
         ?.querySelector("[data-subtasks]")
-        ?.closest<HTMLElement>(".collapsible")?.dataset.open === "true";
+        ?.closest<HTMLElement>(".collapsible")?.dataset.open ===
+      "true";
     const shutId =
       under &&
       under.dataset.parent === undefined &&

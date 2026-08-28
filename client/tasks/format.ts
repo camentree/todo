@@ -1,5 +1,7 @@
 import {
+  addDays,
   differenceInCalendarDays,
+  endOfWeek,
   format,
   isToday,
   isTomorrow,
@@ -7,6 +9,7 @@ import {
   parseISO,
 } from "date-fns";
 
+import type { WeekRuns } from "../data/settings.ts";
 import type { AttributeField } from "@shared/attributes.ts";
 import { asStage, stageLabel } from "@shared/stages.ts";
 import type { Schedule } from "@shared/types.ts";
@@ -115,4 +118,12 @@ export function isDueToday(dueDate: string | null): boolean {
 
 export function todayAsDateString(): string {
   return format(new Date(), "yyyy-MM-dd");
+}
+
+export function weekEndsOn(weekRuns: WeekRuns): string {
+  const last =
+    weekRuns === "calendar"
+      ? endOfWeek(new Date(), { weekStartsOn: 1 })
+      : addDays(new Date(), 6);
+  return format(last, "yyyy-MM-dd");
 }
