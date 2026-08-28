@@ -10,6 +10,7 @@ import type {
 
 const GLOBAL_KEY = "todo.settings";
 const SCREENS_KEY = "todo.screens";
+const FOLDED_KEY = "todo.folded";
 const SETTLE_MILLISECONDS = 500;
 
 export const HISTORY_STOPS = [1, 3, 6, 12, 24, 60, null] as const;
@@ -107,6 +108,9 @@ const global = createStore<GlobalSettings>(
 const screens = createStore<Record<string, Partial<ViewPreference>>>(
   stored(SCREENS_KEY, {}),
 );
+const folded = createStore<Record<string, string[]>>(
+  stored(FOLDED_KEY, {}),
+);
 const settledHistory = createStore<HistoryMonths>(
   global.read().historyMonths,
 );
@@ -170,6 +174,27 @@ export function useViewPreference(
         fallback.orderDirection) as OrderDirection,
     },
     (changes) => changeScreen(key, changes),
+  ];
+}
+
+export function useFoldedGroups(
+  key: string,
+  foldedAtFirst: string[],
+): [Set<string>, (groupKey: string) => void] {
+  const held = useStore(folded)[key] ?? foldedAtFirst;
+
+  return [
+    new Set(held),
+    (groupKey: string) => {
+      const next = held.includes(groupKey)
+        ? held.filter((each) => each !== groupKey)
+        : [...held, groupKey];
+      folded.write({ ...folded.read(), [key]: next });
+      window.localStorage.setItem(
+        FOLDED_KEY,
+        JSON.stringify(folded.read()),
+      );
+    },
   ];
 }
 

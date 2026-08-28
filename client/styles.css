@@ -1673,12 +1673,6 @@ a {
   opacity: 0.35;
 }
 
-.event-track {
-  position: relative;
-  overflow: hidden;
-  border-radius: 10px;
-}
-
 .event {
   position: relative;
   padding: 0.55rem;

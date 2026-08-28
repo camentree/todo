@@ -108,6 +108,15 @@ export function TasksScreen() {
     tasks: tasks,
   });
 
+  function noticing(
+    act: (task: CreatedTask) => void,
+  ): (task: CreatedTask) => void {
+    return (task) => {
+      undoPrompt.noticed();
+      act(task);
+    };
+  }
+
   const results = useMemo(
     () =>
       searchTasks({
@@ -156,6 +165,9 @@ export function TasksScreen() {
 
       <Board
         key={pathname}
+        screen={
+          searchText === null ? viewKeyFor(scope) : SEARCH_VIEW_KEY
+        }
         tasks={searchText === null ? tasks : results}
         view={view}
         lists={lists}
@@ -172,36 +184,15 @@ export function TasksScreen() {
           ...actions,
           open: (task) =>
             navigate(`/${[...screen, task.id].join("/")}`),
-          toggle: (task) => {
-            undoPrompt.noticed();
-            actions.toggle(task);
-          },
-          remove: (task) => {
-            undoPrompt.noticed();
-            actions.remove(task);
-          },
-          archive: (task) => {
-            undoPrompt.noticed();
-            actions.archive(task);
-          },
-          delete: (task) => {
-            undoPrompt.noticed();
-            actions.delete(task);
-          },
-          moveOn: (task) => {
-            undoPrompt.noticed();
-            actions.moveOn(task);
-          },
-          toggleToday: (task) => {
-            undoPrompt.noticed();
-            actions.toggleToday(task);
-          },
-          putInWeek: (task) => {
-            undoPrompt.noticed();
-            actions.rename(task, {
-              dueDate: weekEndsOn(weekRuns),
-            });
-          },
+          toggle: noticing(actions.toggle),
+          remove: noticing(actions.remove),
+          archive: noticing(actions.archive),
+          delete: noticing(actions.delete),
+          moveOn: noticing(actions.moveOn),
+          toggleToday: noticing(actions.toggleToday),
+          putInWeek: noticing((task) =>
+            actions.rename(task, { dueDate: weekEndsOn(weekRuns) }),
+          ),
           pickDate: (task) => {
             setOpenOn("details");
             navigate(`/${[...screen, task.id].join("/")}`);

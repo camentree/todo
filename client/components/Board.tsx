@@ -11,6 +11,7 @@ import { useMoveTask } from "../hooks/useMoveTask.ts";
 import { useRowFocus } from "../hooks/useRowFocus.ts";
 import { Collapsible } from "./ui/Collapsible.tsx";
 import { usePending } from "../data/pending.ts";
+import { useFoldedGroups } from "../data/settings.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { renameChanges, taskAsLine } from "../tasks/taskLine.ts";
 import { asChanges } from "../tasks/attributes.ts";
@@ -34,6 +35,7 @@ export interface RowActions extends SwipeHandlers {
 
 export interface BoardProps {
   tasks: CreatedTask[];
+  screen: string;
   view: ViewPreference;
   lists: string[];
   hiddenAttributes: Attribute[];
@@ -57,6 +59,7 @@ export interface BoardProps {
 
 export function Board({
   tasks,
+  screen,
   view,
   lists,
   hiddenAttributes,
@@ -82,9 +85,9 @@ export function Board({
   );
 
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(
-    new Set([COMPLETED_GROUP]),
-  );
+  const [collapsed, toggleCollapsed] = useFoldedGroups(screen, [
+    COMPLETED_GROUP,
+  ]);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [addingSubtaskTo, setAddingSubtaskTo] = useState<
     number | null
@@ -404,17 +407,7 @@ export function Board({
             })
           }
           collapsed={collapsed.has(group.key)}
-          onToggleCollapsed={() =>
-            setCollapsed((current) => {
-              const next = new Set(current);
-              if (next.has(group.key)) {
-                next.delete(group.key);
-              } else {
-                next.add(group.key);
-              }
-              return next;
-            })
-          }
+          onToggleCollapsed={() => toggleCollapsed(group.key)}
         />
       ))}
     </div>
