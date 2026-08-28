@@ -54,7 +54,7 @@ export function Row({
   onAddSubtask?: () => void;
   onCopy?: () => void;
   swipeLeft?: SwipeAction;
-  swipeRight?: SwipeAction;
+  swipeRight?: SwipeAction[];
   onLongPress?: (pointerX: number, pointerY: number) => void;
   showAttributes: boolean;
   parseAttributes?: boolean;
@@ -94,6 +94,8 @@ export function Row({
     ...edits,
   };
 
+  const fullSwipe = swipeRight?.at(-1);
+
   const { swipingTo } = useKeyboardSwipe({
     left: swipeLeft
       ? {
@@ -105,12 +107,12 @@ export function Row({
         }
       : null,
     right:
-      swipeRight && task.state !== "archived"
+      fullSwipe && task.state !== "archived"
         ? {
             key: "s",
             action: () => {
               onFocusNext?.();
-              swipeRight.action();
+              fullSwipe.action();
             },
           }
         : null,

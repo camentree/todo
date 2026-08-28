@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 
 import { Row } from "./Row.tsx";
 import { NewSubtaskRow, SubtaskRow } from "./Subtasks.tsx";
-import { isDueToday, todayAsDateString } from "../tasks/format.ts";
+import { leftSwipe, rightSwipes } from "../tasks/swipes.ts";
+import type { SwipeHandlers } from "../tasks/swipes.ts";
 import { buildGroups, COMPLETED_GROUP } from "../tasks/grouping.ts";
 import type { TaskGroup } from "../tasks/grouping.ts";
 import { useMoveTask } from "../hooks/useMoveTask.ts";
@@ -13,7 +14,6 @@ import { usePending } from "../data/pending.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { renameChanges, taskAsLine } from "../tasks/taskLine.ts";
 import { asChanges } from "../tasks/attributes.ts";
-import { isTerminal } from "@shared/states.ts";
 import type { Attribute } from "../tasks/attributes.ts";
 import type {
   CreatedTask,
@@ -21,14 +21,12 @@ import type {
   ViewPreference,
 } from "@shared/types.ts";
 
-export interface RowActions {
+export interface RowActions extends SwipeHandlers {
   toggle: (task: CreatedTask) => void;
   open: (task: CreatedTask) => void;
   rename: (task: CreatedTask, changes: Partial<Task>) => void;
   create: (changes: Partial<Task>) => Promise<CreatedTask>;
   remove: (task: CreatedTask) => void;
-  swipeLeft: (task: CreatedTask) => void;
-  swipeRight: (task: CreatedTask) => void;
   reparent: (task: CreatedTask, parentId: number | null) => void;
   undo: () => void;
   redo: () => void;
@@ -353,22 +351,8 @@ export function Board({
           }
           onAddSubtask={() => addSubtaskTo(task.id)}
           onCopy={() => copy(task)}
-          swipeLeft={
-            leftSwipeLabel(task)
-              ? {
-                  name: leftSwipeLabel(task),
-                  action: () => actions.swipeLeft(task),
-                }
-              : undefined
-          }
-          swipeRight={
-            rightSwipeLabel(task)
-              ? {
-                  name: rightSwipeLabel(task),
-                  action: () => actions.swipeRight(task),
-                }
-              : undefined
-          }
+          swipeLeft={leftSwipe(task, actions)}
+          swipeRight={rightSwipes(task, actions)}
           onLongPress={(pointerX, pointerY) =>
             startMove({
               taskId: task.id,
@@ -528,30 +512,6 @@ function GroupedTasks({
       </Collapsible>
     </div>
   );
-}
-
-export function rightSwipeLabel(task: CreatedTask): string {
-  if (task.state === "archived") {
-    return "Unarchive";
-  }
-  if (isTerminal(task.state)) {
-    return "";
-  }
-  if (task.recurringTaskId) {
-    return canSkip(task) ? "Skip" : "";
-  }
-  return isDueToday(task.dueDate) ? "Not today" : "Today";
-}
-
-function canSkip(task: CreatedTask): boolean {
-  return task.dueDate !== null && task.dueDate <= todayAsDateString();
-}
-
-export function leftSwipeLabel(task: CreatedTask): string {
-  if (task.state === "archived") {
-    return "Delete";
-  }
-  return isTerminal(task.state) ? "" : "Archive";
 }
 
 function saveTask({

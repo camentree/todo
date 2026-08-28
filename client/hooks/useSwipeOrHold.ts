@@ -8,17 +8,20 @@ const LONG_PRESS_MILLISECONDS = 400;
 export function useSwipeOrHold({
   onLeft,
   onRight,
+  rightLeast,
   onLongPress,
   enabled,
 }: {
   onLeft?: () => void;
-  onRight?: () => void;
+  onRight?: (distance: number) => void;
+  rightLeast?: number;
   onLongPress?: (pointerX: number, pointerY: number) => void;
   enabled: boolean;
 }) {
   const swipe = usePointerSwipe({
     onLeft: onLeft,
     onRight: onRight,
+    rightLeast: rightLeast,
     enabled: enabled,
   });
   const holding = useRef(false);

@@ -41,6 +41,87 @@ const SPRITES = {
       />
     ),
   },
+  clock: {
+    size: 15,
+    box: 16,
+    draw: (
+      <>
+        <circle
+          cx="8"
+          cy="8"
+          r="6.3"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+        <path
+          d="M8 4.4V8l2.5 1.7"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </>
+    ),
+  },
+  calendar: {
+    size: 15,
+    box: 16,
+    draw: (
+      <>
+        <rect
+          x="1.7"
+          y="3"
+          width="12.6"
+          height="11.3"
+          rx="1.8"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+        <path
+          d="M1.7 6.6h12.6M5 1.6v2.6M11 1.6v2.6"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+        />
+      </>
+    ),
+  },
+  sun: {
+    size: 15,
+    box: 16,
+    draw: (
+      <>
+        <circle cx="8" cy="8" r="3.1" fill="currentColor" />
+        <path
+          d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3.1 3.1l1.1 1.1M11.8 11.8l1.1 1.1M12.9 3.1l-1.1 1.1M4.2 11.8l-1.1 1.1"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+        />
+      </>
+    ),
+  },
+  sunStruck: {
+    size: 15,
+    box: 16,
+    draw: (
+      <>
+        <circle cx="8" cy="8" r="3.1" fill="currentColor" />
+        <path
+          d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3.1 3.1l1.1 1.1M11.8 11.8l1.1 1.1M12.9 3.1l-1.1 1.1M4.2 11.8l-1.1 1.1"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+        />
+        <path
+          d="M2.2 13.8L13.8 2.2"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+        />
+      </>
+    ),
+  },
   undo: {
     size: 19,
     box: 20,

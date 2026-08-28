@@ -10,10 +10,12 @@ export const SWIPE_FRACTION = 0.4;
 export function usePointerSwipe({
   onLeft,
   onRight,
+  rightLeast,
   enabled = true,
 }: {
   onLeft?: () => void;
-  onRight?: () => void;
+  onRight?: (distance: number) => void;
+  rightLeast?: number;
   enabled?: boolean;
 }) {
   const [offset, setOffset] = useState(0);
@@ -79,8 +81,8 @@ export function usePointerSwipe({
       onLeft?.();
       return;
     }
-    if (distance >= enough) {
-      onRight?.();
+    if (distance >= (rightLeast ?? enough)) {
+      onRight?.(distance);
     }
   }
 

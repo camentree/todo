@@ -95,10 +95,12 @@ export function SubtaskRow({
           name: "Delete",
           action: () => actions.remove(subtask),
         }}
-        swipeRight={{
-          name: "Own task",
-          action: () => actions.reparent(subtask, null),
-        }}
+        swipeRight={[
+          {
+            name: "Own task",
+            action: () => actions.reparent(subtask, null),
+          },
+        ]}
         showAttributes={false}
         parseAttributes={false}
       />

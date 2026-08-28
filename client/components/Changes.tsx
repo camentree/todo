@@ -126,7 +126,7 @@ function EventRow({
       role="button"
       tabIndex={0}
       onClick={onOpen}
-      right={{ name: unread ? "Seen" : "Unseen", action: onSeen }}
+      right={[{ name: unread ? "Seen" : "Unseen", action: onSeen }]}
     >
       {event.seenAt === null && <span className="here-dot" />}
       {event.taskTitle && (

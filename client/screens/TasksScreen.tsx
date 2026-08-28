@@ -14,6 +14,7 @@ import { Board } from "../components/Board.tsx";
 import { FloatingButton } from "../components/FloatingButton.tsx";
 import type { Attribute } from "../tasks/attributes.ts";
 import { Sheet } from "../components/Sheet.tsx";
+import type { SheetTab } from "../components/Sheet.tsx";
 import {
   attributeText,
   todayAsDateString,
@@ -66,6 +67,7 @@ export function TasksScreen() {
   const [composing, setComposing] = useState<Partial<Task> | null>(
     null,
   );
+  const [openOn, setOpenOn] = useState<SheetTab>("subtasks");
   const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
     searchText === null ? viewKeyFor(scope) : SEARCH_VIEW_KEY,
@@ -178,13 +180,31 @@ export function TasksScreen() {
             undoPrompt.noticed();
             actions.remove(task);
           },
-          swipeLeft: (task) => {
+          archive: (task) => {
             undoPrompt.noticed();
-            actions.swipeLeft(task);
+            actions.archive(task);
           },
-          swipeRight: (task) => {
+          delete: (task) => {
             undoPrompt.noticed();
-            actions.swipeRight(task);
+            actions.delete(task);
+          },
+          moveOn: (task) => {
+            undoPrompt.noticed();
+            actions.moveOn(task);
+          },
+          toggleToday: (task) => {
+            undoPrompt.noticed();
+            actions.toggleToday(task);
+          },
+          putInWeek: (task) => {
+            undoPrompt.noticed();
+            actions.rename(task, {
+              dueDate: weekEndsOn(weekRuns),
+            });
+          },
+          pickDate: (task) => {
+            setOpenOn("details");
+            navigate(`/${[...screen, task.id].join("/")}`);
           },
         }}
         onMove={actions.move}
@@ -222,8 +242,10 @@ export function TasksScreen() {
           key={openTaskId ?? "new"}
           taskId={openTaskId}
           seed={composing ?? {}}
+          openOn={openOn}
           onClose={() => {
             setComposing(null);
+            setOpenOn("subtasks");
             if (openTaskId !== null) {
               navigate(pathname);
             }

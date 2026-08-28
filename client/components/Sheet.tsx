@@ -23,15 +23,17 @@ import type { CreatedTask, Task } from "@shared/types.ts";
 
 const CLOSE_MILLISECONDS = 850;
 
-type SheetTab = "subtasks" | "notes" | "details";
+export type SheetTab = "subtasks" | "notes" | "details";
 
 export function Sheet({
   taskId,
   seed,
+  openOn = "subtasks",
   onClose,
 }: {
   taskId: number | null;
   seed: Partial<Task>;
+  openOn?: SheetTab;
   onClose: () => void;
 }) {
   const actions = useTaskActions();
@@ -39,7 +41,7 @@ export function Sheet({
   const [madeId, setMadeId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [edits, setEdits] = useState<Partial<Task>>({});
-  const [tab, setTab] = useState<SheetTab>("subtasks");
+  const [tab, setTab] = useState<SheetTab>(openOn);
   const [editingSubtaskId, setEditingSubtaskId] = useState<
     number | null
   >(null);

@@ -314,15 +314,9 @@ export function useTaskActions(
     onError: report("delete that task"),
   });
 
-  const swipeLeft = useMutation({
-    mutationFn: async (task: CreatedTask): Promise<CreatedTask[]> => {
-      if (task.state === "archived") {
-        const { removed } = await api.deleteTask(task.id);
-        takeBack(removed);
-        return [];
-      }
-      return api.archiveTasks([task.id]);
-    },
+  const archive = useMutation({
+    mutationFn: (task: CreatedTask): Promise<CreatedTask[]> =>
+      api.archiveTasks([task.id]),
     onSuccess: (written: CreatedTask[], task: CreatedTask) => {
       landed(written);
       record({
@@ -335,10 +329,10 @@ export function useTaskActions(
         ],
       });
     },
-    onError: report("delete that task"),
+    onError: report("archive that task"),
   });
 
-  const unarchiveOrSkip = useMutation({
+  const moveOn = useMutation({
     mutationFn: (task: CreatedTask): Promise<CreatedTask[]> =>
       task.state === "archived"
         ? api.unarchiveTasks([task.id])
@@ -434,11 +428,11 @@ export function useTaskActions(
           };
 
     const moving = committed(task.id) ?? task;
-    const held = (
-      orderedIds.length > 0 ? orderedIds : [task.id]
-    )
+    const held = (orderedIds.length > 0 ? orderedIds : [task.id])
       .map((id) => committed(id))
-      .filter((sibling): sibling is CreatedTask => sibling !== undefined);
+      .filter(
+        (sibling): sibling is CreatedTask => sibling !== undefined,
+      );
     const slots = reassignSlots(
       held.map((sibling) => sibling.sortOrder),
     );
@@ -540,18 +534,15 @@ export function useTaskActions(
     rename: rename,
     create: create,
     remove: (task: CreatedTask) => remove.mutate(task),
-    swipeLeft: (task: CreatedTask) => swipeLeft.mutate(task),
-    swipeRight: (task: CreatedTask) => {
-      if (task.state === "archived" || task.recurringTaskId) {
-        unarchiveOrSkip.mutate(task);
-        return;
-      }
+    delete: (task: CreatedTask) => remove.mutate(task),
+    archive: (task: CreatedTask) => archive.mutate(task),
+    moveOn: (task: CreatedTask) => moveOn.mutate(task),
+    toggleToday: (task: CreatedTask) =>
       rename(task, {
         dueDate: isDueToday(task.dueDate)
           ? null
           : todayAsDateString(),
-      });
-    },
+      }),
     move: move,
     reparent: reparent,
   };
