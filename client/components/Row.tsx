@@ -16,6 +16,7 @@ import { Swipeable } from "./ui/Swipeable.tsx";
 import type { SwipeAction } from "./ui/Swipeable.tsx";
 import { renameChanges } from "../tasks/taskLine.ts";
 import { searchFor } from "../tasks/attributes.ts";
+import { trace } from "../data/trace.ts";
 import type { Attribute } from "../tasks/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
@@ -464,7 +465,26 @@ function Attributes({
             key={`${attribute.field}-${attribute.label}`}
             className={attribute.field === "tag" ? "tag" : undefined}
             data-clickable={Boolean(term)}
-            onClick={() => term && onSearch?.(term)}
+            onPointerDown={() =>
+              trace("attribute pointer down", {
+                label: attribute.label,
+              })
+            }
+            onTouchEnd={() =>
+              trace("attribute touch end", {
+                label: attribute.label,
+              })
+            }
+            onClick={() => {
+              trace("attribute clicked", {
+                label: attribute.label,
+                term: term ?? "nothing to search",
+                hasHandler: Boolean(onSearch),
+              });
+              if (term) {
+                onSearch?.(term);
+              }
+            }}
           >
             {attribute.label.toLowerCase()}
           </button>

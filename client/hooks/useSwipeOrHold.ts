@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { usePointerSwipe } from "./usePointerSwipe.ts";
+import { trace } from "../data/trace.ts";
 
 const LONG_PRESS_MILLISECONDS = 600;
 
@@ -86,6 +87,7 @@ export function useSwipeOrHold({
       const pointerY = event.clientY;
       watchForRelease(event.pointerId);
       timer.current = setTimeout(() => {
+        trace("long press fired, dragging now");
         holding.current = true;
         onLongPress(pointerX, pointerY);
       }, LONG_PRESS_MILLISECONDS);

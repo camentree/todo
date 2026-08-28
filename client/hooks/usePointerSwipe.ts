@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
+import { trace } from "../data/trace.ts";
+
 const CAPTURE_AFTER = 16;
 const MOVED_AT_ALL = 20;
 const GIVE_UP_VERTICAL = 10;
@@ -92,6 +94,11 @@ export function usePointerSwipe({
     swiping: offset !== 0,
     travelled: () => furthest.current > MOVED_AT_ALL,
     down: (event: ReactPointerEvent) => {
+      trace("pointer down", {
+        enabled: enabled,
+        on: (event.target as HTMLElement).className,
+        pointerType: event.pointerType,
+      });
       if (!enabled) {
         return;
       }
@@ -117,6 +124,10 @@ export function usePointerSwipe({
         Math.abs(downNow) > GIVE_UP_VERTICAL &&
         Math.abs(downNow) > Math.abs(acrossNow)
       ) {
+        trace("gave up, looks vertical", {
+          down: Math.round(downNow),
+          across: Math.round(acrossNow),
+        });
         cancel();
         return;
       }
@@ -130,6 +141,7 @@ export function usePointerSwipe({
         Math.abs(across) > CAPTURE_AFTER &&
         !event.currentTarget.hasPointerCapture(event.pointerId)
       ) {
+        trace("captured the pointer", { across: Math.round(across) });
         event.currentTarget.setPointerCapture(event.pointerId);
       }
       sideways.current = across;

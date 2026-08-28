@@ -25,6 +25,12 @@ function taskState(value: unknown): TaskState {
   return found;
 }
 
+api.post("/trace", async (context) => {
+  const body = await context.req.json();
+  console.log("[trace]", JSON.stringify(body));
+  return context.json({ heard: true });
+});
+
 api.get("/lists", async (context) => {
   return context.json(await lists.all());
 });
