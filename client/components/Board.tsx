@@ -5,7 +5,11 @@ import { Row } from "./Row.tsx";
 import { NewSubtaskRow, SubtaskRow } from "./Subtasks.tsx";
 import { leftSwipe, rightSwipes } from "../tasks/swipes.ts";
 import type { SwipeHandlers } from "../tasks/swipes.ts";
-import { buildGroups, COMPLETED_GROUP } from "../tasks/grouping.ts";
+import {
+  buildGroups,
+  COMPLETED_GROUP,
+  LATER_GROUP,
+} from "../tasks/grouping.ts";
 import type { TaskGroup } from "../tasks/grouping.ts";
 import { useMoveTask } from "../hooks/useMoveTask.ts";
 import { useRowFocus } from "../hooks/useRowFocus.ts";
@@ -41,6 +45,7 @@ export interface BoardProps {
   lists: string[];
   hiddenAttributes: Attribute[];
   showFinished: boolean;
+  dueAfter: string | null;
   pending: boolean;
   emptyMessage: string;
   actions: RowActions;
@@ -65,6 +70,7 @@ export function Board({
   lists,
   hiddenAttributes,
   showFinished,
+  dueAfter,
   pending,
   emptyMessage,
   actions,
@@ -81,12 +87,14 @@ export function Board({
         lists: lists,
         hiddenAttributes: hiddenAttributes,
         showFinished: showFinished,
+        dueAfter: dueAfter,
       }),
-    [tasks, view, lists, hiddenAttributes, showFinished],
+    [tasks, view, lists, hiddenAttributes, showFinished, dueAfter],
   );
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [collapsed, toggleCollapsed] = useFoldedGroups(screen, [
+    LATER_GROUP,
     COMPLETED_GROUP,
   ]);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -460,7 +468,10 @@ function GroupedTasks({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
-  const composable = canCompose && group.key !== COMPLETED_GROUP;
+  const composable =
+    canCompose &&
+    group.key !== COMPLETED_GROUP &&
+    group.key !== LATER_GROUP;
   const shared = sharedAcross(group);
 
   return (

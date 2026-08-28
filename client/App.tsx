@@ -22,8 +22,6 @@ export function App() {
         <Route path="/" element={<TasksScreen />} />
         <Route path="/today" element={<TasksScreen />} />
         <Route path="/today/:taskId" element={<TasksScreen />} />
-        <Route path="/week" element={<TasksScreen />} />
-        <Route path="/week/:taskId" element={<TasksScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
         <Route
           path="/due_date/today"

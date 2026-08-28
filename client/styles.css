@@ -201,22 +201,6 @@ a {
   flex: 1 1 auto;
 }
 
-.topbar-caret {
-  display: grid;
-  place-items: center;
-  width: 1.9rem;
-  height: 2.3rem;
-  flex-shrink: 0;
-}
-
-.topbar-caret .chevron {
-  transform: rotate(90deg);
-}
-
-.topbar-caret .chevron[data-open="true"] {
-  transform: rotate(-90deg);
-}
-
 .topbar-back {
   font-size: 1.6rem;
   line-height: 1;
@@ -619,7 +603,8 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--keyboard-inset, 0px);
+  top: var(--visible-bottom, 100%);
+  transform: translateY(-100%);
   z-index: 47;
   display: flex;
   align-items: center;
@@ -645,11 +630,11 @@ a {
   flex: 1 1 auto;
 }
 
-.app:has(.strip) .floating {
-  bottom: calc(var(--keyboard-inset, 0px) + 3rem);
+body:has(.strip) .floating {
+  transform: translateY(calc(-100% - 3rem));
 }
 
-.app:has(.strip) .sheet-pane {
+body:has(.strip) .sheet-pane {
   padding-bottom: 3.5rem;
 }
 
@@ -811,7 +796,8 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--keyboard-inset, 0px);
+  top: var(--visible-bottom, 100%);
+  transform: translateY(-100%);
   z-index: 48;
   padding: 0 1.15rem calc(1.4rem + env(safe-area-inset-bottom));
   max-width: 40rem;
@@ -970,6 +956,7 @@ a {
 .menu {
   position: absolute;
   top: calc(100% - 0.4rem);
+  right: 0;
   z-index: 46;
   min-width: 12.5rem;
   max-width: min(22rem, 88vw);
@@ -990,15 +977,6 @@ a {
 
 .menu > * {
   flex-shrink: 0;
-}
-
-.menu[data-anchor="title"] {
-  left: 0;
-}
-
-.menu[data-anchor="right"] {
-  right: 0;
-  padding: 0.9rem;
 }
 
 .menu-rule {
@@ -1241,12 +1219,9 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--keyboard-inset, 0px);
+  top: var(--visible-bottom, 100%);
   z-index: 45;
-  height: min(
-    82dvh,
-    calc(100dvh - var(--keyboard-inset, 0px) - 2.5rem)
-  );
+  height: min(82dvh, calc(var(--visible-height, 100dvh) - 2.5rem));
   background: var(--ground);
   border-radius: 18px 18px 0 0;
   border-top: 1px solid var(--hairline);

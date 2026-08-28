@@ -183,6 +183,33 @@ const SPRITES = {
       </>
     ),
   },
+  gear: {
+    size: 18,
+    box: 20,
+    draw: (
+      <>
+        <path
+          d="M10 1.4v2.4M10 16.2v2.4M1.4 10h2.4M16.2 10h2.4M3.9 3.9l1.7 1.7M14.4 14.4l1.7 1.7M16.1 3.9l-1.7 1.7M5.6 14.4l-1.7 1.7"
+          stroke="currentColor"
+          strokeWidth="2.6"
+        />
+        <circle
+          cx="10"
+          cy="10"
+          r="5.4"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx="10"
+          cy="10"
+          r="2"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+      </>
+    ),
+  },
   bell: {
     size: 17,
     box: 20,

@@ -16,7 +16,6 @@ type OpenMenu = "none" | "screen" | "bell";
 
 const SCREENS = [
   { value: "/today", label: "Today" },
-  { value: "/week", label: "Week" },
   { value: "/", label: "To Do" },
 ];
 
@@ -112,17 +111,6 @@ export function TopBar({
           </div>
         )}
 
-        <button
-          type="button"
-          className="topbar-caret"
-          aria-label="Screens and arranging"
-          onClick={() =>
-            setMenu(menu === "screen" ? "none" : "screen")
-          }
-        >
-          <Sprite name="chevron" open={menu === "screen"} />
-        </button>
-
         {searchText === null && screenName === null && (
           <span className="topbar-spacer" />
         )}
@@ -134,6 +122,15 @@ export function TopBar({
             onToggle={() => onSearchChange("")}
           />
         )}
+
+        <MenuButton
+          icon="gear"
+          label="Screens and settings"
+          active={menu === "screen"}
+          onToggle={() =>
+            setMenu(menu === "screen" ? "none" : "screen")
+          }
+        />
 
         <MenuButton
           icon="bell"

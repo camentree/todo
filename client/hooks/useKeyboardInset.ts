@@ -1,13 +1,6 @@
 import { useEffect } from "react";
 
-function coveredBy(viewport: VisualViewport): number {
-  return Math.max(
-    0,
-    document.documentElement.clientHeight -
-      viewport.height -
-      viewport.offsetTop,
-  );
-}
+const A_KEYBOARD_IS_AT_LEAST = 120;
 
 export function useKeyboardInset(): void {
   useEffect(() => {
@@ -16,20 +9,26 @@ export function useKeyboardInset(): void {
       return;
     }
 
-    let shown = -1;
+    let shownBottom = "";
     let queued = 0;
 
     const measure = (): void => {
       cancelAnimationFrame(queued);
       queued = requestAnimationFrame(() => {
-        const covered = Math.round(coveredBy(viewport));
-        if (covered === shown) {
+        const bottom = viewport.offsetTop + viewport.height;
+        const covered =
+          document.documentElement.clientHeight - bottom;
+        const open = covered > A_KEYBOARD_IS_AT_LEAST;
+        const nextBottom = open ? `${Math.round(bottom)}px` : "100%";
+        if (nextBottom === shownBottom) {
           return;
         }
-        shown = covered;
-        document.documentElement.style.setProperty(
-          "--keyboard-inset",
-          `${covered}px`,
+        shownBottom = nextBottom;
+        const root = document.documentElement.style;
+        root.setProperty("--visible-bottom", nextBottom);
+        root.setProperty(
+          "--visible-height",
+          open ? `${Math.round(viewport.height)}px` : "100dvh",
         );
       });
     };

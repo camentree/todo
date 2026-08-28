@@ -6,12 +6,10 @@ import { stageLabel, TASK_STAGES } from "@shared/stages.ts";
 import type { TaskStage } from "@shared/stages.ts";
 import { canonicalName } from "@shared/names.ts";
 import { isTerminal } from "@shared/states.ts";
-import type {
-  CreatedTask,
-  ViewPreference,
-} from "@shared/types.ts";
+import type { CreatedTask, ViewPreference } from "@shared/types.ts";
 
 export const COMPLETED_GROUP = "completed";
+export const LATER_GROUP = "later";
 
 export interface TaskGroup {
   key: string;
@@ -30,41 +28,73 @@ export function buildGroups({
   lists,
   hiddenAttributes = [],
   showFinished = false,
+  dueAfter = null,
 }: {
   tasks: CreatedTask[];
   view: ViewPreference;
   lists: string[];
   hiddenAttributes?: Attribute[];
   showFinished?: boolean;
+  dueAfter?: string | null;
 }): TaskGroup[] {
   const sorted = sortTasks({ tasks: tasks, view: view });
 
   const screenWide = hiddenAttributes;
-  const setAside = (task: CreatedTask) =>
+  const finished = (task: CreatedTask) =>
     !showFinished && isTerminal(task.state);
-  const finished = sorted.filter(setAside);
+  const later = (task: CreatedTask) =>
+    dueAfter !== null &&
+    !finished(task) &&
+    task.dueDate !== null &&
+    task.dueDate > dueAfter;
 
   const groups = groupsOf({
-    sorted: sorted.filter((task) => !setAside(task)),
+    sorted: sorted.filter((task) => !finished(task) && !later(task)),
     view: view,
     lists: lists,
     screenWide: screenWide,
   });
 
-  if (finished.length === 0) {
-    return groups.map(withGuesses);
-  }
-
   return [
     ...groups,
-    {
+    ...setAside({
+      key: LATER_GROUP,
+      label: "This week",
+      tasks: sorted.filter(later),
+      screenWide: screenWide,
+    }),
+    ...setAside({
       key: COMPLETED_GROUP,
       label: "Completed",
+      tasks: sorted.filter(finished),
+      screenWide: screenWide,
+    }),
+  ].map(withGuesses);
+}
+
+function setAside({
+  key,
+  label,
+  tasks,
+  screenWide,
+}: {
+  key: string;
+  label: string;
+  tasks: CreatedTask[];
+  screenWide: Attribute[];
+}): GroupBeforeGuessing[] {
+  if (tasks.length === 0) {
+    return [];
+  }
+  return [
+    {
+      key: key,
+      label: label,
       groupedBy: [],
       hiddenAttributes: screenWide,
-      tasks: finished,
+      tasks: tasks,
     },
-  ].map(withGuesses);
+  ];
 }
 
 function withGuesses(group: GroupBeforeGuessing): TaskGroup {
@@ -93,7 +123,11 @@ function withGuesses(group: GroupBeforeGuessing): TaskGroup {
     first.who !== null &&
     rest.every((task) => task.who === first.who)
   ) {
-    guessed.push({ field: "who", value: first.who, label: first.who });
+    guessed.push({
+      field: "who",
+      value: first.who,
+      label: first.who,
+    });
   }
   if (
     !grouping.has("stage") &&
@@ -283,9 +317,7 @@ function groupedByFor({
   label: string;
 }): Attribute[] {
   if (groupBy === "due_date") {
-    return [
-      { field: "due_date", value: task.dueDate, label: label },
-    ];
+    return [{ field: "due_date", value: task.dueDate, label: label }];
   }
   if (groupBy === "who") {
     return [{ field: "who", value: task.who, label: label }];

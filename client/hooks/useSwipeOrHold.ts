@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { usePointerSwipe } from "./usePointerSwipe.ts";
 
-const LONG_PRESS_MILLISECONDS = 400;
+const LONG_PRESS_MILLISECONDS = 600;
 
 export function useSwipeOrHold({
   onLeft,

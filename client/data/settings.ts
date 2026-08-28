@@ -17,12 +17,11 @@ export const HISTORY_STOPS = [1, 3, 6, 12, 24, 60, null] as const;
 
 export type HistoryMonths = (typeof HISTORY_STOPS)[number];
 
-export type ScreenSpan = "today" | "week" | null;
-
 export interface Scope {
   field: AttributeField | null;
   value: string;
-  span: ScreenSpan;
+  through: string;
+  today: boolean;
 }
 
 export type Theme = "system" | "light" | "dark";
@@ -44,12 +43,6 @@ const FLAT_MANUAL: ViewPreference = {
 const BY_LIST: ViewPreference = {
   groupBy: "list",
   orderBy: "manual",
-  orderDirection: "asc",
-};
-
-const BY_DAY: ViewPreference = {
-  groupBy: "due_date",
-  orderBy: "due_date",
   orderDirection: "asc",
 };
 
@@ -75,8 +68,7 @@ export const SEARCH_VIEW: ViewPreference = BY_RELEVANCE;
 export const SEARCH_VIEW_KEY = "search";
 
 export function defaultView(scope: Scope): ViewPreference {
-  if (scope.span === "today") return BY_LIST_THEN_DUE;
-  if (scope.span === "week") return BY_DAY;
+  if (scope.today) return BY_LIST_THEN_DUE;
   if (scope.field === "state" && scope.value === "complete")
     return BY_FINISHED;
   if (scope.field === null) return BY_LIST;

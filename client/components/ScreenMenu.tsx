@@ -62,7 +62,7 @@ export function ScreenMenu({
   }
 
   return (
-    <Menu anchor="title" onClose={onClose}>
+    <Menu onClose={onClose}>
       <MenuLink
         label="Done"
         here={location.pathname === "/state/complete"}

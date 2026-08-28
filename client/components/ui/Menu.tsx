@@ -2,11 +2,9 @@ import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 export function Menu({
-  anchor,
   onClose,
   children,
 }: {
-  anchor: "title" | "right";
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -20,9 +18,5 @@ export function Menu({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  return (
-    <div className="menu" data-anchor={anchor}>
-      {children}
-    </div>
-  );
+  return <div className="menu">{children}</div>;
 }

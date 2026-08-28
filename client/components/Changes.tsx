@@ -55,7 +55,7 @@ export function Changes({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Menu anchor="right" onClose={onClose}>
+    <Menu onClose={onClose}>
       <div className="menu-head">
         <Label>Changes</Label>
         {unseen.length > 0 && (

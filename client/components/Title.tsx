@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   ChangeEvent,
   FocusEvent,
@@ -273,22 +274,27 @@ export function Title({
         )}
       </span>
 
-      {suggest && multiline && !canHover && focused && (
-        <Strip
-          sigils={sigilsLacked(value)}
-          offers={
-            matches.length > 0
-              ? matches
-                  .slice(ghost ? 1 : 0)
-                  .map(
-                    (candidate) =>
-                      `${opening?.sigil ?? ""}${candidate}`,
-                  )
-              : worthOffering({ input: value, known: known })
-          }
-          onInsert={insert}
-        />
-      )}
+      {suggest &&
+        multiline &&
+        !canHover &&
+        focused &&
+        createPortal(
+          <Strip
+            sigils={sigilsLacked(value)}
+            offers={
+              matches.length > 0
+                ? matches
+                    .slice(ghost ? 1 : 0)
+                    .map(
+                      (candidate) =>
+                        `${opening?.sigil ?? ""}${candidate}`,
+                    )
+                : worthOffering({ input: value, known: known })
+            }
+            onInsert={insert}
+          />,
+          document.body,
+        )}
     </>
   );
 }

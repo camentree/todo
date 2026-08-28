@@ -54,10 +54,11 @@ export function TasksScreen() {
   const [field, value] = screen;
 
   const { weekRuns } = useGlobalSettings();
-  const scope: Scope = spanScope(pathname, weekRuns) ?? {
+  const scope: Scope = todayScope(pathname, weekRuns) ?? {
     field: asAttributeField(field),
     value: value ? canonicalName(decodeURIComponent(value)) : "",
-    span: null,
+    through: "",
+    today: false,
   };
   const archived =
     scope.field === "archived" && scope.value === "true";
@@ -101,7 +102,13 @@ export function TasksScreen() {
 
   const tasks = useMemo(
     () => everything.filter((task) => within(task, scope)),
-    [everything, scope.field, scope.value, scope.span],
+    [
+      everything,
+      scope.field,
+      scope.value,
+      scope.through,
+      scope.today,
+    ],
   );
 
   const undoPrompt = useUndoPrompt({
@@ -176,6 +183,9 @@ export function TasksScreen() {
         lists={lists}
         hiddenAttributes={searchText === null ? scopedTo(scope) : []}
         showFinished={archived || finished || searchText !== null}
+        dueAfter={
+          scope.today && searchText === null ? scope.value : null
+        }
         pending={searchText === null && isPending}
         emptyMessage={emptyMessageFor({
           searchText: searchText,
@@ -268,33 +278,27 @@ function emptyMessageFor({
   return searchText.trim().length > 0 ? "No matches." : "";
 }
 
-function spanScope(
+function todayScope(
   pathname: string,
   weekRuns: WeekRuns,
 ): Scope | null {
-  if (pathname === "/today") {
-    return {
-      field: "due_date",
-      value: todayAsDateString(),
-      span: "today",
-    };
+  if (pathname !== "/today") {
+    return null;
   }
-  if (pathname === "/week") {
-    return {
-      field: "due_date",
-      value: weekEndsOn(weekRuns),
-      span: "week",
-    };
-  }
-  return null;
+  return {
+    field: "due_date",
+    value: todayAsDateString(),
+    through: weekEndsOn(weekRuns),
+    today: true,
+  };
 }
 
 function within(task: CreatedTask, scope: Scope): boolean {
-  if (scope.span !== null) {
+  if (scope.today) {
     return (
       task.state !== "archived" &&
       task.state !== "missed" &&
-      dueOnOrBefore(task.dueDate, scope.value)
+      dueOnOrBefore(task.dueDate, scope.through)
     );
   }
   if (scope.field === "archived") {
@@ -361,8 +365,8 @@ function dueOnOrBefore(
 }
 
 function viewKeyFor(scope: Scope): string {
-  if (scope.span !== null) {
-    return scope.span;
+  if (scope.today) {
+    return "today";
   }
   if (scope.field === "due_date") {
     return "due_date";
@@ -371,7 +375,7 @@ function viewKeyFor(scope: Scope): string {
 }
 
 function titleFor(scope: Scope): string | null {
-  if (scope.span !== null || !scope.field) {
+  if (scope.today || !scope.field) {
     return null;
   }
   if (scope.field === "state" && scope.value === "complete") {
@@ -391,7 +395,7 @@ function titleFor(scope: Scope): string | null {
 }
 
 function scopedTo(scope: Scope): Attribute[] {
-  if (scope.span === "week" || !scope.field) {
+  if (!scope.field) {
     return [];
   }
   return [
@@ -404,9 +408,6 @@ function scopedTo(scope: Scope): Attribute[] {
 }
 
 function seedFor(scope: Scope): Partial<CreatedTask> {
-  if (scope.span === "week") {
-    return {};
-  }
   if (scope.field === "list") {
     return { list: scope.value };
   }
@@ -426,11 +427,8 @@ function seedFor(scope: Scope): Partial<CreatedTask> {
 }
 
 function emptyFor(scope: Scope): string {
-  if (scope.span === "today") {
+  if (scope.today) {
     return "Nothing today.";
-  }
-  if (scope.span === "week") {
-    return "Nothing this week.";
   }
   if (scope.field === "archived" && scope.value === "true") {
     return "Nothing archived.";

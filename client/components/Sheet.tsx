@@ -162,132 +162,136 @@ export function Sheet({
   }
 
   return (
-    <Modal
-      label={taskId === null ? "New task" : "Edit task"}
-      shape="sheet"
-      closing={closing}
-      settled={settled}
-      dragging={drag.dragging}
-      style={{ transform: `translateY(${drag.offset}px)` }}
-      onDismiss={saveAndClose}
-      onEscape={discardAndClose}
-      onPointerDown={drag.start}
-      onPointerMove={drag.move}
-      onPointerUp={drag.end}
-    >
-      <div className="sheet-handle">
-        <div className="sheet-grabber" />
-      </div>
+    <>
+      <Modal
+        label={taskId === null ? "New task" : "Edit task"}
+        shape="sheet"
+        closing={closing}
+        settled={settled}
+        dragging={drag.dragging}
+        style={{
+          transform: `translateY(calc(-100% + ${drag.offset}px))`,
+        }}
+        onDismiss={saveAndClose}
+        onEscape={discardAndClose}
+        onPointerDown={drag.start}
+        onPointerMove={drag.move}
+        onPointerUp={drag.end}
+      >
+        <div className="sheet-handle">
+          <div className="sheet-grabber" />
+        </div>
 
-      <div className="sheet-body" ref={bodyRef}>
-        <Title
-          value={title}
-          onChange={setTitle}
-          inputRef={titleRef}
-          list={shown.list ?? ""}
-          multiline
-          onDone={() => titleRef.current?.blur()}
-          input={{
-            className: "sheet-title",
-            "aria-label": "Title",
-            placeholder: "New task",
-            autoCapitalize: "sentences",
-          }}
-        />
-
-        <div className="chipline">
-          <AttributeChips
-            task={shown}
-            onRemove={(attribute) => {
-              const without = withoutAttribute({
-                task: shown,
-                draft: title,
-                attribute: attribute,
-              });
-              setTitle(without.draft);
-              setEdits({ ...edits, ...without.changes });
+        <div className="sheet-body" ref={bodyRef}>
+          <Title
+            value={title}
+            onChange={setTitle}
+            inputRef={titleRef}
+            list={shown.list ?? ""}
+            multiline
+            onDone={() => titleRef.current?.blur()}
+            input={{
+              className: "sheet-title",
+              "aria-label": "Title",
+              placeholder: "New task",
+              autoCapitalize: "sentences",
             }}
           />
-        </div>
 
-        <Choice
-          label="What to show"
-          value={tab}
-          options={[
-            {
-              value: "subtasks",
-              label: "Subtasks",
-              count: finishedOf(subtasks),
-            },
-            {
-              value: "notes",
-              label: "Notes",
-              count: shown.note?.trim() ? "1" : "",
-            },
-            {
-              value: "comments",
-              label: "Comments",
-              count: shown.commentCount
-                ? String(shown.commentCount)
-                : "",
-            },
-            { value: "timing", label: "Timing" },
-          ]}
-          onChange={setTab}
-        />
+          <div className="chipline">
+            <AttributeChips
+              task={shown}
+              onRemove={(attribute) => {
+                const without = withoutAttribute({
+                  task: shown,
+                  draft: title,
+                  attribute: attribute,
+                });
+                setTitle(without.draft);
+                setEdits({ ...edits, ...without.changes });
+              }}
+            />
+          </div>
 
-        <div className="sheet-pane">
-          {tab === "subtasks" && (
-            <>
-              {subtasks.map((subtask) => (
-                <SubtaskRow
-                  key={subtask.id}
-                  subtask={subtask}
-                  index={subtasks.indexOf(subtask)}
-                  actions={actions}
-                  editing={editingSubtaskId === subtask.id}
-                  onEditingChange={(editing) =>
-                    setEditingSubtaskId(editing ? subtask.id : null)
-                  }
+          <Choice
+            label="What to show"
+            value={tab}
+            options={[
+              {
+                value: "subtasks",
+                label: "Subtasks",
+                count: finishedOf(subtasks),
+              },
+              {
+                value: "notes",
+                label: "Notes",
+                count: shown.note?.trim() ? "1" : "",
+              },
+              {
+                value: "comments",
+                label: "Comments",
+                count: shown.commentCount
+                  ? String(shown.commentCount)
+                  : "",
+              },
+              { value: "timing", label: "Timing" },
+            ]}
+            onChange={setTab}
+          />
+
+          <div className="sheet-pane">
+            {tab === "subtasks" && (
+              <>
+                {subtasks.map((subtask) => (
+                  <SubtaskRow
+                    key={subtask.id}
+                    subtask={subtask}
+                    index={subtasks.indexOf(subtask)}
+                    actions={actions}
+                    editing={editingSubtaskId === subtask.id}
+                    onEditingChange={(editing) =>
+                      setEditingSubtaskId(editing ? subtask.id : null)
+                    }
+                  />
+                ))}
+                <NewSubtaskRow
+                  parent={shown}
+                  actions={subtaskActions}
+                  index={subtasks.length}
                 />
-              ))}
-              <NewSubtaskRow
-                parent={shown}
-                actions={subtaskActions}
-                index={subtasks.length}
+              </>
+            )}
+
+            {tab === "notes" && (
+              <Note
+                note={shown.note ?? ""}
+                rows={2}
+                placeholder="Anything worth remembering"
+                onCommit={(next) =>
+                  held
+                    ? actions.rename(held, { note: next })
+                    : setEdits({ ...edits, note: next })
+                }
               />
-            </>
-          )}
+            )}
 
-          {tab === "notes" && (
-            <Note
-              note={shown.note ?? ""}
-              rows={2}
-              placeholder="Anything worth remembering"
-              onCommit={(next) =>
-                held
-                  ? actions.rename(held, { note: next })
-                  : setEdits({ ...edits, note: next })
-              }
-            />
-          )}
+            {tab === "comments" && held && (
+              <Comments taskId={held.id} />
+            )}
 
-          {tab === "comments" && held && (
-            <Comments taskId={held.id} />
-          )}
-
-          {tab === "timing" && (
-            <Timing
-              schedule={shown.schedule}
-              dueDate={shown.dueDate}
-              dueTime={shown.dueTime}
-              onChange={(changes) =>
-                setEdits({ ...edits, ...changes })
-              }
-            />
-          )}
+            {tab === "timing" && (
+              <Timing
+                schedule={shown.schedule}
+                dueDate={shown.dueDate}
+                dueTime={shown.dueTime}
+                onChange={(changes) =>
+                  setEdits({ ...edits, ...changes })
+                }
+              />
+            )}
+          </div>
         </div>
-      </div>
+      </Modal>
 
       <FloatingButton
         icon="cross"
@@ -295,7 +299,7 @@ export function Sheet({
         tone="leaving"
         onClick={discardAndClose}
       />
-    </Modal>
+    </>
   );
 }
 
