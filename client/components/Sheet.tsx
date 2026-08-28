@@ -25,7 +25,7 @@ import { renameChanges } from "../tasks/taskLine.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
 
-const CLOSE_MILLISECONDS = 850;
+const CLOSE_MILLISECONDS = 500;
 
 export type SheetTab = "subtasks" | "notes" | "comments" | "timing";
 

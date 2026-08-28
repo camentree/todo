@@ -825,7 +825,7 @@ a {
 }
 
 .scrim[data-closing="true"] {
-  animation: fade-out var(--motion-slow) ease forwards;
+  animation: fade-out var(--motion) ease forwards;
 }
 
 @keyframes fade-in {
@@ -1118,12 +1118,18 @@ a {
   display: flex;
   flex-direction: column;
   animation: slide-up var(--motion-slow) var(--ease);
-  transition: transform var(--motion-slow) var(--ease);
+  transition:
+    transform var(--motion) var(--ease),
+    height var(--motion-slow) var(--ease);
   touch-action: none;
 }
 
 .sheet[data-settled="true"] {
   animation: none;
+}
+
+.sheet[data-closing="true"] {
+  transition: transform var(--motion) var(--ease);
 }
 
 .sheet[data-dragging="true"] {
@@ -1231,6 +1237,11 @@ a {
   width: 100%;
   margin: 0 auto;
   touch-action: pan-y;
+  transition: padding-bottom var(--motion-slow) var(--ease);
+}
+
+.sheet[data-closing="true"] .sheet-body {
+  transition: none;
 }
 
 .sheet-body input,
@@ -1630,7 +1641,7 @@ a {
   }
 
   .sheet[data-closing="true"] {
-    animation: modal-out var(--motion-menu) var(--ease) forwards;
+    animation: modal-out var(--motion) var(--ease) forwards;
   }
 
   .sheet-handle {
