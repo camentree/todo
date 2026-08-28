@@ -40,6 +40,7 @@ export function SubtaskRow({
   actions,
   editing,
   onEditingChange,
+  onInfoOpen,
   expanded,
   onExpandedChange,
   onTab,
@@ -52,6 +53,7 @@ export function SubtaskRow({
   actions: SubtaskActions;
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
+  onInfoOpen?: () => void;
   expanded?: boolean;
   onExpandedChange?: (open: boolean) => void;
   onTab?: (backwards: boolean) => void;
@@ -80,6 +82,7 @@ export function SubtaskRow({
         onLongPress={onLongPress}
         isEditing={editing}
         onEditingChange={onEditingChange}
+        onInfoOpen={onInfoOpen}
         expanded={expanded}
         onExpandedChange={onExpandedChange}
         onTab={onTab}

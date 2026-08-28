@@ -10,6 +10,7 @@ import {
   withoutAttribute,
 } from "./Attributes.tsx";
 import { Note } from "./ui/Note.tsx";
+import { useCanHover } from "../hooks/useCanHover.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { useKeyboardSwipe } from "../hooks/useKeyboardSwipe.ts";
 import { Swipeable } from "./ui/Swipeable.tsx";
@@ -71,6 +72,8 @@ export function Row({
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const openedByPointer = useRef(false);
   const unsaved = task.id === null;
+  const canHover = useCanHover();
+  const renamesInPlace = canHover || !onInfoOpen;
 
   useEffect(() => {
     if (isEditing) {
@@ -261,6 +264,10 @@ export function Row({
               type="button"
               className="task-title"
               onClick={(event) => {
+                if (!renamesInPlace) {
+                  onInfoOpen?.();
+                  return;
+                }
                 setCaretAt(caretIndexAt(event));
                 onEditingChange(true);
               }}
@@ -269,7 +276,7 @@ export function Row({
             </button>
           )}
 
-          {onInfoOpen && (
+          {onInfoOpen && canHover && (
             <button
               type="button"
               className="task-info"
@@ -426,7 +433,6 @@ function Attributes({
 
   const shown = attributesOf(task).filter(
     (item) =>
-      item.label.toLowerCase() === "today" ||
       !omit.some(
         (omission) =>
           omission.field === item.field &&

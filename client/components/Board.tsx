@@ -249,6 +249,7 @@ export function Board({
         onEditingChange={(editing) =>
           setEditingId(editing ? subtask.id : null)
         }
+        onInfoOpen={() => actions.open(subtask)}
         onTab={(backwards) =>
           editBeside(subtask.id, backwards ? -1 : 1)
         }
@@ -385,7 +386,10 @@ export function Board({
             })
           }
           showAttributes={true}
-          hiddenAttributes={group.hiddenAttributes}
+          hiddenAttributes={[
+            ...group.hiddenAttributes,
+            ...sharedAcross(group),
+          ]}
           expanded={expanded.has(task.id)}
           onExpandedChange={(open) => expand(task.id, open)}
           renderSubtask={(child, childIndex) =>
@@ -490,6 +494,10 @@ export function Board({
   );
 }
 
+function sharedAcross(group: TaskGroup): Attribute[] {
+  return group.tasks.length > 1 ? group.guessedAttributes : [];
+}
+
 function movement(event: KeyboardEvent): number {
   if (event.ctrlKey) {
     if (event.key === "n") {
@@ -545,12 +553,26 @@ function GroupedTasks({
   onToggleCollapsed: () => void;
 }) {
   const capturable = canCapture && group.key !== COMPLETED_GROUP;
+  const shared = sharedAcross(group);
 
   return (
     <div className="group" data-group-key={group.key}>
       <Collapsible
         tone="group"
-        label={group.label}
+        label={
+          group.label && (
+            <>
+              {group.label}
+              {shared.length > 0 && (
+                <span className="group-shared">
+                  {shared
+                    .map((attribute) => attribute.label.toLowerCase())
+                    .join(" · ")}
+                </span>
+              )}
+            </>
+          )
+        }
         badge={
           collapsed && (
             <span className="group-count">{group.tasks.length}</span>

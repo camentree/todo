@@ -371,6 +371,21 @@ a {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.group-shared {
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .section-head[data-tone="section"] .chevron {
@@ -533,14 +548,11 @@ a {
 .task-info {
   color: var(--dim);
   flex-shrink: 0;
-  display: none;
+  display: grid;
+  visibility: hidden;
   place-items: center;
   width: 2rem;
   height: 2rem;
-}
-
-.task[data-editing="true"] .task-info {
-  display: grid;
 }
 
 .task[data-unsaved="true"] .task-tick {
@@ -720,7 +732,7 @@ a {
 }
 
 .subtasks .task {
-  padding: calc(var(--row-pad) + 0.35rem) 0.25rem;
+  padding-block: calc(var(--row-pad) + 0.35rem);
 }
 
 .empty {
@@ -1763,7 +1775,15 @@ a {
   }
 
   .subtasks .task {
-    padding: var(--row-pad) 0.25rem;
+    padding-block: var(--row-pad);
+  }
+
+  .task-shell {
+    margin-inline: -0.9rem;
+  }
+
+  .task {
+    padding-inline: 0.9rem;
   }
 
   .task-shell[data-focused="true"]:not(:has(textarea:focus))
@@ -1787,11 +1807,6 @@ a {
     top: -0.3rem;
   }
 
-  .task-info {
-    display: grid;
-    visibility: hidden;
-  }
-
   .task-shell[data-focused="true"]
     > .swipe-track
     > .swipe-band
@@ -1800,20 +1815,12 @@ a {
     visibility: visible;
   }
 
-  .task[data-editing="true"] .task-info {
-    visibility: hidden;
-  }
-
   .task-info:hover {
     color: var(--text);
   }
 
   .menu-link:hover {
     background: var(--ground);
-  }
-
-  .menu-link[data-small="true"]:hover {
-    color: var(--text);
   }
 }
 
