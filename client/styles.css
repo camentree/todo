@@ -618,7 +618,7 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--keyboard-inset, 0px);
+  bottom: 0;
   z-index: 47;
   display: flex;
   align-items: center;
@@ -645,7 +645,7 @@ a {
 }
 
 .app:has(.strip) .floating {
-  bottom: calc(var(--keyboard-inset, 0px) + 3rem);
+  bottom: 3rem;
 }
 
 .app:has(.strip) .sheet-pane {
@@ -810,7 +810,7 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--keyboard-inset, 0px);
+  bottom: 0;
   z-index: 48;
   padding: 0 1.15rem calc(1.4rem + env(safe-area-inset-bottom));
   max-width: 40rem;
@@ -1229,12 +1229,9 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--keyboard-inset, 0px);
+  bottom: 0;
   z-index: 45;
-  height: min(
-    82vh,
-    calc(100dvh - var(--keyboard-inset, 0px) - 2.5rem)
-  );
+  height: min(82dvh, calc(100dvh - 2.5rem));
   background: var(--ground);
   border-radius: 18px 18px 0 0;
   border-top: 1px solid var(--hairline);
