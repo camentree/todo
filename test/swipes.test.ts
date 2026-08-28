@@ -66,10 +66,10 @@ describe("what pulling a row to the right offers", () => {
     ).toEqual(["Skip"]);
   });
 
-  it("offers nothing to a repeating task not yet due", () => {
+  it("offers the skip however far off the repeat is", () => {
     expect(
       namesOf(task({ recurringTaskId: 4, dueDate: "2099-01-01" })),
-    ).toEqual([]);
+    ).toEqual(["Skip"]);
   });
 
   it("archives a finished task", () => {

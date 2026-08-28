@@ -12,13 +12,7 @@ import { Confirm } from "./ui/Confirm.tsx";
 import { Sprite } from "./ui/Sprite.tsx";
 import type { Comment } from "@shared/types.ts";
 
-export function Comments({
-  taskId,
-  reading,
-}: {
-  taskId: number;
-  reading: boolean;
-}) {
+export function Comments({ taskId }: { taskId: number }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const [confirmingDelete, setConfirmingDelete] =
@@ -27,7 +21,6 @@ export function Comments({
   const { data: comments = [] } = useQuery({
     queryKey: ["comments", taskId],
     queryFn: () => api.comments(taskId),
-    enabled: reading,
   });
 
   const refresh = () => queryClient.invalidateQueries();
@@ -78,7 +71,7 @@ export function Comments({
         >
           <textarea
             value={draft}
-            rows={2}
+            rows={1}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
               if (

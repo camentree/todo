@@ -6,7 +6,7 @@ export function Choice<Value extends string>({
 }: {
   label: string;
   value: Value;
-  options: { value: Value; label: string }[];
+  options: { value: Value; label: string; count?: string }[];
   onChange: (value: Value) => void;
 }) {
   return (
@@ -22,6 +22,9 @@ export function Choice<Value extends string>({
           onClick={() => onChange(option.value)}
         >
           {option.label}
+          {option.count && (
+            <span className="choice-count">{option.count}</span>
+          )}
         </button>
       ))}
     </div>

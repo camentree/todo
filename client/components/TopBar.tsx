@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { Changes } from "./Changes.tsx";
 import { ScreenMenu } from "./ScreenMenu.tsx";
@@ -21,12 +21,16 @@ const SCREENS = [
 ];
 
 export function TopBar({
+  screen,
+  screenName,
   view,
   onViewChange,
   searchText,
   onSearchChange,
   finished,
 }: {
+  screen: string;
+  screenName: string | null;
   view: ViewPreference;
   onViewChange: (changes: Partial<ViewPreference>) => void;
   searchText: string | null;
@@ -35,7 +39,6 @@ export function TopBar({
 }) {
   const [menu, setMenu] = useState<OpenMenu>("none");
   const navigate = useNavigate();
-  const location = useLocation();
   const failed = useFailures();
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -49,17 +52,33 @@ export function TopBar({
   return (
     <>
       <div className="topbar">
-        {searchText === null ? (
+        {searchText === null && screenName === null && (
           <div className="switcher">
             <Choice
               label="Screen"
-              value={location.pathname}
+              value={screen}
               options={SCREENS}
               onChange={navigate}
             />
           </div>
-        ) : (
-          <div className="searching">
+        )}
+
+        {searchText === null && screenName !== null && (
+          <div className="bar-pill">
+            <span className="bar-pill-name">{screenName}</span>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Leave this screen"
+              onClick={() => navigate(-1)}
+            >
+              <Sprite name="cross" />
+            </button>
+          </div>
+        )}
+
+        {searchText !== null && (
+          <div className="bar-pill">
             <Sprite name="search" />
             <Title
               value={searchText}
@@ -104,15 +123,16 @@ export function TopBar({
           <Sprite name="chevron" open={menu === "screen"} />
         </button>
 
+        {searchText === null && screenName === null && (
+          <span className="topbar-spacer" />
+        )}
+
         {searchText === null && (
-          <>
-            <span className="topbar-spacer" />
-            <MenuButton
-              icon="search"
-              label="Search"
-              onToggle={() => onSearchChange("")}
-            />
-          </>
+          <MenuButton
+            icon="search"
+            label="Search"
+            onToggle={() => onSearchChange("")}
+          />
         )}
 
         <MenuButton

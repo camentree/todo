@@ -97,7 +97,7 @@ export function SubtaskRow({
         }}
         swipeRight={[
           {
-            name: "Own task",
+            name: "Task",
             action: () => actions.reparent(subtask, null),
           },
         ]}

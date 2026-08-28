@@ -1,6 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { AttributeChips } from "./Attributes.tsx";
+import { api } from "../data/api.ts";
+
+import { AttributeChips, withoutAttribute } from "./Attributes.tsx";
 import { Comments } from "./Comments.tsx";
 import { FloatingButton } from "./FloatingButton.tsx";
 import {
@@ -8,12 +11,13 @@ import {
   NewSubtaskRow,
   SubtaskRow,
 } from "./Subtasks.tsx";
-import { TaskDetails } from "./TaskDetails.tsx";
+import { Timing } from "./Timing.tsx";
 import { Title } from "./Title.tsx";
 import { Choice } from "./ui/Choice.tsx";
 import { Modal } from "./ui/Modal.tsx";
 import { Note } from "./ui/Note.tsx";
 import { usePending } from "../data/pending.ts";
+import { hasStarted } from "../data/started.ts";
 import { useDragDown } from "../hooks/useDragDown.ts";
 import { useTaskActions } from "../hooks/useTaskActions.ts";
 import { useTask } from "../hooks/useTasks.ts";
@@ -23,7 +27,7 @@ import type { CreatedTask, Task } from "@shared/types.ts";
 
 const CLOSE_MILLISECONDS = 850;
 
-export type SheetTab = "subtasks" | "notes" | "details";
+export type SheetTab = "subtasks" | "notes" | "comments" | "timing";
 
 export function Sheet({
   taskId,
@@ -46,6 +50,7 @@ export function Sheet({
     number | null
   >(null);
   const [closing, setClosing] = useState(false);
+  const [settled] = useState(() => !hasStarted());
 
   const started = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -68,6 +73,12 @@ export function Sheet({
     ...edits,
   };
   const subtasks = shown.subtasks ?? [];
+
+  useQuery({
+    queryKey: ["comments", held?.id],
+    queryFn: () => api.comments(held?.id ?? 0),
+    enabled: held !== undefined,
+  });
 
   useEffect(() => {
     if (held && !started.current) {
@@ -144,6 +155,7 @@ export function Sheet({
       label={taskId === null ? "New task" : "Edit task"}
       shape="sheet"
       closing={closing}
+      settled={settled}
       dragging={drag.dragging}
       style={{ transform: `translateY(${drag.offset}px)` }}
       onDismiss={saveAndClose}
@@ -174,7 +186,18 @@ export function Sheet({
         />
 
         <div className="chipline">
-          <AttributeChips task={shown} />
+          <AttributeChips
+            task={shown}
+            onRemove={(attribute) => {
+              const without = withoutAttribute({
+                task: shown,
+                draft: title,
+                attribute: attribute,
+              });
+              setTitle(without.draft);
+              setEdits({ ...edits, ...without.changes });
+            }}
+          />
         </div>
 
         <Choice
@@ -183,10 +206,22 @@ export function Sheet({
           options={[
             {
               value: "subtasks",
-              label: `Subtasks ${finishedOf(subtasks)}`,
+              label: "Subtasks",
+              count: finishedOf(subtasks),
             },
-            { value: "notes", label: `Notes ${notesOn(shown)}` },
-            { value: "details", label: "Details" },
+            {
+              value: "notes",
+              label: "Notes",
+              count: shown.note?.trim() ? "1" : "",
+            },
+            {
+              value: "comments",
+              label: "Comments",
+              count: shown.commentCount
+                ? String(shown.commentCount)
+                : "",
+            },
+            { value: "timing", label: "Timing" },
           ]}
           onChange={setTab}
         />
@@ -215,24 +250,27 @@ export function Sheet({
           )}
 
           {tab === "notes" && (
-            <>
-              <Note
-                note={shown.note ?? ""}
-                rows={2}
-                placeholder="Anything worth remembering"
-                onCommit={(next) =>
-                  held
-                    ? actions.rename(held, { note: next })
-                    : setEdits({ ...edits, note: next })
-                }
-              />
-              {held && <Comments taskId={held.id} reading />}
-            </>
+            <Note
+              note={shown.note ?? ""}
+              rows={2}
+              placeholder="Anything worth remembering"
+              onCommit={(next) =>
+                held
+                  ? actions.rename(held, { note: next })
+                  : setEdits({ ...edits, note: next })
+              }
+            />
           )}
 
-          {tab === "details" && (
-            <TaskDetails
-              task={shown}
+          {tab === "comments" && held && (
+            <Comments taskId={held.id} />
+          )}
+
+          {tab === "timing" && (
+            <Timing
+              schedule={shown.schedule}
+              dueDate={shown.dueDate}
+              dueTime={shown.dueTime}
               onChange={(changes) =>
                 setEdits({ ...edits, ...changes })
               }
@@ -258,11 +296,6 @@ function finishedOf(subtasks: CreatedTask[]): string {
     isTerminal(subtask.state),
   ).length;
   return `${done}/${subtasks.length}`;
-}
-
-function notesOn(task: Task): string {
-  const count = (task.note?.trim() ? 1 : 0) + task.commentCount;
-  return count > 0 ? String(count) : "";
 }
 
 function blurActive(): void {

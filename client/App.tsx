@@ -1,4 +1,7 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+
+import { markStarted } from "./data/started.ts";
 
 import { Failures } from "./components/Failures.tsx";
 import { InfoScreen } from "./screens/InfoScreen.tsx";
@@ -10,6 +13,7 @@ import { useKeyboardInset } from "./hooks/useKeyboardInset.ts";
 export function App() {
   useEaseIntoView();
   useKeyboardInset();
+  useEffect(markStarted, []);
 
   return (
     <div className="app">

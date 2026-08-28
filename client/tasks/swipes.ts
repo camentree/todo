@@ -1,4 +1,4 @@
-import { isDueToday, todayAsDateString } from "./format.ts";
+import { isDueToday } from "./format.ts";
 import type { SwipeAction } from "../components/ui/Swipeable.tsx";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask } from "@shared/types.ts";
@@ -40,9 +40,7 @@ export function rightSwipes(
     ];
   }
   if (task.recurringTaskId) {
-    return canSkip(task)
-      ? [{ name: "Skip", action: () => handlers.moveOn(task) }]
-      : [];
+    return [{ name: "Skip", action: () => handlers.moveOn(task) }];
   }
   return [
     {
@@ -67,8 +65,4 @@ export function rightSwipes(
           action: () => handlers.toggleToday(task),
         },
   ];
-}
-
-function canSkip(task: CreatedTask): boolean {
-  return task.dueDate !== null && task.dueDate <= todayAsDateString();
 }

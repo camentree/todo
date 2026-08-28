@@ -27,6 +27,7 @@ export function Modal({
   label,
   shape,
   closing = false,
+  settled = false,
   dragging,
   style,
   onDismiss,
@@ -39,6 +40,7 @@ export function Modal({
   label: string;
   shape: "sheet" | "centred";
   closing?: boolean;
+  settled?: boolean;
   dragging?: boolean;
   style?: CSSProperties;
   onDismiss: () => void;
@@ -91,6 +93,7 @@ export function Modal({
       <div
         className="scrim"
         data-closing={closing}
+        data-settled={settled}
         onClick={onDismiss}
       />
       <div
@@ -99,6 +102,7 @@ export function Modal({
         role="dialog"
         aria-label={label}
         data-closing={closing}
+        data-settled={settled}
         data-dragging={dragging}
         style={style}
         onPointerDown={onPointerDown}

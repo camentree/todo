@@ -67,7 +67,6 @@ export function Swipeable({
       : gesture.offset > 0
         ? "right"
         : null);
-  const uncovered = gesture.offset <= right.length * TARGET_WIDTH;
   const aimedAt = reachedTarget(right, gesture.offset);
   const committing = right[aimedAt];
 
@@ -80,7 +79,7 @@ export function Swipeable({
 
         {revealing === "right" &&
           committing &&
-          (aiming && uncovered && swipingTo === null ? (
+          (aiming && swipingTo === null ? (
             <div className="swipe-targets">
               {right.map((target, index) => (
                 <span

@@ -238,7 +238,7 @@ a {
   padding: 0.16rem;
 }
 
-.searching {
+.bar-pill {
   position: relative;
   display: flex;
   align-items: center;
@@ -252,7 +252,7 @@ a {
   color: var(--dim);
 }
 
-.searching input {
+.bar-pill input {
   flex: 1;
   min-width: 0;
   padding: 0.45rem 0;
@@ -262,9 +262,21 @@ a {
   color: var(--text);
 }
 
-.searching .icon-button {
+.bar-pill .icon-button {
   width: 2rem;
   height: 2rem;
+}
+
+.bar-pill-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.45rem 0.2rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .choice {
@@ -584,7 +596,7 @@ a {
 }
 
 .task-main > .ghosted,
-.searching > .ghosted {
+.bar-pill > .ghosted {
   flex: 1;
 }
 
@@ -871,38 +883,24 @@ a {
 
 .chip.removable {
   position: relative;
-  margin-right: 0.35rem;
   transition:
     color var(--tap) linear,
     background var(--tap) linear;
 }
 
-.chip.removable:has(.chip-remove:hover) {
-  background: var(--hairline);
-  color: var(--dim);
-  text-decoration: line-through;
-}
-
 .chip-remove {
   position: absolute;
-  top: -0.4rem;
-  right: -0.45rem;
+  top: -0.32rem;
+  right: -0.32rem;
   display: grid;
   place-items: center;
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 0.9rem;
+  height: 0.9rem;
   border-radius: 50%;
-  background: var(--dim);
+  background: var(--faint);
   color: var(--ground);
-  opacity: 0.8;
-  font-size: 0.72rem;
+  font-size: 0.6rem;
   line-height: 1;
-}
-
-.chip-remove::after {
-  content: "";
-  position: absolute;
-  inset: -0.5rem -0.5rem -0.25rem -0.25rem;
 }
 
 .task-meta:has(.chip) {
@@ -920,9 +918,9 @@ a {
   }
 
   .chip-remove {
-    width: 1.2rem;
-    height: 1.2rem;
-    font-size: 0.8rem;
+    width: 1rem;
+    height: 1rem;
+    font-size: 0.68rem;
   }
 }
 
@@ -935,6 +933,10 @@ a {
     var(--scrim) calc(var(--scrim-clear) + 5rem)
   );
   animation: fade-in var(--motion-slow) ease;
+}
+
+.scrim[data-settled="true"] {
+  animation: none;
 }
 
 .scrim[data-closing="true"] {
@@ -1229,15 +1231,24 @@ a {
   right: 0;
   bottom: var(--keyboard-inset, 0px);
   z-index: 45;
-  height: 82vh;
+  height: min(
+    82vh,
+    calc(100dvh - var(--keyboard-inset, 0px) - 2.5rem)
+  );
   background: var(--ground);
   border-radius: 18px 18px 0 0;
   border-top: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
   animation: slide-up var(--motion-slow) var(--ease);
-  transition: transform var(--motion-slow) var(--ease);
+  transition:
+    transform var(--motion-slow) var(--ease),
+    height var(--motion) var(--ease);
   touch-action: none;
+}
+
+.sheet[data-settled="true"] {
+  animation: none;
 }
 
 .sheet[data-dragging="true"] {
@@ -1382,23 +1393,16 @@ a {
 
 .chipline {
   display: flex;
-  gap: 0.45rem;
-  align-items: center;
   min-height: 1.6rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-  mask-image: linear-gradient(to right, #000 92%, transparent);
-}
-
-.chipline::-webkit-scrollbar {
-  display: none;
+  flex: 0 0 auto;
 }
 
 .chipline .task-meta {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 0.85rem 0.9rem;
   margin: 0;
-  padding: 0.2rem 0;
+  padding: 0.3rem 0;
 }
 
 .sheet-pane {
@@ -1423,7 +1427,15 @@ a {
   border-radius: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  padding-bottom: 0.5rem;
+  padding: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.choice-count {
+  font-size: 0.75em;
+  font-weight: 400;
+  color: var(--faint);
+  margin-left: 0.3rem;
 }
 
 .sheet-body > .choice > .choice-option[data-on="true"] {
@@ -1449,13 +1461,6 @@ a {
 .when-field {
   position: relative;
   display: flex;
-}
-
-.picker {
-  position: relative;
-  display: flex;
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .when-field input {
@@ -1487,23 +1492,6 @@ a {
   font-size: 1.35rem;
   line-height: 1;
   color: var(--dim);
-}
-
-.sheet-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.sheet-tags .picker {
-  flex: 1 0 100%;
-}
-
-.sheet-tags .tag-input {
-  height: 2.6rem;
-  padding: 0 0.6rem;
-  font-size: 1rem;
 }
 
 .repeat-every {
@@ -1647,26 +1635,50 @@ a {
 
 .comment-entry {
   position: relative;
-  margin-top: 0.3rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  border: 1px solid var(--hairline);
+  border-radius: 1.4rem;
+  background: var(--ground);
+  transition: border-color var(--motion) var(--ease);
+}
+
+.comment-entry:focus-within {
+  border-color: var(--accent);
 }
 
 .comment-entry textarea {
-  width: 100%;
-  padding-right: 4.4rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 2.2rem;
+  padding: 0.45rem 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
   resize: none;
+  overflow: hidden;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  caret-color: var(--accent);
+  field-sizing: content;
+  max-height: 8rem;
 }
 
 .comment-send {
-  position: absolute;
-  right: 0.6rem;
-  bottom: 0.6rem;
-  width: 3.4rem;
-  height: 2rem;
-  border-radius: 999px;
-  background: var(--chip-bg);
-  color: var(--accent);
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ground);
   display: grid;
   place-items: center;
+  transition:
+    background var(--motion) var(--ease),
+    opacity var(--motion) var(--ease);
 }
 
 .comment-send:disabled {
@@ -1786,6 +1798,18 @@ a {
 
   .chip-remove {
     top: -0.3rem;
+    opacity: 0;
+    transition: opacity var(--tap) linear;
+  }
+
+  .chip.removable:hover {
+    background: var(--hairline);
+    color: var(--dim);
+    text-decoration: line-through;
+  }
+
+  .chip.removable:hover .chip-remove {
+    opacity: 0.8;
   }
 
   .task-shell[data-focused="true"]

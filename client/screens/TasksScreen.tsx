@@ -16,6 +16,7 @@ import type { Attribute } from "../tasks/attributes.ts";
 import { Sheet } from "../components/Sheet.tsx";
 import type { SheetTab } from "../components/Sheet.tsx";
 import {
+  asTitle,
   attributeText,
   todayAsDateString,
   weekEndsOn,
@@ -156,6 +157,8 @@ export function TasksScreen() {
   return (
     <>
       <TopBar
+        screen={pathname}
+        screenName={titleFor(scope)}
         view={view}
         onViewChange={changeView}
         searchText={searchText}
@@ -194,7 +197,7 @@ export function TasksScreen() {
             actions.rename(task, { dueDate: weekEndsOn(weekRuns) }),
           ),
           pickDate: (task) => {
-            setOpenOn("details");
+            setOpenOn("timing");
             navigate(`/${[...screen, task.id].join("/")}`);
           },
         }}
@@ -362,6 +365,26 @@ function viewKeyFor(scope: Scope): string {
     return "due_date";
   }
   return scope.field ? `${scope.field}:${scope.value}` : "all";
+}
+
+function titleFor(scope: Scope): string | null {
+  if (scope.span !== null || !scope.field) {
+    return null;
+  }
+  if (scope.field === "state" && scope.value === "complete") {
+    return "Done";
+  }
+  if (scope.field === "archived") {
+    return "Archive";
+  }
+  const text = attributeText(scope.field, scope.value);
+  if (scope.field === "tag") {
+    return `#${text}`;
+  }
+  if (scope.field === "who") {
+    return `@${text}`;
+  }
+  return asTitle(text);
 }
 
 function scopedTo(scope: Scope): Attribute[] {
