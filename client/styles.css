@@ -411,18 +411,9 @@ a {
   overflow: hidden;
 }
 
-.swipe-track:has(.suggestions) {
-  overflow: visible;
-  z-index: 40;
-}
-
 .swipe-band {
   position: relative;
   overflow: hidden;
-}
-
-.swipe-band:has(.suggestions) {
-  overflow: visible;
 }
 
 .swipe-action {
@@ -574,105 +565,6 @@ a {
   opacity: 0.45;
 }
 
-.ghosted {
-  position: relative;
-  display: flex;
-  min-width: 0;
-}
-
-.task-main > .ghosted,
-.bar-pill > .ghosted {
-  flex: 1;
-}
-
-.ghosted > span[aria-hidden] {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  overflow: hidden;
-  color: var(--faint);
-}
-
-.ghost-typed {
-  color: transparent;
-}
-
-.strip {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: var(--visible-bottom, 100%);
-  transform: translateY(-100%);
-  z-index: 47;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.85rem calc(0.45rem + env(safe-area-inset-bottom));
-  background: var(--raised);
-  border-top: 1px solid var(--hairline);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.strip::-webkit-scrollbar {
-  display: none;
-}
-
-.strip .chip {
-  flex: 0 0 auto;
-  padding: 0.32rem 0.6rem;
-  font-size: 0.75rem;
-}
-
-.strip-divide {
-  flex: 1 1 auto;
-}
-
-body:has(.strip) .floating {
-  transform: translateY(calc(-100% - 3rem));
-}
-
-body:has(.strip) .sheet-pane {
-  padding-bottom: 3.5rem;
-}
-
-.suggestions {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  z-index: 40;
-  min-width: 9rem;
-  max-width: min(18rem, 80vw);
-  background: var(--raised);
-  border: 1px solid var(--hairline);
-  border-radius: 10px;
-  padding: 0.25rem;
-  box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.65);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.05rem;
-  animation: drop-in var(--motion-menu) var(--ease);
-  transform-origin: top;
-}
-
-.suggestion {
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-  text-align: left;
-  padding: 0.42rem 0.5rem;
-  border-radius: 7px;
-  color: var(--dim);
-}
-
-.suggestion[data-on="true"] {
-  background: var(--chip-bg);
-  color: var(--chip-text);
-}
-
 .tag {
   color: var(--tag);
   font-size: 0.86rem;
@@ -751,10 +643,6 @@ body:has(.strip) .sheet-pane {
   overflow: hidden;
 }
 
-.collapsible[data-open="true"]:has(.suggestions) > div {
-  overflow: visible;
-}
-
 .repeat-fields {
   display: flex;
   flex-direction: column;
@@ -796,8 +684,7 @@ body:has(.strip) .sheet-pane {
   position: fixed;
   left: 0;
   right: 0;
-  top: var(--visible-bottom, 100%);
-  transform: translateY(-100%);
+  bottom: 0;
   z-index: 48;
   padding: 0 1.15rem calc(1.4rem + env(safe-area-inset-bottom));
   max-width: 40rem;
@@ -1219,9 +1106,12 @@ body:has(.strip) .sheet-pane {
   position: fixed;
   left: 0;
   right: 0;
-  top: var(--visible-bottom, 100%);
+  bottom: 0;
   z-index: 45;
-  height: min(82dvh, calc(var(--visible-height, 100dvh) - 2.5rem));
+  height: min(
+    calc(100dvh - 2.5rem),
+    calc(82dvh + var(--covered, 0px))
+  );
   background: var(--ground);
   border-radius: 18px 18px 0 0;
   border-top: 1px solid var(--hairline);
@@ -1332,7 +1222,8 @@ body:has(.strip) .sheet-pane {
 .sheet-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 0.9rem 1.25rem calc(1rem + env(safe-area-inset-bottom));
+  padding: 0.9rem 1.25rem
+    calc(1rem + env(safe-area-inset-bottom) + var(--covered, 0px));
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -1340,10 +1231,6 @@ body:has(.strip) .sheet-pane {
   width: 100%;
   margin: 0 auto;
   touch-action: pan-y;
-}
-
-.sheet-body:has(.suggestions) {
-  padding-bottom: 14rem;
 }
 
 .sheet-body input,

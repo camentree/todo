@@ -2,7 +2,6 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 import { Sprite } from "./Sprite.tsx";
 import type { SpriteName } from "./Sprite.tsx";
-import { trace } from "../../data/trace.ts";
 import { useSwipeOrHold } from "../../hooks/useSwipeOrHold.ts";
 import { SWIPE_FRACTION } from "../../hooks/usePointerSwipe.ts";
 
@@ -110,10 +109,6 @@ export function Swipeable({
           onPointerUp={gesture.up}
           onPointerCancel={gesture.up}
           onClickCapture={(event) => {
-            trace("click reached the row", {
-              on: (event.target as HTMLElement).className,
-              swallowed: gesture.travelled(),
-            });
             if (gesture.travelled()) {
               event.stopPropagation();
               event.preventDefault();

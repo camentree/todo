@@ -36,15 +36,6 @@ function send<T>(
 
 export const api = {
   lists: () => request<string[]>("/lists"),
-  stages: () => request<string[]>("/stages"),
-  tags: (list?: string) =>
-    request<string[]>(
-      `/tags${list ? `?list=${encodeURIComponent(list)}` : ""}`,
-    ),
-  knownWho: (list?: string) =>
-    request<string[]>(
-      `/who${list ? `?list=${encodeURIComponent(list)}` : ""}`,
-    ),
 
   tasks: (since: string | null) =>
     request<CreatedTask[]>(

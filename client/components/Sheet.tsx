@@ -170,7 +170,7 @@ export function Sheet({
         settled={settled}
         dragging={drag.dragging}
         style={{
-          transform: `translateY(calc(-100% + ${drag.offset}px))`,
+          transform: `translateY(${drag.offset}px)`,
         }}
         onDismiss={saveAndClose}
         onEscape={discardAndClose}
@@ -187,7 +187,6 @@ export function Sheet({
             value={title}
             onChange={setTitle}
             inputRef={titleRef}
-            list={shown.list ?? ""}
             multiline
             onDone={() => titleRef.current?.blur()}
             input={{

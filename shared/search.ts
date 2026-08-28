@@ -16,6 +16,8 @@ interface Filters {
   lists: string[];
   stages: string[];
   states: string[];
+  dueDates: string[];
+  dueTimes: string[];
   phrases: string[];
   terms: string[];
   overdue: boolean;
@@ -157,6 +159,8 @@ function filtersIn({
     lists: [],
     stages: [],
     states: [],
+    dueDates: [],
+    dueTimes: [],
     phrases: [],
     terms: [],
     overdue: false,
@@ -183,6 +187,10 @@ function filtersIn({
       filters.stages.push(token.value);
     } else if (token.kind === "state") {
       filters.states.push(token.value);
+    } else if (token.kind === "dueDate" && spelledOut(token.text)) {
+      filters.dueDates.push(token.value);
+    } else if (token.kind === "dueTime" && spelledOut(token.text)) {
+      filters.dueTimes.push(token.value.slice(0, 5));
     } else if (token.kind === "phrase") {
       filters.phrases.push(token.value.toLowerCase());
     } else if (token.kind === "overdue") {
@@ -210,6 +218,12 @@ function filtersIn({
   return filters;
 }
 
+function spelledOut(text: string): boolean {
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(text) || /^\d{1,2}:\d{2}/.test(text)
+  );
+}
+
 function isBlank(filters: Filters): boolean {
   return (
     !filters.overdue &&
@@ -219,6 +233,8 @@ function isBlank(filters: Filters): boolean {
     filters.lists.length === 0 &&
     filters.stages.length === 0 &&
     filters.states.length === 0 &&
+    filters.dueDates.length === 0 &&
+    filters.dueTimes.length === 0 &&
     filters.phrases.length === 0 &&
     filters.terms.length === 0
   );
@@ -266,6 +282,8 @@ function matchedOn({
     asked([task.list.toLowerCase()], filters.lists),
     asked([spaced(task.stage ?? "")], filters.stages.map(spaced)),
     asked(standingOf(task), filters.states.map(spaced)),
+    asked([task.dueDate ?? ""], filters.dueDates),
+    asked([(task.dueTime ?? "").slice(0, 5)], filters.dueTimes),
   ];
 }
 

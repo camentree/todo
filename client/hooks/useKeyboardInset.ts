@@ -9,27 +9,25 @@ export function useKeyboardInset(): void {
       return;
     }
 
-    let shownBottom = "";
+    let shown = "";
     let queued = 0;
 
     const measure = (): void => {
       cancelAnimationFrame(queued);
       queued = requestAnimationFrame(() => {
-        const bottom = viewport.offsetTop + viewport.height;
         const covered =
-          document.documentElement.clientHeight - bottom;
-        const open = covered > A_KEYBOARD_IS_AT_LEAST;
-        const nextBottom = open ? `${Math.round(bottom)}px` : "100%";
-        if (nextBottom === shownBottom) {
+          document.documentElement.clientHeight -
+          viewport.offsetTop -
+          viewport.height;
+        const next =
+          covered > A_KEYBOARD_IS_AT_LEAST
+            ? `${Math.round(covered)}px`
+            : "0px";
+        if (next === shown) {
           return;
         }
-        shownBottom = nextBottom;
-        const root = document.documentElement.style;
-        root.setProperty("--visible-bottom", nextBottom);
-        root.setProperty(
-          "--visible-height",
-          open ? `${Math.round(viewport.height)}px` : "100dvh",
-        );
+        shown = next;
+        document.documentElement.style.setProperty("--covered", next);
       });
     };
 

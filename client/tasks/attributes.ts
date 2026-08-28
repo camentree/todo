@@ -25,6 +25,12 @@ export function searchFor(attribute: Attribute): string | null {
   if (attribute.field === "stage") {
     return `!${attribute.value}`;
   }
+  if (
+    attribute.field === "due_date" ||
+    attribute.field === "due_time"
+  ) {
+    return attribute.value;
+  }
   return null;
 }
 

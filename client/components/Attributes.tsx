@@ -160,7 +160,10 @@ export function withoutAttribute({
       .reduce((text, word) => text.split(word).join(" "), draft)
       .replace(/\s+/g, " ")
       .trim(),
-    changes: clearing({ task: task, attribute: attribute }),
+    changes:
+      spoken.length > 0
+        ? {}
+        : clearing({ task: task, attribute: attribute }),
   };
 }
 

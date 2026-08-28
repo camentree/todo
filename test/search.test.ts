@@ -308,4 +308,26 @@ describe("searchTasks", () => {
       "Tomorrow never knows",
     ]);
   });
+
+  test("a date written out filters by it, so a date chip can search", () => {
+    const tasks = [
+      task({
+        id: 1,
+        title: "Tomorrow never knows",
+        dueDate: "2026-09-01",
+      }),
+      task({ id: 2, title: "Groceries", dueDate: "2026-08-14" }),
+    ];
+
+    expect(titlesFor("2026-08-14", tasks)).toEqual(["Groceries"]);
+  });
+
+  test("a time written out filters by it", () => {
+    const tasks = [
+      task({ id: 1, title: "Standup", dueTime: "09:30" }),
+      task({ id: 2, title: "Groceries", dueTime: "15:00" }),
+    ];
+
+    expect(titlesFor("15:00", tasks)).toEqual(["Groceries"]);
+  });
 });

@@ -16,7 +16,6 @@ import { Swipeable } from "./ui/Swipeable.tsx";
 import type { SwipeAction } from "./ui/Swipeable.tsx";
 import { renameChanges } from "../tasks/taskLine.ts";
 import { searchFor } from "../tasks/attributes.ts";
-import { trace } from "../data/trace.ts";
 import type { Attribute } from "../tasks/attributes.ts";
 import { isTerminal } from "@shared/states.ts";
 import type { CreatedTask, Task } from "@shared/types.ts";
@@ -254,9 +253,7 @@ export function Row({
             <TitleField
               value={draft}
               onChange={setDraft}
-              list={uncommitted.list ?? ""}
               inputRef={titleRef}
-              suggest={parseAttributes}
               placeholder={placeholder}
               caretAt={caretAt}
               takeFocus={!unsaved}
@@ -376,9 +373,7 @@ export function Row({
 function TitleField({
   value,
   onChange,
-  list,
   inputRef,
-  suggest,
   placeholder,
   caretAt,
   takeFocus,
@@ -388,9 +383,7 @@ function TitleField({
 }: {
   value: string;
   onChange: (next: string) => void;
-  list: string;
   inputRef: RefObject<HTMLTextAreaElement | null>;
-  suggest: boolean;
   placeholder?: string;
   caretAt: number | null;
   takeFocus: boolean;
@@ -416,8 +409,6 @@ function TitleField({
       value={value}
       onChange={onChange}
       inputRef={inputRef}
-      list={list}
-      suggest={suggest}
       multiline
       onDone={onEnter}
       onCancel={onEscape}
@@ -465,26 +456,7 @@ function Attributes({
             key={`${attribute.field}-${attribute.label}`}
             className={attribute.field === "tag" ? "tag" : undefined}
             data-clickable={Boolean(term)}
-            onPointerDown={() =>
-              trace("attribute pointer down", {
-                label: attribute.label,
-              })
-            }
-            onTouchEnd={() =>
-              trace("attribute touch end", {
-                label: attribute.label,
-              })
-            }
-            onClick={() => {
-              trace("attribute clicked", {
-                label: attribute.label,
-                term: term ?? "nothing to search",
-                hasHandler: Boolean(onSearch),
-              });
-              if (term) {
-                onSearch?.(term);
-              }
-            }}
+            onClick={() => term && onSearch?.(term)}
           >
             {attribute.label.toLowerCase()}
           </button>
