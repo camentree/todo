@@ -217,6 +217,7 @@ export function TasksScreen() {
           <FloatingButton
             icon="undo"
             label="Undo"
+            tone="undoing"
             onClick={() => {
               undoPrompt.taken();
               void actions.undo();
@@ -227,6 +228,7 @@ export function TasksScreen() {
             <FloatingButton
               icon="plus"
               label="Add a task"
+              tone="adding"
               onClick={() => setComposing(screenSeed)}
             />
           )

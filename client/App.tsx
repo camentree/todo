@@ -8,9 +8,11 @@ import { InfoScreen } from "./screens/InfoScreen.tsx";
 import { SettingsScreen } from "./screens/SettingsScreen.tsx";
 import { TasksScreen } from "./screens/TasksScreen.tsx";
 import { useEaseIntoView } from "./hooks/useEaseIntoView.ts";
+import { useKeyboardInset } from "./hooks/useKeyboardInset.ts";
 
 export function App() {
   useEaseIntoView();
+  useKeyboardInset();
   useEffect(markStarted, []);
 
   return (

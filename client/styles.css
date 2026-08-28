@@ -49,6 +49,7 @@
   --motion: 0.5s;
   --motion-slow: 0.85s;
   --motion-menu: 0.75s;
+  --control: 3rem;
   --row-pad: 0.42rem;
   --row-title: 1.02rem;
   --row-leading: 1.35;
@@ -618,7 +619,7 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--keyboard-inset, 0px);
   z-index: 47;
   display: flex;
   align-items: center;
@@ -645,7 +646,7 @@ a {
 }
 
 .app:has(.strip) .floating {
-  bottom: 3rem;
+  bottom: calc(var(--keyboard-inset, 0px) + 3rem);
 }
 
 .app:has(.strip) .sheet-pane {
@@ -810,7 +811,7 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--keyboard-inset, 0px);
   z-index: 48;
   padding: 0 1.15rem calc(1.4rem + env(safe-area-inset-bottom));
   max-width: 40rem;
@@ -848,9 +849,20 @@ a {
   transform: scale(0.94);
 }
 
-.bubble.primary {
+.bubble[data-tone="adding"] {
   background: var(--accent);
   color: var(--ground);
+  border-color: transparent;
+}
+
+.bubble[data-tone="leaving"] {
+  background: var(--raised);
+  color: var(--dim);
+}
+
+.bubble[data-tone="undoing"] {
+  background: var(--chip-bg);
+  color: var(--accent);
   border-color: transparent;
 }
 
@@ -1154,7 +1166,7 @@ a {
 .field select,
 .field input {
   font-size: 1.05rem;
-  height: 3rem;
+  height: var(--control);
   box-sizing: border-box;
   padding: 0 0.8rem;
   line-height: normal;
@@ -1229,10 +1241,12 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--keyboard-inset, 0px);
   z-index: 45;
-  height: min(82dvh, calc(100dvh - 2.5rem));
-  scroll-behavior: auto;
+  height: min(
+    82dvh,
+    calc(100dvh - var(--keyboard-inset, 0px) - 2.5rem)
+  );
   background: var(--ground);
   border-radius: 18px 18px 0 0;
   border-top: 1px solid var(--hairline);
@@ -1366,7 +1380,7 @@ a {
 
 .field input,
 .field select {
-  height: 3rem;
+  height: var(--control);
   box-sizing: border-box;
   padding: 0 0.8rem;
   line-height: normal;
@@ -1409,13 +1423,20 @@ a {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-behavior: auto;
-  scroll-padding-block: 1.75rem;
+  scroll-padding-block: 2.5rem;
   padding-bottom: 1rem;
 }
 
 .sheet :is(input, textarea) {
-  scroll-margin-block: 1.75rem;
+  scroll-margin-block: 2.5rem;
+}
+
+.sheet-pane .choice-option,
+.sheet-pane .weekday {
+  display: grid;
+  place-items: center;
+  min-height: var(--control);
+  padding-block: 0;
 }
 
 .sheet-body > .choice {

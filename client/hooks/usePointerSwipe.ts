@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
-const CAPTURE_AFTER = 6;
-const MOVED_AT_ALL = 8;
+const CAPTURE_AFTER = 16;
+const MOVED_AT_ALL = 20;
 const GIVE_UP_VERTICAL = 10;
 
 export const SWIPE_FRACTION = 0.4;

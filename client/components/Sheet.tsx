@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { api } from "../data/api.ts";
 
@@ -87,6 +87,13 @@ export function Sheet({
     }
   }, [held]);
 
+  useLayoutEffect(() => {
+    if (taskId !== null) {
+      return;
+    }
+    titleRef.current?.focus({ preventScroll: true });
+  }, [taskId]);
+
   async function ensureCreated(): Promise<CreatedTask | null> {
     if (held) {
       return held;
@@ -150,6 +157,10 @@ export function Sheet({
     return <MissingTask onClose={onClose} />;
   }
 
+  if (taskId !== null && !held && !closing) {
+    return null;
+  }
+
   return (
     <Modal
       label={taskId === null ? "New task" : "Edit task"}
@@ -181,7 +192,6 @@ export function Sheet({
             "aria-label": "Title",
             placeholder: "New task",
             autoCapitalize: "sentences",
-            autoFocus: taskId === null,
           }}
         />
 
@@ -282,6 +292,7 @@ export function Sheet({
       <FloatingButton
         icon="cross"
         label="Discard"
+        tone="leaving"
         onClick={discardAndClose}
       />
     </Modal>

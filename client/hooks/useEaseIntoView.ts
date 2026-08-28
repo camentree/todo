@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const BREATHING_ROOM = 96;
-const SCROLL_MILLISECONDS = 900;
+const SCROLL_MILLISECONDS = 1400;
 
 const TYPING_INPUTS = new Set([
   "text",
@@ -17,7 +17,7 @@ export function useEaseIntoView(): void {
   useEffect(() => {
     function onFocusIn(event: FocusEvent): void {
       const field = event.target;
-      if (!isTextEntry(field)) {
+      if (!isTextEntry(field) || field.closest(".sheet")) {
         return;
       }
       const row = field.closest(".task");
