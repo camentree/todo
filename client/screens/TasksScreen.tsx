@@ -21,6 +21,7 @@ import {
 } from "../tasks/format.ts";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts.ts";
 import { useTaskActions } from "../hooks/useTaskActions.ts";
+import { useUndoPrompt } from "../hooks/useUndoPrompt.ts";
 import { useTasks } from "../hooks/useTasks.ts";
 import {
   defaultView,
@@ -100,6 +101,11 @@ export function TasksScreen() {
     [everything, scope.field, scope.value, scope.span],
   );
 
+  const undoPrompt = useUndoPrompt({
+    screen: pathname,
+    tasks: tasks,
+  });
+
   const results = useMemo(
     () =>
       searchTasks({
@@ -164,6 +170,22 @@ export function TasksScreen() {
           ...actions,
           open: (task) =>
             navigate(`/${[...screen, task.id].join("/")}`),
+          toggle: (task) => {
+            undoPrompt.noticed();
+            actions.toggle(task);
+          },
+          remove: (task) => {
+            undoPrompt.noticed();
+            actions.remove(task);
+          },
+          swipeLeft: (task) => {
+            undoPrompt.noticed();
+            actions.swipeLeft(task);
+          },
+          swipeRight: (task) => {
+            undoPrompt.noticed();
+            actions.swipeRight(task);
+          },
         }}
         onMove={actions.move}
         onNest={(taskId, parentId, orderedIds) => {
@@ -174,13 +196,26 @@ export function TasksScreen() {
         }}
       />
 
-      {canCompose && openTaskId === null && composing === null && (
-        <FloatingButton
-          icon="plus"
-          label="Add a task"
-          onClick={() => setComposing(screenSeed)}
-        />
-      )}
+      {openTaskId === null &&
+        composing === null &&
+        (undoPrompt.offering ? (
+          <FloatingButton
+            icon="undo"
+            label="Undo"
+            onClick={() => {
+              undoPrompt.taken();
+              void actions.undo();
+            }}
+          />
+        ) : (
+          canCompose && (
+            <FloatingButton
+              icon="plus"
+              label="Add a task"
+              onClick={() => setComposing(screenSeed)}
+            />
+          )
+        ))}
 
       {(openTaskId !== null || composing !== null) && (
         <Sheet

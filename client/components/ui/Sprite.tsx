@@ -41,6 +41,27 @@ const SPRITES = {
       />
     ),
   },
+  undo: {
+    size: 19,
+    box: 20,
+    draw: (
+      <>
+        <path
+          d="M5.2 7.8h7.1a4.1 4.1 0 0 1 0 8.2H9.1"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+        <path
+          d="M8.6 4.4 5 7.8l3.6 3.4"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </>
+    ),
+  },
   cross: {
     size: 15,
     box: 20,
