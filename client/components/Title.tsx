@@ -2,78 +2,24 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type {
   ChangeEvent,
+  FocusEvent,
   InputHTMLAttributes,
   KeyboardEvent,
   RefObject,
   SyntheticEvent,
 } from "react";
 
+import { Strip } from "./Strip.tsx";
 import { api } from "../data/api.ts";
+import { useCanHover } from "../hooks/useCanHover.ts";
+import {
+  ghostAfter,
+  sigilBefore,
+  sigilsLacked,
+  suggestionsFor,
+  worthOffering,
+} from "../tasks/completions.ts";
 import { TASK_STATES } from "@shared/states.ts";
-
-const MOST_SUGGESTIONS = 5;
-
-interface Opening {
-  sigil: string;
-  typed: string;
-  start: number;
-}
-
-function sigilBefore({
-  input,
-  caret,
-}: {
-  input: string;
-  caret: number;
-}): Opening | null {
-  const before = input.slice(0, caret);
-  const found = before.match(/(?:^|\s)([#@/!:])(\S*)$/);
-  const sigil = found?.[1];
-  const typed = found?.[2];
-  if (!sigil || typed === undefined) {
-    return null;
-  }
-  return {
-    sigil: sigil,
-    typed: typed.toLowerCase(),
-    start: before.length - typed.length - 1,
-  };
-}
-
-function suggestionsFor({
-  opening,
-  lists,
-  knownTags,
-  knownWho,
-  stages,
-  states,
-}: {
-  opening: Opening | null;
-  lists: string[];
-  knownTags: string[];
-  knownWho: string[];
-  stages: string[];
-  states: readonly string[];
-}): string[] {
-  if (!opening) {
-    return [];
-  }
-  const candidates = {
-    "/": lists,
-    "#": knownTags,
-    "@": knownWho,
-    "!": stages,
-    ":": states,
-  }[opening.sigil];
-
-  return (candidates ?? [])
-    .filter(
-      (candidate) =>
-        candidate.toLowerCase().startsWith(opening.typed) &&
-        candidate.toLowerCase() !== opening.typed,
-    )
-    .slice(0, MOST_SUGGESTIONS);
-}
 
 function suggestionStep(event: KeyboardEvent<HTMLElement>): number {
   if (event.ctrlKey) {
@@ -101,7 +47,6 @@ export function Title({
   onChange,
   inputRef,
   list = "",
-  at,
   suggest = true,
   multiline = false,
   onDone,
@@ -113,7 +58,6 @@ export function Title({
   onChange: (next: string) => void;
   inputRef: RefObject<TitleElement | null>;
   list?: string;
-  at: "row" | "search" | "sheet";
   suggest?: boolean;
   multiline?: boolean;
   onDone?: () => void;
@@ -128,6 +72,8 @@ export function Title({
   const [pendingCaret, setPendingCaret] = useState<number | null>(
     null,
   );
+  const [focused, setFocused] = useState(false);
+  const canHover = useCanHover();
 
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],
@@ -146,17 +92,23 @@ export function Title({
     queryFn: api.stages,
   });
 
+  const known = {
+    lists: lists,
+    tags: knownTags,
+    who: knownWho,
+    stages: stages,
+    states: TASK_STATES,
+  };
   const opening =
     suppressed || !suggest
       ? null
       : sigilBefore({ input: value, caret: caret });
-  const matches = suggestionsFor({
+  const matches = suggestionsFor({ opening: opening, known: known });
+  const ghost = ghostAfter({
+    input: value,
+    caret: caret,
     opening: opening,
-    lists: lists,
-    knownTags: knownTags,
-    knownWho: knownWho,
-    stages: stages,
-    states: TASK_STATES,
+    matches: highlighted === 0 ? matches : [],
   });
 
   useEffect(() => {
@@ -185,6 +137,16 @@ export function Title({
     setCaret(head.length);
     setPendingCaret(head.length);
     setHighlighted(0);
+  }
+
+  function insert(text: string): void {
+    const spaced = value.length === 0 || value.endsWith(" ");
+    const next = `${value}${spaced ? "" : " "}${text}`;
+    onChange(next);
+    setCaret(next.length);
+    setPendingCaret(next.length);
+    setSuppressed(false);
+    inputRef.current?.focus();
   }
 
   function typed(event: ChangeEvent<TitleElement>): void {
@@ -247,46 +209,85 @@ export function Title({
     }
   }
 
+  const watched = {
+    ...input,
+    onFocus: (event: FocusEvent<TitleElement>) => {
+      setFocused(true);
+      input.onFocus?.(event);
+    },
+    onBlur: (event: FocusEvent<TitleElement>) => {
+      setFocused(false);
+      input.onBlur?.(event);
+    },
+  };
+
+  const field = multiline ? (
+    <textarea
+      {...watched}
+      ref={inputRef as RefObject<HTMLTextAreaElement>}
+      rows={1}
+      value={value}
+      onChange={typed}
+      onSelect={moved}
+      onKeyDown={pressed}
+    />
+  ) : (
+    <input
+      {...watched}
+      ref={inputRef as RefObject<HTMLInputElement>}
+      value={value}
+      onChange={typed}
+      onSelect={moved}
+      onKeyDown={pressed}
+    />
+  );
+
   return (
     <>
-      {multiline ? (
-        <textarea
-          {...input}
-          ref={inputRef as RefObject<HTMLTextAreaElement>}
-          rows={1}
-          value={value}
-          onChange={typed}
-          onSelect={moved}
-          onKeyDown={pressed}
-        />
-      ) : (
-        <input
-          {...input}
-          ref={inputRef as RefObject<HTMLInputElement>}
-          value={value}
-          onChange={typed}
-          onSelect={moved}
-          onKeyDown={pressed}
-        />
-      )}
+      <span className="ghosted">
+        {ghost && (
+          <span className={input.className} aria-hidden="true">
+            <span className="ghost-typed">{value}</span>
+            {ghost}
+          </span>
+        )}
+        {field}
 
-      {matches.length > 0 && (
-        <div className="suggestions" data-at={at}>
-          {matches.map((candidate, index) => (
-            <button
-              type="button"
-              key={candidate}
-              tabIndex={-1}
-              className="suggestion"
-              data-on={index === highlighted}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => pick(candidate)}
-            >
-              {opening?.sigil}
-              {candidate}
-            </button>
-          ))}
-        </div>
+        {canHover && matches.length > 0 && (
+          <div className="suggestions">
+            {matches.map((candidate, index) => (
+              <button
+                type="button"
+                key={candidate}
+                tabIndex={-1}
+                className="suggestion"
+                data-on={index === highlighted}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => pick(candidate)}
+              >
+                {opening?.sigil}
+                {candidate}
+              </button>
+            ))}
+          </div>
+        )}
+      </span>
+
+      {suggest && multiline && !canHover && focused && (
+        <Strip
+          sigils={sigilsLacked(value)}
+          offers={
+            matches.length > 0
+              ? matches
+                  .slice(ghost ? 1 : 0)
+                  .map(
+                    (candidate) =>
+                      `${opening?.sigil ?? ""}${candidate}`,
+                  )
+              : worthOffering({ input: value, known: known })
+          }
+          onInsert={insert}
+        />
       )}
     </>
   );

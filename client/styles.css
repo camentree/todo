@@ -546,8 +546,73 @@ a {
   opacity: 0.45;
 }
 
+.ghosted {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.task-main > .ghosted,
+.searching > .ghosted {
+  flex: 1;
+}
+
+.ghosted > span[aria-hidden] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  color: var(--faint);
+}
+
+.ghost-typed {
+  color: transparent;
+}
+
+.strip {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--keyboard-inset, 0px);
+  z-index: 47;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem calc(0.45rem + env(safe-area-inset-bottom));
+  background: var(--raised);
+  border-top: 1px solid var(--hairline);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+.strip .chip {
+  flex: 0 0 auto;
+  padding: 0.32rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.strip-divide {
+  flex: 1 1 auto;
+}
+
+.app:has(.strip) .floating {
+  bottom: calc(var(--keyboard-inset, 0px) + 3rem);
+}
+
+.app:has(.strip) .sheet-pane {
+  padding-bottom: 3.5rem;
+}
+
 .suggestions {
   position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
   z-index: 40;
   min-width: 9rem;
   max-width: min(18rem, 80vw);
@@ -562,21 +627,6 @@ a {
   gap: 0.05rem;
   animation: drop-in var(--motion-menu) var(--ease);
   transform-origin: top;
-}
-
-.suggestions[data-at="row"] {
-  top: calc(100% - 0.3rem);
-  left: calc(var(--tick) + var(--tick-gap));
-}
-
-.suggestions[data-at="search"] {
-  top: calc(100% + 0.45rem);
-  left: 0.9rem;
-}
-
-.suggestions[data-at="sheet"] {
-  top: calc(100% + 0.2rem);
-  left: 0;
 }
 
 .suggestion {
@@ -717,8 +767,8 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  z-index: 46;
+  bottom: var(--keyboard-inset, 0px);
+  z-index: 48;
   padding: 0 1.15rem calc(1.4rem + env(safe-area-inset-bottom));
   max-width: 40rem;
   margin: 0 auto;
@@ -1146,7 +1196,7 @@ a {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--keyboard-inset, 0px);
   z-index: 45;
   height: 82vh;
   background: var(--ground);

@@ -65,7 +65,6 @@ export function TopBar({
               value={searchText}
               onChange={onSearchChange}
               inputRef={searchRef}
-              at="search"
               onDone={() => searchRef.current?.blur()}
               onCancel={(event) => {
                 event.stopPropagation();

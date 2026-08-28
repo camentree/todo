@@ -160,7 +160,6 @@ export function Sheet({
           onChange={setTitle}
           inputRef={titleRef}
           list={shown.list ?? ""}
-          at="sheet"
           multiline
           onDone={() => titleRef.current?.blur()}
           input={{

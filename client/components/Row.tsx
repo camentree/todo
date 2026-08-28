@@ -409,7 +409,6 @@ function TitleField({
       onChange={onChange}
       inputRef={inputRef}
       list={list}
-      at="row"
       suggest={suggest}
       multiline
       onDone={onEnter}

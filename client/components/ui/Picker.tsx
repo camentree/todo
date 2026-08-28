@@ -77,7 +77,7 @@ export function Picker({
       />
 
       {showing && matches.length > 0 && (
-        <div className="suggestions" data-at="sheet">
+        <div className="suggestions">
           {matches.map((option) => (
             <button
               type="button"
