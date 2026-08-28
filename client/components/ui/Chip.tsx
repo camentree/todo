@@ -18,6 +18,7 @@ export function Chip({
       className={onRemove ? "chip removable" : "chip"}
       data-field={field}
       data-guess={guess}
+      data-plain={sigil === ""}
     >
       {sigil}
       {label.toLowerCase()}

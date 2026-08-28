@@ -94,7 +94,7 @@ export function Modal({
         onClick={onDismiss}
       />
       <div
-        className={shape === "sheet" ? "info" : "help"}
+        className={shape === "sheet" ? "sheet" : "help"}
         ref={panel}
         role="dialog"
         aria-label={label}

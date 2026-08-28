@@ -11,9 +11,9 @@ import { inLayout, usePending } from "../data/pending.ts";
 import { TopBar } from "../components/TopBar.tsx";
 import { Help } from "../components/Help.tsx";
 import { Board } from "../components/Board.tsx";
-import { AddButton } from "../components/Row.tsx";
+import { FloatingButton } from "../components/FloatingButton.tsx";
 import type { Attribute } from "../tasks/attributes.ts";
-import { Info } from "../components/Info.tsx";
+import { Sheet } from "../components/Sheet.tsx";
 import {
   attributeText,
   todayAsDateString,
@@ -35,7 +35,7 @@ import { canonicalName } from "@shared/names.ts";
 import { asStage } from "@shared/stages.ts";
 import { isTerminal } from "@shared/states.ts";
 import { searchTasks } from "@shared/search.ts";
-import type { CreatedTask } from "@shared/types.ts";
+import type { CreatedTask, Task } from "@shared/types.ts";
 export function TasksScreen() {
   const parameters = useParams();
   const location = useLocation();
@@ -62,17 +62,24 @@ export function TasksScreen() {
     scope.field === "state" && scope.value === "complete";
 
   const [searchText, setSearchText] = useState<string | null>(null);
-  const [capturing, setCapturing] = useState(false);
+  const [composing, setComposing] = useState<Partial<Task> | null>(
+    null,
+  );
   const [helping, setHelping] = useState(false);
   const [view, changeView] = useViewPreference(
     searchText === null ? viewKeyFor(scope) : SEARCH_VIEW_KEY,
     searchText === null ? defaultView(scope) : SEARCH_VIEW,
   );
   const actions = useTaskActions(changeView);
+  const canCompose = !archived && !finished;
+  const screenSeed =
+    searchText === null && scope.field && scope.field !== view.groupBy
+      ? seedFor(scope)
+      : {};
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
-    setCapturing(false);
+    setComposing(null);
     setSearchText(null);
   }, [pathname]);
 
@@ -111,7 +118,7 @@ export function TasksScreen() {
     }
     if (event.key === "n" && !archived && !finished) {
       event.preventDefault();
-      setCapturing(true);
+      setComposing(screenSeed);
     }
     if (event.key === "f") {
       event.preventDefault();
@@ -128,15 +135,6 @@ export function TasksScreen() {
       setHelping(true);
     }
   });
-
-  const captureSeed =
-    archived || finished
-      ? null
-      : searchText !== null
-        ? {}
-        : scope.field && scope.field !== view.groupBy
-          ? seedFor(scope)
-          : {};
 
   return (
     <>
@@ -160,9 +158,8 @@ export function TasksScreen() {
           searchText: searchText,
           scope: scope,
         })}
-        captureSeed={captureSeed}
-        capturing={capturing}
-        onCapturingChange={setCapturing}
+        canCompose={canCompose}
+        onCompose={(seed) => setComposing({ ...screenSeed, ...seed })}
         actions={{
           ...actions,
           open: (task) =>
@@ -177,14 +174,25 @@ export function TasksScreen() {
         }}
       />
 
-      {!archived && !finished && (
-        <AddButton onClick={() => setCapturing(true)} />
+      {canCompose && openTaskId === null && composing === null && (
+        <FloatingButton
+          icon="plus"
+          label="Add a task"
+          onClick={() => setComposing(screenSeed)}
+        />
       )}
 
-      {openTaskId !== null && (
-        <Info
+      {(openTaskId !== null || composing !== null) && (
+        <Sheet
+          key={openTaskId ?? "new"}
           taskId={openTaskId}
-          onClose={() => navigate(pathname)}
+          seed={composing ?? {}}
+          onClose={() => {
+            setComposing(null);
+            if (openTaskId !== null) {
+              navigate(pathname);
+            }
+          }}
         />
       )}
 

@@ -138,6 +138,7 @@ export function NewSubtaskRow({
         }
         showAttributes={false}
         parseAttributes={false}
+        placeholder="Add a subtask"
       />
     </div>
   );

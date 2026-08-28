@@ -60,7 +60,7 @@ export function Comments({
 
   return (
     <>
-      <div className="info-comments">
+      <div className="comments">
         {comments.map((entry) => (
           <CommentRow
             key={entry.id}

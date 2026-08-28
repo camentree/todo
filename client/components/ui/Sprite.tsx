@@ -29,6 +29,18 @@ const SPRITES = {
       </>
     ),
   },
+  plus: {
+    size: 21,
+    box: 20,
+    draw: (
+      <path
+        d="M10 4v12M4 10h12"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+    ),
+  },
   cross: {
     size: 15,
     box: 20,

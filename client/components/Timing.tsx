@@ -1,6 +1,6 @@
 import { Count } from "./ui/Count.tsx";
 import { Field } from "./ui/Field.tsx";
-import { Select } from "./ui/Select.tsx";
+import { Choice } from "./ui/Choice.tsx";
 import { Toggle } from "./ui/Toggle.tsx";
 import { Weekdays } from "./ui/Weekdays.tsx";
 import { When } from "./ui/When.tsx";
@@ -66,10 +66,10 @@ export function Timing({
       </Field>
 
       <div className="collapsible unhurried" data-open={repeats}>
-        <div className="info-repeat">
+        <div className="repeat-fields">
           {schedule && (
             <>
-              <div className="info-every">
+              <div className="repeat-every">
                 <Field label="Every">
                   <Count
                     value={schedule.repeatEvery}
@@ -82,7 +82,8 @@ export function Timing({
                   />
                 </Field>
                 <Field label="Period">
-                  <Select
+                  <Choice
+                    label="Period"
                     value={schedule.frequency}
                     options={periodLabels(schedule.repeatEvery)}
                     onChange={(frequency) =>

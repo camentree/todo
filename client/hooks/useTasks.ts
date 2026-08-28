@@ -37,19 +37,19 @@ export function useTasks(): {
   return { tasks: tasks, isPending: isPending };
 }
 
-export function useTask(taskId: number): {
+export function useTask(taskId: number | null): {
   task: CreatedTask | undefined;
   isPending: boolean;
   isError: boolean;
 } {
   const queryClient = useQueryClient();
   const { tasks, isPending: listPending } = useTasks();
-  const held = findTask(tasks, taskId);
+  const held = taskId === null ? undefined : findTask(tasks, taskId);
 
   const { isPending: fetchPending, isError } = useQuery({
     queryKey: ["task", taskId],
     queryFn: async () => {
-      const fetched = await api.task(taskId);
+      const fetched = await api.task(taskId ?? 0);
       queryClient.setQueriesData(
         { queryKey: [TASKS_KEY] },
         (cached: unknown) =>
@@ -57,14 +57,16 @@ export function useTask(taskId: number): {
       );
       return fetched;
     },
-    enabled: !listPending && held === undefined,
+    enabled: taskId !== null && !listPending && held === undefined,
     retry: false,
     gcTime: 0,
   });
 
   return {
     task: held,
-    isPending: listPending || (held === undefined && fetchPending),
+    isPending:
+      taskId !== null &&
+      (listPending || (held === undefined && fetchPending)),
     isError: isError,
   };
 }

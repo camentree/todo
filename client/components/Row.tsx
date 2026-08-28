@@ -37,7 +37,7 @@ export function Row({
   showAttributes,
   parseAttributes = true,
   hiddenAttributes = [],
-  focusOnMount = false,
+  placeholder,
   renderSubtask,
   renderNewSubtask,
   expanded = false,
@@ -59,7 +59,7 @@ export function Row({
   showAttributes: boolean;
   parseAttributes?: boolean;
   hiddenAttributes?: Attribute[];
-  focusOnMount?: boolean;
+  placeholder?: string;
   renderSubtask?: (subtask: CreatedTask, index: number) => ReactNode;
   renderNewSubtask?: (parent: Task) => ReactNode;
   expanded?: boolean;
@@ -253,8 +253,9 @@ export function Row({
               list={uncommitted.list ?? ""}
               inputRef={titleRef}
               suggest={parseAttributes}
+              placeholder={placeholder}
               caretAt={caretAt}
-              takeFocus={!unsaved || focusOnMount}
+              takeFocus={!unsaved}
               onEnter={commit}
               onEscape={stopEditing}
               onTab={onTab && moveOn}
@@ -370,6 +371,7 @@ function TitleField({
   list,
   inputRef,
   suggest,
+  placeholder,
   caretAt,
   takeFocus,
   onEnter,
@@ -381,6 +383,7 @@ function TitleField({
   list: string;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   suggest: boolean;
+  placeholder?: string;
   caretAt: number | null;
   takeFocus: boolean;
   onEnter: () => void;
@@ -415,6 +418,7 @@ function TitleField({
       input={{
         className: "task-title editing",
         "aria-label": "Title",
+        placeholder: placeholder,
         enterKeyHint: "done",
         autoCapitalize: "sentences",
       }}
@@ -485,35 +489,4 @@ function dismissKeyboard(): void {
   if (focused instanceof HTMLElement) {
     focused.blur();
   }
-}
-
-export function AddButton({ onClick }: { onClick: () => void }) {
-  return (
-    <div className="floating">
-      <div className="floating-row">
-        <button
-          type="button"
-          className="bubble primary"
-          aria-label="Add a task"
-          onClick={onClick}
-        >
-          <svg
-            className="plus"
-            width="21"
-            height="21"
-            viewBox="0 0 20 20"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M10 4v12M4 10h12"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
 }

@@ -6,15 +6,14 @@ const DRAG_TO_CLOSE = 110;
 function fromTheHandle(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
-    target.closest(".info-handle") !== null
+    target.closest(".sheet-handle") !== null
   );
 }
 
 function handlesItsOwnScrolling(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
-    target.closest("textarea, .info-comments, .info-subtasks") !==
-      null
+    target.closest("textarea, .comments, .sheet-pane") !== null
   );
 }
 

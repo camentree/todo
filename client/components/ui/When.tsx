@@ -16,7 +16,7 @@ export function When({
   const empty = value === "";
 
   return (
-    <div className="info-input" data-empty={empty}>
+    <div className="when-field" data-empty={empty}>
       <input
         type={kind}
         aria-label={label}
@@ -24,12 +24,12 @@ export function When({
         onChange={(event) => onChange(event.target.value)}
       />
       {empty && example && (
-        <span className="info-example">{example}</span>
+        <span className="when-example">{example}</span>
       )}
       {!empty && onClear && (
         <button
           type="button"
-          className="info-clear"
+          className="when-clear"
           aria-label={`Clear ${label.toLowerCase()}`}
           onClick={onClear}
         >
