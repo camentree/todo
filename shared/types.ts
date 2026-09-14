@@ -1,96 +1,85 @@
-import type { TaskStage } from "./stages.ts";
-import type { TaskState } from "./states.ts";
+export type Kind = "bool" | "timer" | "count" | "amount" | "weight" | "text";
+export type TaskType = "boolean" | "numeric" | "text";
+export type Notebook = "daily" | "climbing";
 
-export type EventSource = "app" | "system" | "mcp" | "agent";
-
-export type Frequency = "daily" | "weekly" | "monthly";
-
-export interface Schedule {
-  frequency: Frequency;
-  repeatEvery: number;
-  weekdays: number[];
-  dayOfMonth: number | null;
-  startsOn: string;
-}
+export const notebooks: Notebook[] = ["daily", "climbing"];
+export const groupOrder = ["habits", "exercise", "personal"];
 
 export interface Task {
-  id: number | null;
-  list: string | null;
-  parentId: number | null;
-  recurringTaskId: number | null;
-  title: string;
-  note: string | null;
-  state: TaskState;
-  stage: TaskStage | null;
-  tags: string[];
-  who: string | null;
-  dueDate: string | null;
-  dueTime: string | null;
-  sortOrder: number;
-  finishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  commentCount: number;
-  schedule: Schedule | null;
-  subtasks?: CreatedTask[];
+  id: string;
+  name: string;
+  type: TaskType;
+  kind: Kind;
+  target: number;
+  current: number;
+  unit: string;
+  rest: number;
+  parent: string | null;
+  group: string;
+  note: string;
+  value: string;
+  doneManual: boolean | null;
+  tapIncrement: boolean;
+  definitionId: string | null;
+  auto: "journal" | null;
 }
 
-export interface CreatedTask extends Task {
-  id: number;
-  list: string;
+export interface DerivedTask extends Task {
+  done: boolean;
+}
+
+export interface DefinitionChild {
+  name: string;
+  kind: Kind;
+  target: number;
+  unit: string;
+  note: string;
+}
+
+export interface Definition {
+  id: string;
+  name: string;
+  group: string;
+  kind: Kind;
+  target: number;
+  unit: string;
+  rest: number;
+  every: string;
+  note: string;
+  tapIncrement: boolean;
+  children: DefinitionChild[];
+  anchor: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  at: string;
+  notebook: Notebook;
+  taskId: string | null;
+  text: string;
 }
 
 export interface Comment {
-  id: number;
-  taskId: number;
-  author: string;
-  body: string;
-  createdAt: string;
+  id: string;
+  key: string;
+  at: string;
+  text: string;
 }
 
-export interface RecurringTask extends Schedule {
-  id: number;
-  list: string;
-  title: string;
-  note: string | null;
-  tags: string[];
-  who: string | null;
-  dueTime: string | null;
-  endedAt: string | null;
-  generatedThrough: string | null;
+export interface DayState {
+  date: string;
+  tasks: Task[];
+  definitions: Definition[];
+  entries: JournalEntry[];
+  comments: Comment[];
 }
 
-export interface Event {
-  id: number;
-  taskId: number | null;
-  taskTitle: string | null;
-  source: EventSource;
-  summary: string;
-  createdAt: string;
-  seenAt: string | null;
+export function typeOfKind(kind: Kind): TaskType {
+  if (kind === "bool") return "boolean";
+  if (kind === "text") return "text";
+  return "numeric";
 }
 
-export type GroupByField =
-  | "none"
-  | "list"
-  | "stage"
-  | "tag"
-  | "due_date"
-  | "who";
-
-export type OrderByField =
-  | "manual"
-  | "relevance"
-  | "due_date"
-  | "title"
-  | "tag"
-  | "created_at"
-  | "finished_at";
-
-export type OrderDirection = "asc" | "desc";
-
-export interface ViewPreference {
-  groupBy: GroupByField;
-  orderBy: OrderByField;
-  orderDirection: OrderDirection;
+export function newId(prefix: string): string {
+  return prefix + Math.random().toString(36).slice(2, 10);
 }

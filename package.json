@@ -1,5 +1,5 @@
 {
-  "name": "parallax-frontend",
+  "name": "todo",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,21 +8,13 @@
     "dev:client": "vite --host",
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/main.ts",
-    "test": "scripts/test",
-    "migrate": "tsx --env-file=.env scripts/migrate.ts",
-    "roll-over": "tsx --env-file=.env scripts/roll-over.ts",
-    "seed-test": "tsx --env-file=.env test/seed-test.ts"
+    "test": "scripts/test"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "@tanstack/react-query": "^5.62.7",
-    "date-fns": "^4.1.0",
-    "fuse.js": "^7.5.0",
     "hono": "^4.6.14",
-    "postgres": "^3.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.1",
     "tsx": "^4.19.2"
   },
   "devDependencies": {
@@ -31,7 +23,6 @@
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.0",
-    "playwright": "^1.62.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vitest": "^3.2.7"
