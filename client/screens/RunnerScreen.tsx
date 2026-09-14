@@ -265,7 +265,7 @@ export function RunnerScreen({
       {state.phase === "rest" && (
         <div className="runner-center">
           <div className="rest-label">rest</div>
-          <div className="big numbers">{formatClock(state.rest)}</div>
+          <div className="big clock numbers">{formatClock(state.rest)}</div>
           <div className="rest-next">next: {find(state.queue[state.index + 1])?.name ?? ""}</div>
         </div>
       )}
@@ -274,10 +274,16 @@ export function RunnerScreen({
         <div className="runner-center">
           <div className="runner-parent">{parent && state.label !== parent.name ? parent.name : ""}</div>
           <div className="runner-name">{task.name}</div>
+          <div className="parts">
+            {parent &&
+              (childrenOf({ tasks, id: parent.id }) as DerivedTask[]).map((part) => (
+                <span key={part.id} className={["part-dot", part.id === task.id && "current", part.done && "done"].filter(Boolean).join(" ")} />
+              ))}
+          </div>
           {(task.note || parent?.note) && <div className="note runner-note">{task.note || parent?.note}</div>}
           {task.kind === "timer" && (
             <>
-              <button className={taskDone ? "big numbers done" : "big numbers"} onClick={() => !taskDone && onChange({ ...state, running: !state.running })}>
+              <button className={taskDone ? "big clock numbers done" : "big clock numbers"} onClick={() => !taskDone && onChange({ ...state, running: !state.running })}>
                 {formatClock(taskDone ? task.target : task.target - task.current)}
               </button>
               <div className="hint">{hint}</div>
