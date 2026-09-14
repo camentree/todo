@@ -17,6 +17,17 @@ describe("commitEntry", () => {
     expect(result.tasks[0]?.auto).toBe("journal");
   });
 
+  it("only makes today's instance when the schedule lands on today", () => {
+    const monday = "2026-09-14";
+    const saturdays = commitEntry({ text: "Long run #timer 1h #every sa", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date: monday })!;
+    expect(saturdays.tasks).toEqual([]);
+    expect(saturdays.definitions).toHaveLength(1);
+    const mondays = commitEntry({ text: "Pull-ups #count 5 #every mo,we,fr", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date: monday })!;
+    expect(mondays.tasks).toHaveLength(1);
+    const daily = commitEntry({ text: "Read #every 1d", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date: monday })!;
+    expect(daily.tasks).toHaveLength(1);
+  });
+
   it("keeps existing tasks when adding another", () => {
     const first = commitEntry({ text: "Call mum", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date })!;
     const second = commitEntry({ text: "Read /habits", tasks: first.tasks, definitions: [], editTaskId: null, editDefinitionId: null, date })!;

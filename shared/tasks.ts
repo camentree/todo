@@ -9,7 +9,7 @@ export function childrenOf({ tasks, id }: { tasks: Task[]; id: string }): Task[]
 export function leafDone({ task, entries, date }: { task: Task; entries: JournalEntry[]; date: string }): boolean {
   if (task.doneManual !== null) return task.doneManual;
   if (task.auto === "journal") return entries.some((entry) => entry.at.slice(0, 10) === date);
-  if (task.type === "numeric") return task.target > 0 && task.current >= task.target;
+  if (task.type === "numeric") return !task.tapIncrement && task.target > 0 && task.current >= task.target;
   if (task.type === "text") return task.value !== "";
   return false;
 }
@@ -54,7 +54,7 @@ export function toggled({ tasks: derived, task }: { tasks: DerivedTask[]; task: 
       : task.type === "text"
         ? { doneManual: null, value: "" }
         : { doneManual: false }
-    : task.type === "numeric"
+    : task.type === "numeric" && !task.tapIncrement
       ? { doneManual: true, current: task.target > 0 ? task.target : task.current }
       : { doneManual: true };
   return tasks.map((each) => (each.id === task.id ? { ...each, ...patch } : each));

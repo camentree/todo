@@ -1,5 +1,6 @@
 import type { ParsedEntry, ParsedTask } from "./grammar.ts";
 import { parseEntry } from "./grammar.ts";
+import { isDue } from "./schedule.ts";
 import { autoRule } from "./tasks.ts";
 import type { Definition, Task } from "./types.ts";
 import { newId } from "./types.ts";
@@ -86,15 +87,17 @@ export function commitEntry({
   const block = [root, ...children];
   const at = editTaskId ? tasks.findIndex((task) => task.id === editTaskId) : -1;
   const remaining = editTaskId ? tasks.filter((task) => task.id !== editTaskId && task.parent !== editTaskId) : [...tasks];
-  if (at >= 0) remaining.splice(Math.min(at, remaining.length), 0, ...block);
-  else remaining.push(...block);
   let nextDefinitions = definitions;
+  let dueToday = true;
   if (parsed.every) {
     const id = editDefinitionId ?? root.definitionId ?? newId("d");
     const existing = definitions.find((definition) => definition.id === id);
     const definition = definitionFrom({ parsed, id, anchor: existing?.anchor ?? date });
     root.definitionId = id;
     nextDefinitions = existing ? definitions.map((each) => (each.id === id ? definition : each)) : [...definitions, definition];
+    dueToday = isDue({ every: definition.every, anchor: definition.anchor, date });
   }
+  if (at >= 0) remaining.splice(Math.min(at, remaining.length), 0, ...block);
+  else if (dueToday) remaining.push(...block);
   return { tasks: remaining, definitions: nextDefinitions, rootId };
 }

@@ -40,6 +40,14 @@ describe("derive", () => {
     expect(derived.map((each) => each.done)).toEqual([true, false, true, false, true, true]);
   });
 
+  it("never finishes an open-ended count on its own, and keeps its count when ticked", () => {
+    const open = task("open", { type: "numeric", kind: "count", target: 1, tapIncrement: true, current: 4 });
+    const derived = derive({ tasks: [open], entries: [], date });
+    expect(derived[0]?.done).toBe(false);
+    const ticked = derive({ tasks: toggled({ tasks: derived, task: derived[0]! }), entries: [], date });
+    expect(ticked[0]).toMatchObject({ done: true, current: 4 });
+  });
+
   it("gives a parent its children's progress", () => {
     const derived = derive({
       tasks: [

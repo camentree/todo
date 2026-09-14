@@ -62,7 +62,8 @@ export function RunnerScreen({
   }, []);
 
   const patchDone = (target: DerivedTask) => {
-    const patch = target.type === "numeric" && target.target > 0 && target.current < target.target ? { doneManual: true, current: target.target } : { doneManual: true };
+    const fill = target.type === "numeric" && !target.tapIncrement && target.target > 0 && target.current < target.target;
+    const patch = fill ? { doneManual: true, current: target.target } : { doneManual: true };
     store.patchTask({ id: target.id, patch });
   };
 

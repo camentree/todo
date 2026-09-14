@@ -77,12 +77,13 @@ export function TodayScreen({
 
   useEffect(() => write({ key: "collapsed:" + store.date, value: collapsed }), [collapsed, store.date]);
 
-  const groups = [...new Set([...groupOrder, ...store.tasks.map((task) => task.group)])].filter((group) => store.tasks.some((task) => task.group === group));
+  const allGroups = [...new Set([...groupOrder, ...store.tasks.map((task) => task.group), ...store.definitions.map((definition) => definition.group)])];
+  const groups = allGroups.filter((group) => store.tasks.some((task) => task.group === group));
   const week = store.definitions
     .filter((definition) => !store.tasks.some((task) => task.definitionId === definition.id))
     .map((definition) => ({ definition, days: daysUntilDue({ definition, date: store.date }) }))
     .filter((each): each is { definition: Definition; days: number } => each.days !== null)
-    .sort((a, b) => groups.indexOf(a.definition.group) - groups.indexOf(b.definition.group) || a.days - b.days);
+    .sort((a, b) => allGroups.indexOf(a.definition.group) - allGroups.indexOf(b.definition.group) || a.days - b.days);
 
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
