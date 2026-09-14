@@ -42,6 +42,9 @@ body {
 }
 
 body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   background: var(--page);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
@@ -76,6 +79,17 @@ textarea {
   outline: none;
   display: block;
   width: 100%;
+}
+
+textarea,
+input,
+.cm-content,
+.comment-text,
+.runner-answer,
+.note {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 textarea::placeholder,
@@ -321,6 +335,18 @@ input[type="number"]::-webkit-inner-spin-button {
   flex: 1;
   overflow-y: auto;
   padding: 0 var(--gutter) 80px;
+}
+
+.compose-preview .row {
+  min-height: 36px;
+}
+
+.compose-preview .row-name {
+  padding: 4px 0;
+}
+
+.compose-preview .box-button {
+  height: 36px;
 }
 
 .entry {
