@@ -65,6 +65,9 @@ textarea {
 button {
   cursor: pointer;
   text-align: left;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 textarea {
@@ -451,7 +454,7 @@ input[type="number"]::-webkit-inner-spin-button {
   position: absolute;
   top: 36px;
   left: -8px;
-  right: -60px;
+  right: -8px;
   z-index: 2;
   max-height: 420px;
   overflow-y: auto;

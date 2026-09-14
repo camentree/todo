@@ -8,7 +8,7 @@ import { childrenOf, metaText, toggled } from "@shared/tasks.ts";
 import type { Definition, DerivedTask, Task } from "@shared/types.ts";
 import { groupOrder } from "@shared/types.ts";
 
-import { Box, Check, Chevron, Play } from "../components/Glyphs.tsx";
+import { Check, Chevron, Play } from "../components/Glyphs.tsx";
 import { TaskRow } from "../components/TaskRow.tsx";
 import { readCollapsed, write } from "../data/settings.ts";
 import { useStore } from "../data/store.tsx";
@@ -179,9 +179,6 @@ export function TodayScreen({
                     <span>{definition.name}</span>
                     <span className="row-meta numbers">{definitionMeta(definition)}</span>
                   </button>
-                  <span className="box-button">
-                    <Box done={false} />
-                  </span>
                 </div>
               ))}
           </div>
