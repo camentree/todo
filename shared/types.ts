@@ -1,9 +1,7 @@
 export type Kind = "bool" | "timer" | "count" | "amount" | "weight" | "text";
 export type TaskType = "boolean" | "numeric" | "text";
-export type Notebook = "daily" | "climbing";
-
-export const notebooks: Notebook[] = ["daily", "climbing"];
 export const groupOrder = ["habits", "exercise", "personal"];
+export const defaultNotebook = "daily";
 
 export interface Task {
   id: string;
@@ -54,7 +52,7 @@ export interface Definition {
 export interface JournalEntry {
   id: string;
   at: string;
-  notebook: Notebook;
+  notebook: string;
   taskId: string | null;
   text: string;
 }

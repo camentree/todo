@@ -32,7 +32,10 @@ export function renderLine(line: string): Segment[] {
 }
 
 export function stripMarkers(line: string): string {
-  return line.replace(/^#+ |^[-*] |^> /, "");
+  return renderLine(line)
+    .filter((segment) => segment.tone !== "marker" && segment.tone !== "accent")
+    .map((segment) => segment.text)
+    .join("");
 }
 
 export function preview(text: string): string {

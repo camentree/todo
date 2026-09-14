@@ -985,6 +985,28 @@ button.big {
   color: var(--faint);
 }
 
+.tone-marker.hidden-marker {
+  visibility: hidden;
+}
+
+.rendered.read .hidden-marker {
+  display: none;
+}
+
+.notebooks button.faint {
+  color: var(--faint);
+}
+
+.notebook-name {
+  width: 110px;
+  font-size: 16px;
+  color: var(--ink);
+  border-bottom: 1px solid var(--hairline);
+  outline: none;
+  padding: 0 0 2px;
+  margin: 0 0 -3px;
+}
+
 .tone-ink {
   color: var(--ink);
 }

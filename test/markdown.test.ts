@@ -32,7 +32,7 @@ describe("renderLine", () => {
 
 describe("preview and firstLine", () => {
   it("strips markers from the first two non-empty lines", () => {
-    expect(preview("# Slept badly\n\n- sat anyway\n- third line")).toBe("Slept badly sat anyway");
+    expect(preview("# Slept badly\n\n- sat **anyway**\n- third line")).toBe("Slept badly sat anyway");
     expect(firstLine("\n\n> quiet room")).toBe("quiet room");
   });
 });

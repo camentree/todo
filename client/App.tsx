@@ -5,7 +5,8 @@ import { capitalise } from "@shared/format.ts";
 import type { RunnerState } from "@shared/runner.ts";
 import { startRunner } from "@shared/runner.ts";
 import { childrenOf } from "@shared/tasks.ts";
-import type { Definition, DerivedTask, Notebook } from "@shared/types.ts";
+import type { Definition, DerivedTask } from "@shared/types.ts";
+import { defaultNotebook } from "@shared/types.ts";
 
 import { TabBar } from "./components/TabBar.tsx";
 import { useStore } from "./data/store.tsx";
@@ -25,7 +26,7 @@ export function App() {
   const [returnRunner, setReturnRunner] = useState<RunnerState | null>(null);
   const [composer, setComposer] = useState<ComposerState | null>(null);
   const [journalDraft, setJournalDraft] = useState<JournalDraft | null>(null);
-  const [notebook, setNotebook] = useState<Notebook>("daily");
+  const [notebook, setNotebook] = useState(defaultNotebook);
 
   const leaveRunner = () => {
     if (screen === "runner" && runner) setReturnRunner({ ...runner, running: false });
