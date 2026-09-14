@@ -1,32 +1,11 @@
-import { firstLine, preview, renderLine } from "@shared/markdown.ts";
+import { firstLine, preview, stripMarkers } from "@shared/markdown.ts";
 
-describe("renderLine", () => {
-  it("keeps markers visible in a fainter tone", () => {
-    expect(renderLine("# Morning")).toEqual([
-      { text: "# ", tone: "marker" },
-      { text: "Morning", tone: "ink" },
-    ]);
-    expect(renderLine("- sat for **twelve** minutes")).toEqual([
-      { text: "- ", tone: "accent" },
-      { text: "sat for ", tone: "body" },
-      { text: "**", tone: "marker" },
-      { text: "twelve", tone: "ink" },
-      { text: "**", tone: "marker" },
-      { text: " minutes", tone: "body" },
-    ]);
-    expect(renderLine("> quiet")).toEqual([
-      { text: "> ", tone: "marker" },
-      { text: "quiet", tone: "muted" },
-    ]);
-    expect(renderLine("_soft_ and `code`")).toEqual([
-      { text: "_", tone: "marker" },
-      { text: "soft", tone: "italic" },
-      { text: "_", tone: "marker" },
-      { text: " and ", tone: "body" },
-      { text: "`", tone: "marker" },
-      { text: "code", tone: "ink" },
-      { text: "`", tone: "marker" },
-    ]);
+describe("stripMarkers", () => {
+  it("removes line and inline markers", () => {
+    expect(stripMarkers("# Morning")).toBe("Morning");
+    expect(stripMarkers("- sat for **twelve** minutes")).toBe("sat for twelve minutes");
+    expect(stripMarkers("> _soft_ and `code`")).toBe("soft and code");
+    expect(stripMarkers("2. second")).toBe("second");
   });
 });
 

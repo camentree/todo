@@ -94,51 +94,57 @@ export function App() {
   const writeJournal = (taskId: string | null) => {
     leaveRunner();
     setScreen("journal");
-    setJournalDraft({ text: "", notebook, editId: null, linkTaskId: taskId, reading: false, promptDismissed: false });
+    setJournalDraft({ text: "", notebook, editId: null, linkTaskId: taskId, promptDismissed: false });
   };
 
   const showTabs = screen !== "runner" && !(screen === "today" && composer) && !(screen === "journal" && journalDraft);
 
   return (
     <>
-      {screen === "today" && !composer && (
+      <div className="stack">
         <TodayScreen onOpenTask={openTask} onEditTask={editTask} onRunGroup={runGroup} onEditDefinition={editDefinition} />
-      )}
+        {screen === "journal" && (
+          <div className="overlay">
+            <JournalScreen
+              draft={journalDraft}
+              onDraft={setJournalDraft}
+              onNotebook={setNotebook}
+              canReturn={returnRunner !== null}
+              onReturn={resumeRunner}
+              onClose={() => {
+                setJournalDraft(null);
+                if (returnRunner) resumeRunner();
+              }}
+            />
+          </div>
+        )}
+      </div>
       {screen === "today" && composer && (
-        <Composer
-          state={composer}
-          onChange={setComposer}
-          onClose={() => {
-            setComposer(null);
-            resumeRunner();
-          }}
-        />
+        <div className="overlay">
+          <Composer
+            state={composer}
+            onChange={setComposer}
+            onClose={() => {
+              setComposer(null);
+              resumeRunner();
+            }}
+          />
+        </div>
       )}
       {screen === "runner" && runner && (
-        <RunnerScreen
-          state={runner}
-          onChange={setRunner}
-          onExit={() => {
-            setRunner(null);
-            setReturnRunner(null);
-            setScreen("today");
-          }}
-          onEdit={editTask}
-          onWrite={writeJournal}
-        />
-      )}
-      {screen === "journal" && (
-        <JournalScreen
-          draft={journalDraft}
-          onDraft={setJournalDraft}
-          onNotebook={setNotebook}
-          canReturn={returnRunner !== null}
-          onReturn={resumeRunner}
-          onClose={() => {
-            setJournalDraft(null);
-            if (returnRunner) resumeRunner();
-          }}
-        />
+        <div className="overlay">
+          <RunnerScreen
+            state={runner}
+            onChange={setRunner}
+            onExit={() => {
+              setRunner(null);
+              setReturnRunner(null);
+              setScreen("today");
+            }}
+            onEdit={editTask}
+            onWrite={writeJournal}
+          />
+        </div>
       )}
       {showTabs && (
         <TabBar

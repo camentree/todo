@@ -230,7 +230,7 @@ export function RunnerScreen({
       <div className="runner-header">
         <div className="runner-scope">
           <button className="runner-scope-button" onClick={() => state.queue.length > 1 && setListOpen((open) => !open)}>
-            <span>{state.label}</span>
+            <span>{state.queue.length > 1 ? state.label : ""}</span>
             {state.queue.length > 1 && (
               <span className="runner-position numbers">
                 {(state.phase === "end" ? state.queue.length : Math.min(state.index + 1, state.queue.length)) + " of " + state.queue.length}

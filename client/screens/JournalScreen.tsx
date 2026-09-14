@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import type { MouseEvent } from "react";
+import { useState } from "react";
 
 import { formatWhen } from "@shared/format.ts";
-import { firstLine, preview, renderLine } from "@shared/markdown.ts";
+import { firstLine, preview } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/types.ts";
 import { defaultNotebook, newId } from "@shared/types.ts";
 
 import { ConfirmDelete } from "../components/ConfirmDelete.tsx";
+import { MarkdownEditor } from "../components/MarkdownEditor.tsx";
 import { useStore } from "../data/store.tsx";
 
 export interface JournalDraft {
@@ -14,49 +14,7 @@ export interface JournalDraft {
   notebook: string;
   editId: string | null;
   linkTaskId: string | null;
-  reading: boolean;
   promptDismissed: boolean;
-}
-
-function Rendered({ text, currentLine }: { text: string; currentLine: number | null }) {
-  return (
-    <>
-      {text.split("\n").map((line, index) => (
-        <div key={index}>
-          {line === ""
-            ? "​"
-            : renderLine(line).map((segment, position) => (
-                <span key={position} className={"tone-" + segment.tone + (segment.tone === "marker" && index !== currentLine ? " hidden-marker" : "")}>
-                  {segment.text}
-                </span>
-              ))}
-        </div>
-      ))}
-    </>
-  );
-}
-
-function lineOf({ text, offset }: { text: string; offset: number }): number {
-  return text.slice(0, offset).split("\n").length - 1;
-}
-
-function caretAt({ event, text }: { event: MouseEvent<HTMLDivElement>; text: string }): number {
-  const range = document.caretRangeFromPoint?.(event.clientX, event.clientY);
-  if (!range) return text.length;
-  const root = event.currentTarget;
-  let offset = 0;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode();
-  while (node) {
-    if (node === range.startContainer) {
-      offset += range.startOffset;
-      break;
-    }
-    offset += (node.textContent ?? "").replace(/​/g, "").length;
-    node = walker.nextNode();
-  }
-  const lineIndex = Array.from(root.children).findIndex((child) => child.contains(range.startContainer));
-  return Math.min(text.length, offset + Math.max(0, lineIndex));
 }
 
 function NotebookPicker({
@@ -126,23 +84,8 @@ export function JournalScreen({
   const store = useStore();
   const [filter, setFilter] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const [pendingCaret, setPendingCaret] = useState<number | null>(null);
-  const [currentLine, setCurrentLine] = useState(0);
-  const textarea = useRef<HTMLTextAreaElement>(null);
   const now = new Date();
   const notebooks = [...new Set([defaultNotebook, ...store.entries.map((entry) => entry.notebook), ...(draft ? [draft.notebook] : [])])];
-
-  useEffect(() => {
-    if (pendingCaret === null || !textarea.current) return;
-    textarea.current.focus();
-    textarea.current.setSelectionRange(pendingCaret, pendingCaret);
-    setCurrentLine(lineOf({ text: textarea.current.value, offset: pendingCaret }));
-    setPendingCaret(null);
-  }, [pendingCaret]);
-
-  useEffect(() => {
-    if (draft && !draft.reading) textarea.current?.focus();
-  }, [draft?.editId, draft?.reading]);
 
   if (!draft) {
     const entries = store.entries.filter((entry) => !filter || entry.notebook === filter).sort((a, b) => b.at.localeCompare(a.at));
@@ -173,9 +116,7 @@ export function JournalScreen({
               <button
                 key={entry.id}
                 className="entry-card"
-                onClick={() =>
-                  onDraft({ text: entry.text, notebook: entry.notebook, editId: entry.id, linkTaskId: entry.taskId, reading: true, promptDismissed: true })
-                }
+                onClick={() => onDraft({ text: entry.text, notebook: entry.notebook, editId: entry.id, linkTaskId: entry.taskId, promptDismissed: true })}
               >
                 <div className="comment-when numbers">
                   <span>{formatWhen({ at: new Date(entry.at), now })}</span>
@@ -193,11 +134,7 @@ export function JournalScreen({
 
   const linked = draft.linkTaskId ? store.tasks.find((task) => task.id === draft.linkTaskId) : null;
   const prompt = linked ? (linked.type === "text" ? linked.name : "About " + linked.name + " just now.") : "What is one thing you noticed today?";
-  const showPrompt = !draft.promptDismissed && !draft.text && !draft.editId;
-
-  const trackCaret = () => {
-    if (textarea.current) setCurrentLine(lineOf({ text: textarea.current.value, offset: textarea.current.selectionStart }));
-  };
+  const showPrompt = !draft.promptDismissed && !draft.editId;
 
   const save = () => {
     if (!draft.text.trim()) return;
@@ -229,36 +166,12 @@ export function JournalScreen({
             </button>
           </div>
         )}
-        {draft.reading ? (
-          <div
-            className="rendered read"
-            onClick={(event) => {
-              setPendingCaret(caretAt({ event, text: draft.text }));
-              onDraft({ ...draft, reading: false });
-            }}
-          >
-            <Rendered text={draft.text} currentLine={null} />
-          </div>
-        ) : (
-          <div className="editor">
-            <div className="rendered" aria-hidden="true">
-              <Rendered text={draft.text} currentLine={currentLine} />
-            </div>
-            <textarea
-              ref={textarea}
-              value={draft.text}
-              onChange={(event) => {
-                onDraft({ ...draft, text: event.target.value });
-                setCurrentLine(lineOf({ text: event.target.value, offset: event.target.selectionStart }));
-              }}
-              onSelect={trackCaret}
-              onKeyUp={trackCaret}
-              onClick={trackCaret}
-              rows={Math.max(8, draft.text.split("\n").length + 2)}
-              spellCheck={false}
-            />
-          </div>
-        )}
+        <MarkdownEditor
+          key={draft.editId ?? "new"}
+          value={draft.text}
+          autoFocus={draft.editId === null}
+          onChange={(text) => onDraft({ ...draft, text, promptDismissed: text === "" ? false : draft.promptDismissed })}
+        />
       </div>
       <div className="editor-bar">
         <div>

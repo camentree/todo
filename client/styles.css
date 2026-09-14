@@ -110,6 +110,23 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+.stack {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--page);
+  display: flex;
+  flex-direction: column;
+}
+
 .screen {
   display: flex;
   flex-direction: column;
@@ -952,48 +969,62 @@ button.big {
 }
 
 .editor {
-  position: relative;
-}
-
-.rendered {
-  padding: 8px 0;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  color: var(--body);
-}
-
-.rendered.read {
   min-height: 200px;
   cursor: text;
 }
 
-.editor .rendered {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+.editor .cm-editor {
+  outline: none;
+  background: none;
 }
 
-.editor textarea {
-  position: relative;
-  padding: 8px 0;
+.editor .cm-scroller {
+  font-family: inherit;
+  font-size: 18px;
   line-height: 1.55;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  color: transparent;
-  caret-color: var(--ink);
+  overflow: visible;
 }
 
-.tone-marker {
+.editor .cm-content {
+  padding: 8px 0;
+  color: var(--body);
+  caret-color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.editor .cm-line {
+  padding: 0;
+}
+
+.editor .cm-cursor {
+  border-left-color: var(--ink);
+}
+
+.editor .cm-selectionBackground,
+.editor .cm-editor ::selection {
+  background: color-mix(in oklch, var(--accent) 25%, transparent);
+}
+
+.cm-marker {
   color: var(--faint);
 }
 
-.tone-marker.hidden-marker {
-  visibility: hidden;
+.cm-strong,
+.cm-heading,
+.cm-code {
+  color: var(--ink);
 }
 
-.rendered.read .hidden-marker {
-  display: none;
+.cm-em {
+  font-style: italic;
+}
+
+.cm-quote {
+  color: var(--muted);
+}
+
+.cm-bullet {
+  color: var(--accent);
 }
 
 .notebooks button.faint {
@@ -1008,22 +1039,6 @@ button.big {
   outline: none;
   padding: 0 0 2px;
   margin: 0 0 -3px;
-}
-
-.tone-ink {
-  color: var(--ink);
-}
-
-.tone-accent {
-  color: var(--accent);
-}
-
-.tone-muted {
-  color: var(--muted);
-}
-
-.tone-italic {
-  font-style: italic;
 }
 
 .editor-bar {
