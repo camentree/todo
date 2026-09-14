@@ -54,9 +54,9 @@ export function App() {
     setScreen("runner");
   };
 
-  const openTask = (task: DerivedTask) => {
-    const root = task.parent ? (store.tasks.find((each) => each.id === task.parent) ?? task) : task;
-    openRunner(startRunner({ tasks: store.tasks, tapped: task, scope: "task", groupTops: [], label: root.name }));
+  const openTask = ({ task, among }: { task: DerivedTask; among: DerivedTask[] }) => {
+    const root = task.parent ? (among.find((each) => each.id === task.parent) ?? task) : task;
+    openRunner(startRunner({ tasks: among, tapped: task, scope: "task", groupTops: [], label: root.name }));
   };
 
   const runGroup = ({ group, tops }: { group: string; tops: DerivedTask[] }) => {

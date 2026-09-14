@@ -4,7 +4,7 @@ import type { PointerEvent } from "react";
 import { capitalise, formatDuration } from "@shared/format.ts";
 import { everyLabel } from "@shared/grammar.ts";
 import { daysUntilDue } from "@shared/schedule.ts";
-import { childrenOf, metaText, toggled } from "@shared/tasks.ts";
+import { childrenOf, derive, instantiate, metaText, plain, toggled } from "@shared/tasks.ts";
 import type { Definition, DerivedTask, Task } from "@shared/types.ts";
 import { groupOrder } from "@shared/types.ts";
 
@@ -56,7 +56,7 @@ export function TodayScreen({
   onRunGroup,
   onEditDefinition,
 }: {
-  onOpenTask: (task: DerivedTask) => void;
+  onOpenTask: (open: { task: DerivedTask; among: DerivedTask[] }) => void;
   onEditTask: (id: string) => void;
   onRunGroup: (run: { group: string; tops: DerivedTask[] }) => void;
   onEditDefinition: (definition: Definition) => void;
@@ -96,6 +96,15 @@ export function TodayScreen({
   };
 
   const toggleGroup = (key: string) => setCollapsed((current) => ({ ...current, [key]: !current[key] }));
+
+  const bringForward = ({ definition, done }: { definition: Definition; done: boolean }): { task: DerivedTask; among: DerivedTask[] } => {
+    const block = derive({ tasks: instantiate({ definition, date: store.date }), entries: [], date: store.date });
+    const root = block[0] as DerivedTask;
+    const tasks = done ? toggled({ tasks: block, task: root }) : plain(block);
+    store.setTasks((current) => [...current, ...tasks]);
+    const among = derive({ tasks: [...plain(store.tasks), ...tasks], entries: store.entries, date: store.date });
+    return { task: among.find((task) => task.id === root.id) ?? root, among };
+  };
 
   return (
     <div className="screen">
@@ -147,7 +156,7 @@ export function TodayScreen({
                       arranging={isArranging}
                       dragging={dragging === task.id}
                       press={longPress(() => onEditTask(task.id))}
-                      onOpen={() => !isArranging && onOpenTask(task)}
+                      onOpen={() => !isArranging && onOpenTask({ task, among: store.tasks })}
                       onToggle={() => !isArranging && store.setTasks(() => toggled({ tasks: store.tasks, task }))}
                       onDragStart={
                         task.parent
@@ -174,12 +183,20 @@ export function TodayScreen({
             </div>
             {!collapsed[weekKey] &&
               week.map(({ definition }) => (
-                <div className="row" key={definition.id}>
-                  <button className="row-name" onClick={() => onEditDefinition(definition)}>
-                    <span>{definition.name}</span>
-                    <span className="row-meta numbers">{definitionMeta(definition)}</span>
-                  </button>
-                </div>
+                <TaskRow
+                  key={definition.id}
+                  id={definition.id}
+                  name={definition.name}
+                  meta={definitionMeta(definition)}
+                  done={false}
+                  child={false}
+                  arranging={false}
+                  dragging={false}
+                  press={longPress(() => onEditDefinition(definition))}
+                  onOpen={() => onOpenTask(bringForward({ definition, done: false }))}
+                  onToggle={() => bringForward({ definition, done: true })}
+                  onDragStart={null}
+                />
               ))}
           </div>
         )}

@@ -230,7 +230,7 @@ export function RunnerScreen({
       <div className="runner-header">
         <div className="runner-scope">
           <button className="runner-scope-button" onClick={() => state.queue.length > 1 && setListOpen((open) => !open)}>
-            <span>{state.queue.length > 1 ? state.label : ""}</span>
+            <span>{state.scope === "group" ? state.label : ""}</span>
             {state.queue.length > 1 && (
               <span className="runner-position numbers">
                 {(state.phase === "end" ? state.queue.length : Math.min(state.index + 1, state.queue.length)) + " of " + state.queue.length}
@@ -272,14 +272,14 @@ export function RunnerScreen({
 
       {task && (
         <div className="runner-center">
-          <div className="runner-parent">{parent && state.label !== parent.name ? parent.name : ""}</div>
-          <div className="runner-name">{task.name}</div>
+          <div className="runner-parent">{parent?.name ?? ""}</div>
           <div className="parts">
             {parent &&
               (childrenOf({ tasks, id: parent.id }) as DerivedTask[]).map((part) => (
                 <span key={part.id} className={["part-dot", part.id === task.id && "current", part.done && "done"].filter(Boolean).join(" ")} />
               ))}
           </div>
+          <div className="runner-name">{task.name}</div>
           {(task.note || parent?.note) && <div className="note runner-note">{task.note || parent?.note}</div>}
           {task.kind === "timer" && (
             <>
@@ -386,7 +386,7 @@ export function RunnerScreen({
           {task.type === "text" && (
             <>
               {task.value && <div className="runner-answer">{task.value}</div>}
-              <button className="pill" style={{ marginTop: 24 }} onClick={() => onWrite(task.id)}>
+              <button className="pill" onClick={() => onWrite(task.id)}>
                 {task.value ? "edit in journal" : "write in journal"}
               </button>
             </>

@@ -551,10 +551,20 @@ input[type="number"]::-webkit-inner-spin-button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 9vh;
   align-items: center;
   text-align: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.runner-center .big,
+.runner-center .counter,
+.runner-center .amount-total,
+.runner-center .slider,
+.runner-center .runner-answer,
+.runner-center .pill {
+  margin-top: 28px;
 }
 
 .runner-parent {
@@ -687,7 +697,6 @@ button.big {
   height: 60px;
   border-radius: 30px;
   border: 1.5px solid var(--hairline);
-  margin-top: 24px;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
