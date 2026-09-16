@@ -31,7 +31,7 @@
   --chip-bg: #356b5224;
   --chip-text: #356b52;
   --tag: #68726f;
-  --scrim: rgba(245, 248, 246, 0.72);
+  --scrim: rgba(27, 33, 32, 0.16);
   --warn: #b46a5f;
   --swipe-warn: #ba6155;
   --swipe-accent: #2d8059;
@@ -75,7 +75,7 @@
     --chip-bg: #7fb99629;
     --chip-text: #96c8ab;
     --tag: #857f7a;
-    --scrim: rgba(28, 26, 30, 0.72);
+    --scrim: rgba(0, 0, 0, 0.5);
     --warn: #c9736c;
     --swipe-warn: #d86d64;
     --swipe-accent: #6ec490;
@@ -547,18 +547,22 @@ textarea {
   max-width: var(--column);
   align-self: center;
   background: var(--ground);
-  padding: 0.4rem 0 0;
+  border-radius: 1rem 1rem 0 0;
   display: flex;
   flex-direction: column;
   max-height: 100%;
 }
 
 .preview {
-  padding: 0.6rem var(--gutter) 0.9rem;
+  padding: 1rem var(--gutter) 0.9rem;
   overflow-y: auto;
   scrollbar-width: none;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.preview .task {
+  pointer-events: none;
 }
 
 .preview::-webkit-scrollbar {
@@ -622,6 +626,10 @@ textarea {
 
 .actions .text.active {
   color: var(--accent);
+}
+
+.actions .text.warn {
+  color: var(--warn);
 }
 
 .confirm {

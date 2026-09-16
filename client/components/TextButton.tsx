@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 
 import type { PressHandlers } from "../interaction/longPress.ts";
 
-export function TextButton({ active, onSelect, press, children }: { active: boolean; onSelect: () => void; press?: PressHandlers | null; children: ReactNode }) {
+export function TextButton({ active, warn, onSelect, press, children }: { active: boolean; warn?: boolean; onSelect: () => void; press?: PressHandlers | null; children: ReactNode }) {
   return (
-    <button className={active ? "text active" : "text"} onClick={onSelect} {...press}>
+    <button className={warn ? "text warn" : active ? "text active" : "text"} onClick={onSelect} {...press}>
       {children}
     </button>
   );

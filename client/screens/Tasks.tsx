@@ -197,7 +197,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
                   onHold={null}
                   focused={null}
                   onTick={() => null}
-                  onTitle={() => field.current?.focus()}
+                  onTitle={() => null}
                   onToday={null}
                   onDelete={null}
                   onDeletePart={null}
@@ -217,7 +217,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           <div className="actions">
             <div className="actions-left">
               {draft.editing && (
-                <TextButton active={false} onSelect={onDelete}>
+                <TextButton active={false} warn onSelect={onDelete}>
                   delete
                 </TextButton>
               )}
