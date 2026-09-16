@@ -227,7 +227,8 @@ export function serializeTask({ task, every, today }: { task: Task; every: strin
   if (task.time) text += " " + task.time;
   if (task.parts.length === 0) text += valueTokens(task);
   else if (task.doneAt) text += " = done";
-  text += noteLines(task.note);
+  if (task.note) text += "\n" + noteLines(task.note);
+  if (task.note && task.parts.length > 0) text += "\n";
   for (const part of task.parts) text += "\n- " + part.name + kindTokens(part) + valueTokens(part) + noteLines(part.note);
   return text;
 }

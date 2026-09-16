@@ -145,7 +145,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
             )}
           </div>
         )}
-        <div className={draft.block ? "composer-field block" : "composer-field"}>
+        <div className="composer-field">
           <textarea
             ref={field}
             rows={1}
