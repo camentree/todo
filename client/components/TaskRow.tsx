@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { PointerEvent } from "react";
+import type { MouseEvent, PointerEvent } from "react";
 
 import type { Comment, Task } from "@shared/model.ts";
 import { partAsTask } from "@shared/move.ts";
@@ -17,7 +17,6 @@ import { Handle } from "./Handle.tsx";
 import { Meta } from "./Meta.tsx";
 import { SquareTick } from "./SquareTick.tsx";
 import { Swipeable } from "./Swipeable.tsx";
-import { TextButton } from "./TextButton.tsx";
 
 export interface Select {
   selected: (id: string) => boolean;
@@ -111,6 +110,12 @@ export function TaskRow({
     if (commentsShowing && !partsShowing) folds.set({ key: openKey(task.id), open: false });
   };
 
+  const onRow = (event: MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+    if (select) return select.onToggle(task.id);
+    onTitle();
+  };
+
   const onPartsGlyph = () => {
     folds.set({ key: partsKey(task.id), open: !partsShowing });
     if (partsShowing && !commentsShowing) folds.set({ key: openKey(task.id), open: false });
@@ -123,7 +128,7 @@ export function TaskRow({
   return (
     <div className={done ? "task done" : "task"}>
       <Swipeable onRight={select ? null : onToday} onLeft={select ? null : onDelete}>
-        <div className={focused === task.id ? "row focused" : "row"} data-focus={task.id}>
+        <div className={focused === task.id ? "row focused" : "row"} data-focus={task.id} onClick={onRow} {...press}>
           <div className="main">
             {select ? (
               <>
@@ -131,12 +136,10 @@ export function TaskRow({
                 <SquareTick on={select.selected(task.id)} onToggle={() => select.onToggle(task.id)} />
               </>
             ) : (
-              <CircleTick done={done} onToggle={onTick} press={press} />
+              <CircleTick done={done} onToggle={onTick} />
             )}
             {when && <span className="when">{when}</span>}
-            <TextButton active={false} onSelect={select ? () => select.onToggle(task.id) : onTitle} press={press}>
-              {task.name}
-            </TextButton>
+            <span className="text">{task.name}</span>
             {hint && <span className="hint">{hint}</span>}
             <div className="marks">
               {comments.length > 0 && (

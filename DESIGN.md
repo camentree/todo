@@ -49,8 +49,12 @@ composer and comment editor are full-screen overlays.
   background. Comments come first, then the note and the parts. Everything
   that opens rolls into view slowly; nothing pops. The note and the parts
   start where the title text starts, not at the tick.
-- Tap the title to edit, tap the tick to complete. Hold anywhere on the row,
-  tick or title, to enter select mode.
+- Tap the row to edit: anywhere on it that is not one of its own controls,
+  the tick, the handle and square in select mode, the two glyphs and the
+  chevron, so the time, the title, the target hint, the date and the chip all
+  open the editor. Tap the tick to complete. Hold anywhere on the row to
+  enter select mode. The hover lift covers exactly the area a tap would open;
+  the controls answer hover themselves and leave the row flat.
 - A part is a TaskRow: same look, same tick, same swipes, same hold, indented
   under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
@@ -171,7 +175,7 @@ get a square in line with the task squares, left of the title. Bottom right:
 a small raised `×` cancels, and play, larger and round in the accent, runs
 the selection in order, a selected subtask running the task it sits in.
 Nothing else appears.
-- Tapping a title selects that row too; nothing opens the editor and there is
+- Tapping the row selects it too; nothing opens the editor and there is
   no tick to hit, so completing is a keyboard key. Holding a subtask selects
   that subtask alone, never its parent. Deselecting the last row leaves
   select mode.
@@ -288,8 +292,10 @@ faint; the date sits under it in the meta size. Round buttons are 3.25rem:
 `+`, done and play in the accent, arrows and `×` in raised; every round
 button is the same size, and play's triangle sits a little left of centre so
 it looks centred. On a pointer that hovers, everything clickable answers by
-colour alone: dim goes to text, faint to dim, a tick's border to dim; nothing
-moves and nothing gains a background. The phone sees none of it. Cards
+colour alone: dim goes to text, faint to dim, a tick's border to dim, accent
+and warn to a stronger shade of themselves; nothing moves. Only a whole row,
+a task row or a journal entry, gains a background, the raised colour under
+the area a tap would open. The phone sees none of it. Cards
 (comments) are raised with a 0.7rem radius, the only cards in the app. The
 ring is 250px, 3px, raised track with an accent arc. Red only for delete, the
 swipe and every `delete` action, and the unseen dot on the comment glyph.

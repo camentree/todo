@@ -289,6 +289,7 @@ textarea {
   gap: 0.15rem;
   padding: var(--row-padding);
   border-radius: 0.5rem;
+  cursor: pointer;
   transition: background 0.45s ease;
 }
 
@@ -1370,7 +1371,7 @@ textarea.editor {
     color: var(--dim);
   }
 
-  .row:has(> .main > .text:hover),
+  .row:not(:has(button:hover)):hover,
   .entry:hover {
     background: var(--raised);
   }
