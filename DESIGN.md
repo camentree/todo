@@ -141,6 +141,17 @@ tables and the app talks only to Parallax. Agents use the same HTTP API.
 - Journal and notes are the two markdown files Parallax already indexes; the
   app reads and appends through Parallax's journal endpoints.
 
+Until Parallax has these endpoints, `server/main.ts` stands in over a data
+directory; `DEV.md` lists the endpoints, how to run, seed, isolate and reset.
+
+The client loads definitions, every task, every comment and both journals
+once at start and holds them in memory; every screen renders from memory.
+A write changes memory first and the screen moves at once, then the request
+goes to the API. If the request fails, memory is reverted to what it was and
+an error sprite appears with the message from the response, or "could not
+reach Parallax" when there was none; it dismisses on tap. The sprite is the
+only red thing besides the delete swipe.
+
 Rules the server owns:
 - Opening a date instantiates every definition due that day, once.
 - A habit's instance from a previous day is never carried; it stays as history.

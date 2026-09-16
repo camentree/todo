@@ -68,6 +68,16 @@ padding, card radius. Values are the ones on the canvas frames.
   (track plus arc plus centred children; fills for counts, empties for
   timers), the nav row.
 
+- **ErrorSprite**: the one red thing besides the delete swipe; shows the
+  message of a failed write, dismisses on tap. Lives with the store.
+
+## Store
+
+One in-memory store loaded once at start: definitions, tasks, comments, both
+journals. Every screen reads from it. A write applies to memory, then sends
+the request; a failed request restores the previous memory and raises the
+ErrorSprite. Nothing else talks to the API.
+
 ## Hooks
 
 - **useLongPress**: one duration, one slop. Hold a tick, hold a group label,

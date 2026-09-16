@@ -94,13 +94,19 @@ Swipes
 - Nothing else swipes.
 
 Data
-- Requesting a date from the API returns the tasks for that date, creating
-  instances from due definitions the first time the date is requested and not
-  again.
-- Every change made in the UI is visible in the API promptly and survives a
-  reload.
-- A one-off posted by an agent through the API appears on Today or Backlog
-  without a reload.
+- Requesting the tasks from the API creates instances from due definitions
+  for today and the coming week the first time and not again.
+- The client fetches everything once at start; opening a tab or unfolding a
+  group makes no request.
+- Every change made in the UI shows on screen before the request completes,
+  is visible in the API promptly, and survives a reload.
+- With the API set to fail writes, ticking a task shows the tick, then the
+  tick reverts and an error sprite appears with the server's message; tapping
+  the sprite dismisses it; the task is unchanged after a reload.
+- With the server stopped, the same happens with a message saying Parallax
+  could not be reached.
+- A one-off posted by an agent through the API appears on Today or Backlog on
+  the next load.
 
 ## Slice 2: select mode, play, runner
 
