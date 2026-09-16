@@ -34,14 +34,21 @@ composer and comment editor are full-screen overlays.
   even when it is empty, so every title wraps at the same place. Under the
   title, only when there is something to say: an overdue date as `sept 12` in
   dim, and the mono chip for a group-level attribute. Nothing else.
-- The two glyphs are toggles: tapping one sets whether comments, parts (note
-  and subtasks), or both roll open under the row, and an active glyph is in
-  the accent colour, colour alone with no background. Only parts is active to
-  begin with; a comment nobody has seen makes comments active too. The
-  chevron opens and closes whatever is active. Comments come first, then the
-  note and the parts. Everything that opens rolls into view slowly; nothing
-  pops. The note and the parts start where the title text starts, not at the
-  tick.
+- The two glyphs answer to whether the row is open. Closed (chevron `›`),
+  neither is in the accent: they are dim counts, and tapping one does nothing,
+  except the comment glyph, which opens the row with only the comments
+  showing. Opening with the chevron shows the parts, the note and the
+  subtasks, so the parts glyph turns accent; comments do not show by default.
+  With the row open, tapping the comment glyph toggles the comments, accent
+  while they show, and tapping the parts glyph toggles the parts. The
+  exception is a newest comment written by `agent` and unseen: the comment
+  glyph carries a small dot in the warn colour at its top right, open or
+  closed, until the thread is opened and marked seen, and the chevron then
+  opens comments and parts together, so both glyphs are accent. Closing the
+  row drops both glyphs back to dim. An accent glyph is colour alone, with no
+  background. Comments come first, then the note and the parts. Everything
+  that opens rolls into view slowly; nothing pops. The note and the parts
+  start where the title text starts, not at the tick.
 - Tap the title to edit, tap the tick to complete. Hold anywhere on the row,
   tick or title, to enter select mode.
 - A part is a TaskRow: same look, same tick, same swipes, same hold, indented
@@ -147,8 +154,8 @@ follow a habit across days. Agents post them too, through the HTTP API.
 - The field opens the comment editor: full screen, heading `comment`, the
   task and part under it, a plain text field, cancel and save. Escape
   cancels, cmd+enter saves.
-- An unseen comment from the agent makes the row's comment glyph active, so
-  it shows in the accent colour, and pulls the task onto Today in its group.
+- A newest comment from the agent that nobody has seen puts the warn dot on
+  the row's comment glyph, and pulls the task onto Today in its group.
   Opening the thread marks them seen.
 
 **Select mode**: hold anywhere on a row, or hold a group title to start with
@@ -236,8 +243,8 @@ once at start and holds them in memory; every screen renders from memory.
 A write changes memory first and the screen moves at once, then the request
 goes to the API. If the request fails, memory is reverted to what it was and
 an error sprite appears with the message from the response, or "could not
-reach Parallax" when there was none; it dismisses on tap. The sprite is the
-only red thing besides the delete swipe.
+reach Parallax" when there was none; it dismisses on tap. The sprite is red,
+with delete and the unseen dot.
 
 Rules the server owns:
 - Opening a date instantiates every definition due that day, once.
@@ -275,8 +282,9 @@ it looks centred. On a pointer that hovers, everything clickable answers by
 colour alone: dim goes to text, faint to dim, a tick's border to dim; nothing
 moves and nothing gains a background. The phone sees none of it. Cards
 (comments) are raised with a 0.7rem radius, the only cards in the app. The
-ring is 250px, 3px, raised track with an accent arc. Red only for the delete
-swipe. Phone first; desktop only widens the column. Light must survive sun.
+ring is 250px, 3px, raised track with an accent arc. Red only for delete, the
+swipe and every `delete` action, and the unseen dot on the comment glyph.
+Phone first; desktop only widens the column. Light must survive sun.
 Everything the app writes is lowercase (`since sept 12`, `wednesday,
 september 16`, `15:00`, `done`, `add a comment`); the exceptions are group
 labels, which stay UPPERCASE, and the tab names and the two section

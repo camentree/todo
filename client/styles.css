@@ -348,6 +348,7 @@ textarea {
 }
 
 .mark {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -359,6 +360,16 @@ textarea {
 
 .mark.on {
   color: var(--accent);
+}
+
+.unseen {
+  position: absolute;
+  top: calc(50% - 8px);
+  right: 0.15rem;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--warn);
 }
 
 .fold {
@@ -1341,7 +1352,7 @@ textarea.editor {
   .confirm-choices .text:not(.active):hover,
   .ring-inside .text:not(.active):hover,
   .group-head .text:hover,
-  .mark:not(.on):hover {
+  .mark:not(.on):not(:disabled):hover {
     color: var(--text);
   }
 

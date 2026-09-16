@@ -75,29 +75,45 @@ export function TaskRow({
   const [firstUnseen, setFirstUnseen] = useState<string | null>(null);
   const done = isDone({ task, entries: store.journal });
   const unseen = comments.some((comment) => comment.seenAt === null);
+  const newest = comments[0] ?? null;
+  const agentUnseen = newest !== null && newest.author === "agent" && newest.seenAt === null;
   const hasParts = task.parts.length > 0 || task.note !== "";
   const open = folds.isOpen({ key: openKey(task.id), fallback: false });
-  const partsActive = folds.isOpen({ key: partsKey(task.id), fallback: true });
-  const commentsActive = folds.isOpen({ key: commentsKey(task.id), fallback: unseen });
-  const partsOpen = fixedOpen || unfoldParts || (open && partsActive);
-  const commentsOpen = open && commentsActive && comments.length > 0;
+  const partsShowing = open && folds.isOpen({ key: partsKey(task.id), fallback: true });
+  const commentsShowing = open && folds.isOpen({ key: commentsKey(task.id), fallback: agentUnseen }) && comments.length > 0;
+  const partsOpen = fixedOpen || unfoldParts || partsShowing;
   const now = nowStamp();
   const press = onHold ? longPress(() => onHold(task.id)) : null;
 
   useEffect(() => {
-    if (!commentsOpen) return;
+    if (!commentsShowing) return;
     const ordered = [...comments].sort((a, b) => a.writtenAt.localeCompare(b.writtenAt));
     setFirstUnseen(ordered.find((comment) => comment.seenAt === null)?.id ?? null);
     if (!unseen) return;
     for (const comment of comments) if (comment.seenAt === null) store.putComment({ ...comment, seenAt: now });
     if (task.date === null) store.putTask({ ...task, date: store.today });
-  }, [commentsOpen]);
+  }, [commentsShowing]);
 
-  const setActive = ({ key, active }: { key: string; active: boolean }) => {
-    folds.set({ key, open: active });
-    if (active) return folds.set({ key: openKey(task.id), open: true });
-    const other = key === partsKey(task.id) ? commentsActive : partsActive;
-    if (!other) folds.set({ key: openKey(task.id), open: false });
+  const onChevron = () => {
+    if (open) return folds.set({ key: openKey(task.id), open: false });
+    folds.set({ key: partsKey(task.id), open: hasParts });
+    folds.set({ key: commentsKey(task.id), open: agentUnseen || !hasParts });
+    folds.set({ key: openKey(task.id), open: true });
+  };
+
+  const onCommentGlyph = () => {
+    if (!open) {
+      folds.set({ key: partsKey(task.id), open: false });
+      folds.set({ key: commentsKey(task.id), open: true });
+      return folds.set({ key: openKey(task.id), open: true });
+    }
+    folds.set({ key: commentsKey(task.id), open: !commentsShowing });
+    if (commentsShowing && !partsShowing) folds.set({ key: openKey(task.id), open: false });
+  };
+
+  const onPartsGlyph = () => {
+    folds.set({ key: partsKey(task.id), open: !partsShowing });
+    if (partsShowing && !commentsShowing) folds.set({ key: openKey(task.id), open: false });
   };
 
   const when = whenHint({ task, today: store.today });
@@ -124,17 +140,18 @@ export function TaskRow({
             {hint && <span className="hint">{hint}</span>}
             <div className="marks">
               {comments.length > 0 && (
-                <Mark label="comments" count={String(comments.length)} active={commentsActive} onSelect={() => setActive({ key: commentsKey(task.id), active: !commentsActive })}>
+                <Mark label="comments" count={String(comments.length)} active={commentsShowing} onSelect={onCommentGlyph}>
                   <SpeechGlyph />
+                  {agentUnseen && <span className="unseen" />}
                 </Mark>
               )}
               {hasParts && (
-                <Mark label="parts" count={partCount(task)} active={partsActive} onSelect={() => setActive({ key: partsKey(task.id), active: !partsActive })}>
+                <Mark label="parts" count={partCount(task)} active={partsShowing} onSelect={open ? onPartsGlyph : null}>
                   <PartsGlyph />
                 </Mark>
               )}
               {(hasParts || comments.length > 0) && !fixedOpen && (
-                <button className="fold" aria-label={open ? "fold" : "unfold"} onClick={() => folds.set({ key: openKey(task.id), open: !open })}>
+                <button className="fold" aria-label={open ? "fold" : "unfold"} onClick={onChevron}>
                   <ChevronGlyph open={open} />
                 </button>
               )}
@@ -149,7 +166,7 @@ export function TaskRow({
         </div>
       </Swipeable>
       {comments.length > 0 && (
-        <Roll open={commentsOpen}>
+        <Roll open={commentsShowing}>
           <div className="unfolded">
             <CommentList comments={comments} scrollTo={firstUnseen} onAdd={onAddComment} onDelete={onDeleteComment} />
           </div>

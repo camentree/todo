@@ -27,7 +27,7 @@ import type { Select } from "../components/TaskRow.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { useFolds } from "../components/Foldable.tsx";
-import { commentsKey, openKey } from "../components/TaskRow.tsx";
+import { commentsKey, openKey, partsKey } from "../components/TaskRow.tsx";
 import { longPress } from "../interaction/longPress.ts";
 import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
 import type { ShortcutAction } from "../interaction/shortcuts.tsx";
@@ -588,6 +588,7 @@ export function Tasks() {
     }
     if (action === "thread" && commentsFor({ task: host, comments: store.comments }).length > 0) {
       const on = !folds.isOpen({ key: commentsKey(host.id), fallback: false });
+      folds.set({ key: partsKey(host.id), open: false });
       folds.set({ key: commentsKey(host.id), open: on });
       folds.set({ key: openKey(host.id), open: on });
     }
