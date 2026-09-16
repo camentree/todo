@@ -140,7 +140,8 @@ the whole group. Nothing changes at the top. Every row becomes: drag handle, squ
 select, title, with the squares exactly where the ticks were. Group headers
 get a square in line with the task squares, left of the title. Bottom right:
 a small raised `×` cancels, and play, larger and round in the accent, runs
-the selection in order. Nothing else appears.
+the selection in order, a selected subtask running the task it sits in.
+Nothing else appears.
 - Tapping a title selects that row too; nothing opens the editor and there is
   no tick to hit, so completing is a keyboard key. Holding a subtask selects
   that subtask alone, never its parent. Deselecting the last row leaves

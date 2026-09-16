@@ -290,7 +290,7 @@ export function Tasks() {
     selection ? { on: tasks.length > 0 && tasks.every((task) => selection.has(task.id)), onToggle: () => toggleSelected(tasks.map((task) => task.id)) } : null;
 
   const play = () => {
-    const chosen = listOrder.filter((task) => selection?.has(task.id));
+    const chosen = listOrder.filter((task) => selection?.has(task.id) || task.parts.some((_, index) => selection?.has(task.id + ":" + index)));
     if (chosen.length === 0) return;
     const groups = new Set(chosen.map((task) => task.group));
     const label = chosen.length === 1 ? (chosen[0]?.name ?? "") : groups.size === 1 ? (chosen[0]?.group ?? "") : "selection";
