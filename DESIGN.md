@@ -26,14 +26,15 @@ composer and comment editor are full-screen overlays.
   both states and turns smoothly between them. A task with no group is
   `ungrouped`; the model and the composer default to no group. No buttons on
   headers. Generous space between groups.
-- Row: one line reading tick circle, then `{time} {title} {target}` — the
-  time or coming date in dim first, the title in text colour, the target hint
-  in dim after it (`30 min`, `500 ml`, `8`, `3 / 8`; a count is its number
-  alone, there is no `×` anywhere) — and at the far right a cluster,
-  `{n} comment-glyph {m} parts-glyph ›`, whose width is reserved on every row
-  even when it is empty, so every title wraps at the same place. Under the
-  title, only when there is something to say: an overdue date as `sept 12` in
-  dim, and the mono chip for a group-level attribute. Nothing else.
+- Row: one line reading tick circle, then `{title} {target} {when}` — the
+  title in text colour, the target hint in dim after it (`30 min`, `500 ml`,
+  `8`, `3 / 8`; a count is its number alone, there is no `×` anywhere), then
+  the date and the time in dim, `sept 20, 9:00 pm`, `tomorrow, 9:00 pm`, a
+  past `sept 13`, or just `9:00 pm` when the date is today or there is none —
+  and at the far right a cluster, `{n} comment-glyph {m} parts-glyph ›`, whose
+  width is reserved on every row even when it is empty, so every title wraps
+  at the same place. Under the title, only the mono chip for a group-level
+  attribute. Nothing else.
 - The two glyphs answer to whether the row is open. Closed (chevron `›`),
   neither is in the accent: they are dim counts, and tapping one does nothing,
   except the comment glyph, which opens the row with only the comments
@@ -51,14 +52,14 @@ composer and comment editor are full-screen overlays.
   start where the title text starts, not at the tick.
 - Tap the row to edit: anywhere on it that is not one of its own controls,
   the tick, the handle and square in select mode, the two glyphs and the
-  chevron, so the time, the title, the target hint, the date and the chip all
+  chevron, so the title, the target hint, the date and time and the chip all
   open the editor. Tap the tick to complete. Hold anywhere on the row to
   enter select mode. The hover lift covers exactly the area a tap would open;
   the controls answer hover themselves and leave the row flat.
 - A part is a TaskRow: same look, same tick, same swipes, same hold, indented
   under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
-  shows `sept 12` in muted text, never red.
+  ends its line with `sept 12` in the dim slot, never red.
 - **Backlog**: collapsed by default, and every group inside it starts folded
   too. Everything not due today or past: future one-offs, the next instance of
   each coming definition, and every undated, unfinished one-off, grouped the

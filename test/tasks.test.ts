@@ -1,5 +1,5 @@
 import type { Task } from "@shared/model.ts";
-import { grouped, isBacklog, isDone, isOnToday, kindHint, partToggled, pastHint, toggled, whenHint } from "@shared/tasks.ts";
+import { grouped, isBacklog, isDone, isOnToday, kindHint, partToggled, toggled, whenHint } from "@shared/tasks.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
@@ -114,19 +114,14 @@ describe("placing rows", () => {
     ]);
   });
 
-  it("leads the title with the time, and the day too when it is still to come", () => {
+  it("closes the line with the date and the time, and drops the date when it is today", () => {
     expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("sept 18, 5:00 pm");
     expect(whenHint({ task: later, today })).toBe("sept 22");
     expect(whenHint({ task: task("t", { date: "2026-09-16", time: "09:00" }), today })).toBe("tomorrow, 9:00 am");
     expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3:00 pm");
-    expect(whenHint({ task: overdue, today })).toBe("");
-  });
-
-  it("puts an overdue date under the title and nothing else", () => {
-    expect(pastHint({ task: overdue, today })).toBe("sept 12");
-    expect(pastHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("sept 14");
-    expect(pastHint({ task: soon, today })).toBe("");
-    expect(pastHint({ task: backlog, today })).toBe("");
+    expect(whenHint({ task: overdue, today })).toBe("sept 12");
+    expect(whenHint({ task: task("y", { date: "2026-09-14", time: "07:10" }), today })).toBe("sept 14, 7:10 am");
+    expect(whenHint({ task: backlog, today })).toBe("");
   });
 
   it("writes a count target as its number alone", () => {

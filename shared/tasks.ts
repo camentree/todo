@@ -104,11 +104,8 @@ export function partCount(task: Task): string {
 }
 
 export function whenHint({ task, today }: { task: Task; today: string }): string {
-  if (task.date === null || task.date <= today) return task.time ? timeOfDay(task.time) : "";
-  const day = comingDate({ key: task.date, today });
-  return task.time ? day + ", " + timeOfDay(task.time) : day;
-}
-
-export function pastHint({ task, today }: { task: Task; today: string }): string {
-  return task.date !== null && task.date < today ? shortDate(task.date) : "";
+  const time = task.time ? timeOfDay(task.time) : "";
+  if (task.date === null || task.date === today) return time;
+  const day = task.date < today ? shortDate(task.date) : comingDate({ key: task.date, today });
+  return time ? day + ", " + time : day;
 }

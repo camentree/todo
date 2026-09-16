@@ -3,7 +3,7 @@ import type { MouseEvent, PointerEvent } from "react";
 
 import type { Comment, Task } from "@shared/model.ts";
 import { partAsTask } from "@shared/move.ts";
-import { isDone, kindHint, partCount, partToggled, pastHint, whenHint } from "@shared/tasks.ts";
+import { isDone, kindHint, partCount, partToggled, whenHint } from "@shared/tasks.ts";
 
 import { nowStamp, useStore } from "../data/store.tsx";
 import { longPress } from "../interaction/longPress.ts";
@@ -122,7 +122,6 @@ export function TaskRow({
   };
 
   const when = whenHint({ task, today: store.today });
-  const past = pastHint({ task, today: store.today });
   const hint = kindHint(task);
 
   return (
@@ -138,9 +137,9 @@ export function TaskRow({
             ) : (
               <CircleTick done={done} onToggle={onTick} />
             )}
-            {when && <span className="when">{when}</span>}
             <span className="text">{task.name}</span>
             {hint && <span className="hint">{hint}</span>}
+            {when && <span className="when">{when}</span>}
             <div className="marks">
               {comments.length > 0 && (
                 <Mark label="comments" count={String(comments.length)} active={commentsShowing} onSelect={onCommentGlyph}>
@@ -160,10 +159,9 @@ export function TaskRow({
               )}
             </div>
           </div>
-          {(past || chip) && (
+          {chip && (
             <Meta>
-              {chip && <Chip>{chip}</Chip>}
-              {past && <span>{past}</span>}
+              <Chip>{chip}</Chip>
             </Meta>
           )}
         </div>
