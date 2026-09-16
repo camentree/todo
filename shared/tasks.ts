@@ -85,7 +85,6 @@ export function isOnToday({ task, today, entries, comments }: { task: Task; toda
 export function isBacklog({ task, today, entries, comments }: { task: Task; today: string; entries: JournalEntry[]; comments: Comment[] }): boolean {
   if (isOnToday({ task, today, entries, comments })) return false;
   if (task.date !== null) return task.date > today;
-  if (task.definitionId !== null) return false;
   if (!isDone({ task, entries })) return true;
   return (task.doneAt ?? "").slice(0, 10) === today;
 }

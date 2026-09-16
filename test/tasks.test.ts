@@ -91,6 +91,7 @@ describe("placing rows", () => {
     const inBacklog = (each: Task) => isBacklog({ task: each, today, entries: [], comments });
     expect([backlog, backlogDoneToday, backlogDoneYesterday, commented, habitToday].map(inBacklog)).toEqual([true, true, false, false, false]);
     expect([soon, later, habitYesterday, overdue].map(inBacklog)).toEqual([true, true, false, false]);
+    expect(inBacklog(task("h3", { definitionId: "d" }))).toBe(true);
   });
 
   it("orders groups habits, exercise, personal, then the rest alphabetically, ungrouped last, rows by sort", () => {

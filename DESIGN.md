@@ -129,8 +129,9 @@ the selection in order. Nothing else appears.
 - Drag a handle: the row lifts, one accent line shows the target, dragging
   right nests it under the row above. A bundle drags the same way as one row,
   with the count as its title. Hold over a folded task and it unfolds. What
-  lands takes the attributes of where it lands: the group, the date if the
-  group is on Today, parenthood if it went inside a task.
+  lands takes the attributes of where it lands: the group, today's date in
+  the Today section and no date at all in Backlog, parenthood if it went
+  inside a task.
 - No move button, no delete button, no picker.
 
 **Swipes**: right on a backlog row is today; left on any row or comment is
