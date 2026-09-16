@@ -33,9 +33,12 @@ checkout.
   choice ("today only" / "every day").
 - **Delete in the composer** is dim text, not red; red stays on the swipe
   and the sprite.
-- **Composer keyboard**: the overlay is `position: fixed; inset: 0` with the
-  field at the bottom, and `interactive-widget=resizes-content` makes Safari
-  shrink it above the keyboard. No measured offsets. Verified with the real
+- **Keyboard**: `interactive-widget=resizes-content` does not take on this
+  Safari (innerHeight stayed 714 with the keyboard up, visualViewport 412),
+  so Overlay listens to `visualViewport` resize and scroll and, only when
+  more than 120px is covered, sets its own `top` and `height` to the visual
+  viewport, once per animation frame and only on change. The composer and
+  both editor screens then sit above the keyboard. Verified with the real
   keyboard in the simulator.
 - **Editing a habit instance**: the composer serialises it without a date;
   removing `#every` turns that instance into a one-off in Backlog and leaves
@@ -177,3 +180,26 @@ Judgment calls in this slice
 - Tags for a new entry: a leading line of `#words` in the text becomes the tag list; otherwise the active filter word is the tag; otherwise none. Editing shows the tags as that leading line so they can be changed in place.
 - Writing from a task: the runner shows "write" inside the ring for a boolean task named Journal, opening the Entry editor with the task name; nothing else in the design creates an entry from a task.
 - Entry previews strip markdown markers and skip blank lines, so three lines means three lines of text.
+
+## Slice 5: drag
+
+- [x] Pressing a handle and moving lifts the row (raised, shadow, slight tilt) and shows one accent line that follows the finger: simulator screenshot mid-drag, against the MoveDrag frame.
+- [x] Releasing drops at the line, the group renumbers `sort`, and the order came back from the API after reload (Physio 0, Yoga 1).
+- [x] Dragging clearly right (40px past the start) over a row nests the line under it; releasing made Yoga the first part of Physio (API showed five parts and no Yoga task); dragging back left un-nests before release.
+- [x] Pausing 480ms over a folded task unfolds it so the line can go inside: Chrome, pointer events with a wait.
+- [x] Dropping into another group changes the group; onto Today gives today's date; into Backlog clears the date (pharmacy went to Backlog/personal with `date: null`): Chrome and API. Unit-tested in `test/move.test.ts`.
+- [x] With several rows selected any handle drags them all as "N tasks" and they land together in list order: Chrome (Meditate, Drink water, pharmacy after Read).
+- [x] Dragging a part out to the left edge makes it a top-level task after its parent: Chrome (Yoga back out of Physio).
+- [x] Only the handle starts a drag (`touch-action: none` on it alone); the rest of the row scrolls: simulator.
+
+Judgment calls in this slice
+- The list auto-scrolls while the finger is within 120px of the top or bottom of the visual viewport, ten pixels every 16ms, so a row can travel from Today to Backlog. Verified in the simulator by holding a handle near the toolbar.
+- A dragged task becomes one part (or its own parts, if it had any); a part dragged out becomes a boolean/count/timer task in its parent's group with its parent's date.
+- Dropping under This week keeps a future date, or gives tomorrow to a row that had none.
+- The drop target is whatever row is under the finger; with the finger in the handle column the part under it is found by height, so parts can be targeted without moving right.
+- There are no drop targets on group headers: a group with no rows cannot be dropped into; This week and Backlog only exist while they have rows.
+
+## What does not hold
+
+- Wake lock and the theme-color meta cannot be observed in the simulator; the code is there.
+- Chrome's extension tab was hidden for part of the drag checks, which stalls animation frames; that is why the auto-scroll runs on an interval rather than requestAnimationFrame.

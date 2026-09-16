@@ -23,12 +23,14 @@ export interface Select {
   on: boolean;
   onToggle: () => void;
   onHandle: (event: PointerEvent<HTMLButtonElement>) => void;
+  onPartHandle: (event: PointerEvent<HTMLButtonElement>, index: number) => void;
 }
 
-function PartRow({ part, onToggle }: { part: TaskPart; onToggle: (() => void) | null }) {
+function PartRow({ part, onToggle, onHandle }: { part: TaskPart; onToggle: (() => void) | null; onHandle: ((event: PointerEvent<HTMLButtonElement>) => void) | null }) {
   const done = partDone(part);
   return (
     <div className={done ? "part done" : "part"}>
+      {onHandle && <Handle onPointerDown={onHandle} />}
       <CircleTick done={done} onToggle={onToggle ?? (() => null)} press={null} />
       <div className="part-text">
         <span className="part-name">{part.name}</span>
@@ -48,6 +50,7 @@ export function TaskRow({
   onAddComment,
   onDeleteComment,
   fixedOpen,
+  unfoldParts,
 }: {
   task: Task;
   chip: string | null;
@@ -57,9 +60,11 @@ export function TaskRow({
   onAddComment: () => void;
   onDeleteComment: (comment: Comment) => void;
   fixedOpen: boolean;
+  unfoldParts: boolean;
 }) {
   const store = useStore();
-  const [unfolded, setUnfolded] = useState<Unfolded>(() => (fixedOpen ? "parts" : remembered({ key: "task:" + task.id, fallback: null })));
+  const [remembered_, setUnfolded] = useState<Unfolded>(() => (fixedOpen ? "parts" : remembered({ key: "task:" + task.id, fallback: null })));
+  const unfolded: Unfolded = unfoldParts ? "parts" : remembered_;
   const done = isDone({ task, entries: store.journal });
   const comments = commentsFor({ task, comments: store.comments });
   const unseen = comments.some((comment) => comment.seenAt === null);
@@ -112,7 +117,9 @@ export function TaskRow({
           {task.parts.length > 0 && (
             <div className="parts">
               {task.parts.map((part, index) => (
-                <PartRow key={index} part={part} onToggle={fixedOpen ? null : () => store.putTask(partToggled({ task, index, now }))} />
+                <div key={index} data-part={task.id + ":" + index}>
+                  <PartRow part={part} onToggle={fixedOpen || select ? null : () => store.putTask(partToggled({ task, index, now }))} onHandle={select ? (event) => select.onPartHandle(event, index) : null} />
+                </div>
               ))}
             </div>
           )}
