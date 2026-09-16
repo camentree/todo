@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { formatWhen } from "@shared/format.ts";
-import { autoTitle, entryFrom, entryText, tagCounts } from "@shared/journal.ts";
+import { entryFrom, entryText, entryTitle, sectionTitleFrom, tagCounts } from "@shared/journal.ts";
 import { stripMarkers, wordCount } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
@@ -15,8 +15,8 @@ import { TextButton } from "./TextButton.tsx";
 const headings: Record<JournalName, string> = { journal: "Journal", notebook: "Notebook" };
 
 export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
-  const at = nowStamp().slice(0, 16);
-  return { id: identifier(), at, title: autoTitle(at), tags: tag ? [tag] : [], task: null, body: "" };
+  const at = nowStamp();
+  return { id: identifier(), at, sectionTitle: sectionTitleFrom(at), displayTitle: null, tags: tag ? [tag] : [], task: null, body: "" };
 }
 
 function Filters({ counts, total, active, onSelect }: { counts: { tag: string; count: number }[]; total: number; active: string | null; onSelect: (tag: string | null) => void }) {
@@ -39,7 +39,7 @@ function EntryRow({ entry, filter, onOpen }: { entry: JournalEntry; filter: stri
   const words = wordCount(entry.body);
   return (
     <button className="entry" onClick={onOpen}>
-      {entry.title !== autoTitle(entry.at) && <div className="entry-title">{entry.title}</div>}
+      {entry.displayTitle && <div className="entry-title">{entryTitle(entry)}</div>}
       <div className="entry-head">
         <span>{formatWhen(entry.at)}</span>
         {tags.length > 0 && <span className="entry-tag">{tags.join(", ")}</span>}

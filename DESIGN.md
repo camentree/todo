@@ -65,21 +65,24 @@ composer and comment editor are full-screen overlays.
 - Finished rows stay struck through until the day rolls over.
 
 **Journal**: a view over the one `journal.md` Parallax already splits on H2.
-Each H2 is an entry: its section title, a metadata block under it holding the
-timestamp and the tags, then the body, which may carry its own deeper
-subheadings. A new entry is titled `YYYY-MM-DD - HH:MM` in 24-hour time until
-it is renamed. Entries newest first: the title on its own line in text
-colour, shown only once it has been renamed so the moment is never printed
-twice, then timestamp, the tags and the word count in the meta style, then
-the first three lines of body as plain text. Filters
-are plain words above the list, every tag in use in alphabetical order after
-`all`, each with its count in dim, the active one in text colour; the
-filtered tag is not repeated on its entries, and an entry's task name is kept
-in the data but never shown. CodeMirror markdown with markers hidden
-off the caret line, except heading marks, which stay visible so the level
-reads; the `## title` line sits at the top and editing it renames the
-section. An entry may name a task; a task named Journal auto-completes when
-an entry exists for the day.
+Each H2 is an entry. Its section title is `YYYY-MM-DD HH:MM:SS`, the time
+part optional, and under it come plain `key: value` lines, `id`, `at`, `tag`
+repeated or as a comma list, `display_title` and `task`, then a blank line
+and the body, which may carry its own deeper subheadings. A new entry's
+section title is the moment it was written and it has no `display_title`.
+The title an entry shows, everywhere the app shows one, is `display_title`
+when there is one and the section title otherwise. Entries newest first: the
+title on its own line in text colour, shown only once it has one, then
+timestamp, the tags and the word count in the meta style, then the first
+three lines of body as plain text. Filters are plain words above the list,
+every tag in use in alphabetical order after `all`, each with its count in
+dim, the active one in text colour; the filtered tag is not repeated on its
+entries, and an entry's task name is kept in the data but never shown.
+CodeMirror markdown with markers hidden off the caret line,
+except heading marks, which stay visible so the level reads; the `## title`
+line sits at the top, and editing it writes `display_title` and leaves the
+section title alone. An entry may name a task; a task named Journal
+auto-completes when an entry exists for the day.
 
 **Notebook**: the same screen over `notebook.md`. Journal is introspection,
 Notebook is things. The editor's heading is Journal or Notebook, so the

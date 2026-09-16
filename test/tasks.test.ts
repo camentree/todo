@@ -39,7 +39,7 @@ describe("isDone", () => {
     ];
     expect(isDone({ task: task("e", { parts }), entries: [] })).toBe(true);
     expect(isDone({ task: task("f", { parts: [parts[0]!, { ...parts[1]!, current: 3 }] }), entries: [] })).toBe(false);
-    expect(isDone({ task: task("Journal", { date: today }), entries: [{ id: "j", at: today + "T07:00", title: today + " - 07:00", tags: [], task: null, body: "" }] })).toBe(true);
+    expect(isDone({ task: task("Journal", { date: today }), entries: [{ id: "j", at: today + "T07:00:00", sectionTitle: today + " 07:00:00", displayTitle: null, tags: [], task: null, body: "" }] })).toBe(true);
     expect(isDone({ task: task("Journal", { date: today }), entries: [] })).toBe(false);
   });
 });

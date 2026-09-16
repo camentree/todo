@@ -67,7 +67,8 @@ export interface Comment {
 export interface JournalEntry {
   id: string;
   at: string;
-  title: string;
+  sectionTitle: string;
+  displayTitle: string | null;
   tags: string[];
   task: string | null;
   body: string;

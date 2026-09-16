@@ -4,10 +4,28 @@
 
 `server/main.ts` stands in for Parallax's HTTP server until Parallax has these
 endpoints. It keeps everything in one directory, `DATA_DIR`: `parallax.json`
-(definitions, tasks, comments) and `journal.md` and `notebook.md` (entries
-split on H2, an HTML comment under each heading holds id, tags and task). The
-data model is `shared/model.ts`; the client should use it and retire the
-habit-app types in `shared/types.ts` as it goes.
+(definitions, tasks, comments) and `journal.md` and `notebook.md`. The data
+model is `shared/model.ts`; the client should use it and retire the habit-app
+types in `shared/types.ts` as it goes.
+
+Entries split on H2. The section title is `YYYY-MM-DD HH:MM:SS`, the time
+part optional, and plain `key: value` lines follow it up to a blank line:
+
+```
+## 2026-09-16 21:05:00
+id: abc123
+at: 2026-09-16T21:05:00
+tag: books
+display_title: what I read this week
+
+body…
+```
+
+`tag` may repeat or carry a comma list and reads the same either way; it is
+written as one comma list. `display_title` and `task` are written only when
+set. The title an entry shows, in the list and at the top of the editor, is
+`display_title` when there is one and the section title otherwise; editing
+that line writes `display_title` and leaves the section title alone.
 
 Endpoints, all JSON:
 

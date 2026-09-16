@@ -3,24 +3,29 @@ import type { JournalEntry } from "./model.ts";
 export function parseMarkdown(markdown: string): JournalEntry[] {
   const blocks = markdown.split(/^## /m).slice(1);
   return blocks.map((block) => {
-    const newline = block.indexOf("\n");
-    const heading = (newline === -1 ? block : block.slice(0, newline)).trim();
-    const lines = (newline === -1 ? "" : block.slice(newline + 1)).replace(/\n+$/, "");
-    const metadata = lines.match(/^<!--\s*([\s\S]*?)\s*-->\n?/);
+    const lines = block.replace(/\n+$/, "").split("\n");
+    const sectionTitle = (lines[0] ?? "").trim();
     const fields: Record<string, string> = {};
-    for (const line of (metadata?.[1] ?? "").split("\n")) {
+    const tags: string[] = [];
+    let index = 1;
+    while (/^[a-z_]+: /.test(lines[index] ?? "")) {
+      const line = lines[index] ?? "";
       const colon = line.indexOf(":");
-      if (colon === -1) continue;
-      const key = line.slice(0, colon).trim();
-      if (key) fields[key] = line.slice(colon + 1).trim();
+      const key = line.slice(0, colon);
+      const value = line.slice(colon + 1).trim();
+      if (key === "tag") for (const tag of value.split(",")) tags.push(tag.trim());
+      else fields[key] = value;
+      index += 1;
     }
+    while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
     return {
-      id: fields.id ?? heading,
-      at: fields.at ?? heading,
-      title: heading,
-      tags: fields.tags ? fields.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
+      id: fields.id ?? sectionTitle,
+      at: fields.at ?? sectionTitle,
+      sectionTitle,
+      displayTitle: fields.display_title || null,
+      tags: tags.filter(Boolean),
       task: fields.task || null,
-      body: metadata ? lines.slice(metadata[0].length) : lines,
+      body: lines.slice(index).join("\n"),
     };
   });
 }
@@ -28,10 +33,16 @@ export function parseMarkdown(markdown: string): JournalEntry[] {
 export function serializeMarkdown(entries: JournalEntry[]): string {
   return entries
     .map((entry) => {
-      const metadata = [`id: ${entry.id}`, `at: ${entry.at}`, `tags: ${entry.tags.join(", ")}`, entry.task ? `task: ${entry.task}` : ""]
+      const metadata = [
+        `id: ${entry.id}`,
+        `at: ${entry.at}`,
+        entry.tags.length ? `tag: ${entry.tags.join(", ")}` : "",
+        entry.displayTitle ? `display_title: ${entry.displayTitle}` : "",
+        entry.task ? `task: ${entry.task}` : "",
+      ]
         .filter(Boolean)
         .join("\n");
-      return `## ${entry.title}\n<!--\n${metadata}\n-->\n${entry.body}\n`;
+      return `## ${entry.sectionTitle}\n${metadata}\n\n${entry.body}\n`;
     })
     .join("\n");
 }
@@ -42,13 +53,17 @@ export function tagCounts(entries: JournalEntry[]): { tag: string; count: number
   return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([tag, count]) => ({ tag, count }));
 }
 
-export function autoTitle(at: string): string {
-  return at.replace("T", " - ");
+export function sectionTitleFrom(at: string): string {
+  return at.replace("T", " ");
+}
+
+export function entryTitle(entry: JournalEntry): string {
+  return entry.displayTitle ?? entry.sectionTitle;
 }
 
 export function entryText(entry: JournalEntry): string {
   const tagLine = entry.tags.map((tag) => "#" + tag).join(" ");
-  const lines = entry.tags.length ? [tagLine, `## ${entry.title}`, entry.body] : [`## ${entry.title}`, entry.body];
+  const lines = entry.tags.length ? [tagLine, `## ${entryTitle(entry)}`, entry.body] : [`## ${entryTitle(entry)}`, entry.body];
   return lines.join("\n\n");
 }
 
@@ -65,7 +80,8 @@ export function entryFrom({ entry, text }: { entry: JournalEntry; text: string }
   const heading = titled ? (lines[index] ?? "").slice(3).trim() : "";
   if (titled) index += 1;
   const body = lines.slice(index).join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
-  return { ...entry, tags, title: heading || entry.title, body };
+  const displayTitle = titled ? (heading === "" || heading === entry.sectionTitle ? null : heading) : entry.displayTitle;
+  return { ...entry, tags, displayTitle, body };
 }
 
 function isTagLine(line: string): boolean {
