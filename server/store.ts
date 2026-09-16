@@ -134,14 +134,21 @@ export class Store {
   }
 
   private readMarkdown(name: string): string {
-    const file = join(this.directory, `${name}.md`);
+    const file = join(this.directory, `${journalFile(name)}.md`);
     return existsSync(file) ? readFileSync(file, "utf8") : "";
   }
 
   private writeMarkdown({ name, entries }: { name: string; entries: JournalEntry[] }): void {
     mkdirSync(this.directory, { recursive: true });
-    writeFileSync(join(this.directory, `${name}.md`), serializeMarkdown(entries));
+    writeFileSync(join(this.directory, `${journalFile(name)}.md`), serializeMarkdown(entries));
   }
+}
+
+const journals = ["journal", "notebook"];
+
+function journalFile(name: string): string {
+  if (!journals.includes(name)) throw new Error(`no journal named ${name}`);
+  return name;
 }
 
 export function parseMarkdown(markdown: string): JournalEntry[] {
