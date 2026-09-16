@@ -26,15 +26,22 @@ composer and comment editor are full-screen overlays.
   both states and turns smoothly between them. A task with no group is
   `ungrouped`; the model and the composer default to no group. No buttons on
   headers. Generous space between groups.
-- Row: tick circle on the left, then the title with its kind hint in dim
-  right after it on the same line (`30 min`, `2 times`, `8 ×`, `500 ml`,
-  `3 / 8`), and at the far right, only when the task has parts, the part
-  count in dim and then the fold chevron. Under the title a meta line in this
-  order: mono chip for a group-level attribute first, then date (full weekday
-  name, never abbreviated) and time, then the comment mark with count.
-- Under the row, in this order when shown: the comments (opened by the
-  comment mark), then the note and the parts (opened by the chevron). Both can
-  be open at once. Everything that opens rolls into view slowly; nothing pops.
+- Row: one line reading tick circle, then `{time} {title} {target}` — the
+  time or coming date in dim first, the title in text colour, the target hint
+  in dim after it (`30 min`, `500 ml`, `8`, `3 / 8`; a count is its number
+  alone, there is no `×` anywhere) — and at the far right a cluster,
+  `{n} comment-glyph {m} parts-glyph ›`, whose width is reserved on every row
+  even when it is empty, so every title wraps at the same place. Under the
+  title, only when there is something to say: an overdue date as `since
+  sept 12` in dim, and the mono chip for a group-level attribute. Nothing else.
+- The two glyphs are toggles: tapping one sets whether comments, parts (note
+  and subtasks), or both roll open under the row, and an active glyph is in
+  the accent colour, colour alone with no background. Only parts is active to
+  begin with; a comment nobody has seen makes comments active too. The
+  chevron opens and closes whatever is active. Comments come first, then the
+  note and the parts. Everything that opens rolls into view slowly; nothing
+  pops. The note and the parts start where the title text starts, not at the
+  tick.
 - Tap the title to edit, tap the tick to complete. Hold anywhere on the row,
   tick or title, to enter select mode.
 - A part is a TaskRow: same look, same tick, same swipes, same hold, indented
@@ -109,9 +116,9 @@ follow a habit across days. Agents post them too, through the HTTP API.
   left to delete. The same thread component on Today and in the runner.
 - The field opens the comment editor: full screen, heading `Comment`, the
   task and part under it, the markdown editor, cancel and save.
-- An unseen comment from the agent shows the row mark in the accent colour
-  and pulls the task onto Today in its group. Opening the thread marks them
-  seen.
+- An unseen comment from the agent makes the row's comment glyph active, so
+  it shows in the accent colour, and pulls the task onto Today in its group.
+  Opening the thread marks them seen.
 
 **Select mode**: hold anywhere on a row, or hold a group title to start with
 the whole group. Nothing changes at the top. Every row becomes: drag handle, square

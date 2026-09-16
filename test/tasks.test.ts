@@ -1,5 +1,5 @@
 import type { Task } from "@shared/model.ts";
-import { grouped, isBacklog, isDone, isOnToday, partToggled, toggled, whenHint } from "@shared/tasks.ts";
+import { grouped, isBacklog, isDone, isOnToday, kindHint, partToggled, sinceHint, toggled, whenHint } from "@shared/tasks.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
@@ -113,11 +113,23 @@ describe("placing rows", () => {
     ]);
   });
 
-  it("says since when for overdue rows and the day for coming ones", () => {
-    expect(whenHint({ task: overdue, today })).toBe("since saturday");
-    expect(whenHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("since yesterday");
+  it("leads the title with the time, and the day too when it is still to come", () => {
     expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("friday 5pm");
     expect(whenHint({ task: later, today })).toBe("september 22");
     expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3pm");
+    expect(whenHint({ task: overdue, today })).toBe("");
+  });
+
+  it("puts an overdue date under the title and nothing else", () => {
+    expect(sinceHint({ task: overdue, today })).toBe("since saturday");
+    expect(sinceHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("since yesterday");
+    expect(sinceHint({ task: soon, today })).toBe("");
+    expect(sinceHint({ task: backlog, today })).toBe("");
+  });
+
+  it("writes a count target as its number alone", () => {
+    expect(kindHint(task("c", { kind: "count", target: 8 }))).toBe("8");
+    expect(kindHint(task("c", { kind: "count", target: 8, current: 3 }))).toBe("3 / 8");
+    expect(kindHint(task("c", { kind: "timer", timer: 600 }))).toBe("10 min");
   });
 });

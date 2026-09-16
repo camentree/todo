@@ -54,6 +54,14 @@ export function SpeechGlyph() {
   );
 }
 
+export function PartsGlyph() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M2.5 3.5h11M6 8h7.5M6 12.5h7.5" />
+    </svg>
+  );
+}
+
 export function GripGlyph() {
   return (
     <svg width="14" height="12" viewBox="0 0 14 12" fill="currentColor">

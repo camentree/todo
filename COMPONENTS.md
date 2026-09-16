@@ -27,9 +27,9 @@ padding, card radius. Values are the ones on the canvas frames.
   the grid that rolls content open and closed slowly; TaskRow's thread and
   parts use Roll directly.
 - **Chip**: mono attribute pill.
-- **Meta**: the dim line under a title; holds the kind hint, date or time,
-  CommentMark, Chips.
-- **CommentMark**: speech glyph plus count; dim, or accent when unseen.
+- **Meta**: the dim line under a title; holds the overdue date and the Chip.
+- **Mark**: count plus a glyph; dim, or accent when active. The comment mark
+  and the parts mark are both one of these.
 - **RoundButton**: circle with a glyph; accent or raised; sizes small, normal,
   big. Used for +, done, previous, next, ×, play.
 - **TextButton**: text, `active`, `onSelect`. The words in the top bar, the
@@ -44,15 +44,16 @@ padding, card radius. Values are the ones on the canvas frames.
 - **Overlay**: full-screen surface over Tasks that returns to where you were.
   Runner, Composer and EditorScreen sit in one.
 - **Glyphs**: every icon in one file: plus, tick, chevron, play, arrows, ×,
-  speech mark, grip. Nothing draws its own.
+  speech mark, parts, grip. Nothing draws its own.
 
 ## Shared composites
 
 - **TopBar**: three TextButtons and the date line.
-- **TaskRow**: Swipeable around (CircleTick or Handle + SquareTick, title with
-  its kind hint, part count, chevron, Meta), then the CommentList and then the
-  note and parts, each in its own Roll. A part is a TaskRow of its own, built
-  from the part with its host's callbacks; the note line lives in this file.
+- **TaskRow**: Swipeable around (CircleTick or Handle + SquareTick, the time,
+  title and target hint on one line, then the fixed-width cluster of the two
+  Marks and the chevron, then Meta), then the CommentList and then the note
+  and parts, each in its own Roll. A part is a TaskRow of its own, built from
+  the part with its host's callbacks; the note line lives in this file.
 - **Group**: label as TextButton with the count right after it, Foldable,
   rows; a SquareTick in select mode. The Today and Backlog sections are
   Groups, sized and stripped of their chevron by the screen's stylesheet.

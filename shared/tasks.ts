@@ -92,7 +92,7 @@ export function isBacklog({ task, today, entries, comments }: { task: Task; toda
 
 export function kindHint(task: Pick<Task, "kind" | "timer" | "target" | "current" | "value">): string {
   if (task.kind === "timer") return formatDuration(task.timer);
-  if (task.kind === "count") return task.current > 0 && task.current < task.target ? task.current + " / " + task.target : task.target + " ×";
+  if (task.kind === "count") return task.current > 0 && task.current < task.target ? task.current + " / " + task.target : String(task.target);
   if (task.kind === "text") return task.value;
   return "";
 }
@@ -105,10 +105,12 @@ export function partCount(task: Task): string {
 }
 
 export function whenHint({ task, today }: { task: Task; today: string }): string {
-  if (task.date && task.date < today) return "since " + dayLabel({ key: task.date, today });
-  if (task.date && task.date > today) {
-    const day = dayLabel({ key: task.date, today });
-    return task.time ? day + " " + formatTime(task.time) : day;
-  }
-  return task.time ? formatTime(task.time) : "";
+  const time = task.time ? formatTime(task.time) : "";
+  if (task.date === null || task.date <= today) return time;
+  const day = dayLabel({ key: task.date, today });
+  return time ? day + " " + time : day;
+}
+
+export function sinceHint({ task, today }: { task: Task; today: string }): string {
+  return task.date !== null && task.date < today ? "since " + dayLabel({ key: task.date, today }) : "";
 }
