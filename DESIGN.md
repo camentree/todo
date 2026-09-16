@@ -48,9 +48,13 @@ composer and comment editor are full-screen overlays.
   under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
   shows `sept 12` in muted text, never red.
-- **Backlog**: collapsed by default. Everything not due today or past: future
-  one-offs, the next instance of each coming definition, and every undated,
-  unfinished one-off, grouped the same way. Tick works in place.
+- **Backlog**: collapsed by default, and every group inside it starts folded
+  too. Everything not due today or past: future one-offs, the next instance of
+  each coming definition, and every undated, unfinished one-off, grouped the
+  same way. Tick works in place.
+- Every fold on the screen, the two sections and each group in each section,
+  is remembered by its key in localStorage and comes back on the next visit.
+  A store that refuses to be read or written just leaves the defaults.
 - Finished rows stay struck through until the day rolls over.
 
 **Journal**: a view over the one `journal.md` Parallax already splits on H2.

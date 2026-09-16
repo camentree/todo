@@ -569,7 +569,7 @@ export function Tasks() {
     }
     if (focused?.startsWith("group:")) {
       const key = focused.slice(6);
-      if (action === "fold") folds.set({ key, open: !folds.isOpen({ key, fallback: key !== "backlog" }) });
+      if (action === "fold") folds.set({ key, open: !folds.isOpen({ key, fallback: !key.startsWith("backlog") }) });
       return;
     }
     if (!target) return;
@@ -613,7 +613,7 @@ export function Tasks() {
           <Group storageKey="backlog" label="Backlog" count={backlog.length} defaultOpen={false} select={groupSelect(backlog)} press={groupPress(backlog)} focused={focused === "group:backlog"}>
             {backlogGroups.map(({ group, tasks }) => (
               <div key={group} data-container="backlog" data-group={group}>
-                <Group storageKey={"backlog:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:backlog:" + group}>
+                <Group storageKey={"backlog:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen={false} select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:backlog:" + group}>
                   {tasks.map((task) => row({ task, chip: null, onToday: () => bringForward(task), onTick: () => tick(task) }))}
                 </Group>
               </div>
