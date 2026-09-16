@@ -580,24 +580,28 @@ textarea {
 .composer-field {
   background: var(--raised);
   border-radius: 1rem 1rem 0 0;
-  padding: 0.4rem var(--gutter) var(--bottom);
+  padding: 1.6rem var(--gutter) var(--bottom);
   flex: none;
 }
 
 .composer-field .editor .cm-content {
-  padding: 0.85rem 0.25rem;
-  min-height: 3.2rem;
+  padding: 0.8rem 0.25rem;
+  min-height: 3.1rem;
   transition: min-height 0.45s ease;
 }
 
 .preview + .composer-field .editor .cm-content {
-  min-height: 10.9rem;
+  min-height: 10.8rem;
 }
 
 .composer-field .cm-scroller {
-  max-height: max(10.9rem, 40vh);
+  max-height: max(10.8rem, 40vh);
   overflow-y: auto;
   scrollbar-width: none;
+}
+
+.composer-field .actions {
+  margin-top: 0.9rem;
 }
 
 .composer-field .cm-scroller::-webkit-scrollbar {
