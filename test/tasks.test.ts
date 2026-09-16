@@ -115,9 +115,10 @@ describe("placing rows", () => {
   });
 
   it("leads the title with the time, and the day too when it is still to come", () => {
-    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("sept 18, 17:00");
+    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("sept 18, 5:00 pm");
     expect(whenHint({ task: later, today })).toBe("sept 22");
-    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("15:00");
+    expect(whenHint({ task: task("t", { date: "2026-09-16", time: "09:00" }), today })).toBe("tomorrow, 9:00 am");
+    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3:00 pm");
     expect(whenHint({ task: overdue, today })).toBe("");
   });
 

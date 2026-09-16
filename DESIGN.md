@@ -279,5 +279,7 @@ labels, which stay UPPERCASE, and the tab names and the two section
 headings, which stay Title Case; task titles and journal text are whatever
 was typed. One format everywhere the app writes a date: short month and day,
 `sept 16`; time in 24 hours, `15:00`; the two together, `sept 16, 15:00`.
-`shared/format.ts` owns it. The top bar's `wednesday, september 16` is the
-one exception.
+`shared/format.ts` owns it. Two exceptions: the top bar's
+`wednesday, september 16`, and the dim slot leading a task row, which says
+`tomorrow` for the day after today and writes the clock in 12 hours,
+`9:00 pm`, `7:30 am`.

@@ -55,6 +55,16 @@ export function shortDate(key: string): string {
   return date.toLocaleDateString("en-GB", { month: "short" }).toLowerCase() + " " + date.getDate();
 }
 
+export function comingDate({ key, today }: { key: string; today: string }): string {
+  return key === shiftDate({ key: today, days: 1 }) ? "tomorrow" : shortDate(key);
+}
+
+export function timeOfDay(time: string): string {
+  const [hours, minutes] = time.split(":").map(Number);
+  const hour = (hours ?? 0) % 12;
+  return (hour === 0 ? 12 : hour) + ":" + String(minutes ?? 0).padStart(2, "0") + " " + ((hours ?? 0) < 12 ? "am" : "pm");
+}
+
 export function longDate(key: string): string {
   return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }).toLowerCase();
 }
