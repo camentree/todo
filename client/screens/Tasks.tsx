@@ -203,6 +203,12 @@ export function Tasks() {
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const blur = () => setFocused(null);
+    window.addEventListener("pointerdown", blur);
+    return () => window.removeEventListener("pointerdown", blur);
+  }, []);
+
+  useEffect(() => {
     if (!landed) return;
     const settled = window.setTimeout(() => {
       listRef.current?.querySelector(`[data-task="${landed}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -492,15 +498,20 @@ export function Tasks() {
       if (running) return setRunning(null);
       if (selection) return setSelection(null);
       if (target && folds.isOpen({ key: openKey(target.host.id), fallback: false })) return folds.set({ key: openKey(target.host.id), open: false });
+      setFocused(null);
       return (document.activeElement as HTMLElement | null)?.blur();
     }
     if (focused?.startsWith("group:")) {
-      if (action === "fold" || action === "unfold") folds.set({ key: focused.slice(6), open: action === "unfold" });
+      const key = focused.slice(6);
+      if (action === "fold") folds.set({ key, open: !folds.isOpen({ key, fallback: key !== "backlog" }) });
       return;
     }
     if (!target) return;
     const { host, index } = target;
-    if (action === "fold" || action === "unfold") return folds.set({ key: openKey(focused ?? ""), open: action === "unfold" });
+    if (action === "fold") {
+      const key = openKey(focused ?? "");
+      return folds.set({ key, open: !folds.isOpen({ key, fallback: false }) });
+    }
     if (action === "select") return selection ? toggleSelected([host.id]) : setSelection(new Set([host.id]));
     if (action === "complete") return index === null ? tick(host) : store.putTask(partToggled({ task: host, index, now: nowStamp() }));
     if (action === "edit") return edit(host);

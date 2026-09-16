@@ -170,6 +170,13 @@ the scrollbar gutter so screens never shift sideways.
 **Settings**: none on screen. Theme follows the system, `autoStartTimers`
 stays a localStorage flag until it needs more.
 
+**Keyboard**: desktop only, and never while typing. A faint ring moves down
+and up the list with `j` and `k`; `f` folds and unfolds whatever it is on,
+row, group or section, rolling as slowly as a tap does. The rest act on the
+ring: select, complete (in select mode too), edit, delete, today, comments,
+new task, and `?` for the list. Escape closes whatever is open, then clears
+the ring; a tap anywhere clears it as well.
+
 ## Build order
 
 1. Today from schedules, backlog, folding, the one-line composer that grows,
@@ -184,9 +191,9 @@ but a mark or a handle.
 
 ## Not in this version
 
-Search, archive, stages, the Changes feed and bell, who, tags, keyboard
-shortcuts, undo history, the settings screen, amounts, bulk delete. Each
-comes back only when its absence hurts.
+Search, archive, stages, the Changes feed and bell, who, tags, undo history,
+the settings screen, amounts, bulk delete. Each comes back only when its
+absence hurts.
 
 ## Data
 
