@@ -241,6 +241,8 @@ textarea {
   gap: 0.75rem;
   padding: 0.35rem 0.25rem 0.1rem;
   color: var(--dim);
+  border-radius: 0.5rem;
+  transition: background 0.45s ease;
 }
 
 .group-head .text {
@@ -282,6 +284,8 @@ textarea {
   flex-direction: column;
   gap: 0.15rem;
   padding: var(--row-padding);
+  border-radius: 0.5rem;
+  transition: background 0.45s ease;
 }
 
 .main {
@@ -635,7 +639,6 @@ textarea {
 .group-head.focused {
   outline: 1.5px solid var(--faint);
   outline-offset: -1px;
-  border-radius: 0.5rem;
 }
 
 .shortcuts {
@@ -1236,6 +1239,8 @@ textarea.editor {
   flex-direction: column;
   padding: 1.2rem 0.25rem 0.2rem;
   width: 100%;
+  border-radius: 0.5rem;
+  transition: background 0.45s ease;
 }
 
 .entry-title {
@@ -1318,25 +1323,23 @@ textarea.editor {
   .filters .text:not(.active):hover,
   .queue .text:not(.active):hover,
   .runner-comments > .text:not(.active):hover,
-  .entry:hover .entry-tag,
-  .group-head .text:hover .chevron,
   .fold:hover,
   .handle:hover,
   .field:hover {
     color: var(--dim);
   }
 
-  .group-head .text:hover,
-  .group-head .text:hover .group-count,
   .actions .text:not(.active):hover,
   .confirm-choices .text:not(.active):hover,
   .ring-inside .text:not(.active):hover,
-  .entry:hover .entry-head,
-  .mark:not(.on):hover,
-  .main > .text:hover .when,
-  .main > .text:hover .hint,
-  .task.done > .swipeable .main > .text:hover {
+  .mark:not(.on):hover {
     color: var(--text);
+  }
+
+  .row:has(> .main > .text:hover),
+  .group-head:has(> .text:hover),
+  .entry:hover {
+    background: var(--raised);
   }
 
   .tick:hover span,
