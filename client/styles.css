@@ -580,13 +580,18 @@ textarea {
   flex: none;
 }
 
-.composer-field .cm-content {
-  padding: 0.5rem 0.25rem;
-  caret-color: var(--accent);
+.composer-field .editor .cm-content {
+  padding: 0.85rem 0.25rem;
+  min-height: 3.2rem;
+  transition: min-height 0.45s ease;
+}
+
+.preview + .composer-field .editor .cm-content {
+  min-height: 10.9rem;
 }
 
 .composer-field .cm-scroller {
-  max-height: 40vh;
+  max-height: max(10.9rem, 40vh);
   overflow-y: auto;
   scrollbar-width: none;
 }
