@@ -20,7 +20,7 @@ import { TaskRow } from "../components/TaskRow.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { useFolds } from "../components/Foldable.tsx";
-import { commentsKey, partsKey } from "../components/TaskRow.tsx";
+import { commentsKey, openKey } from "../components/TaskRow.tsx";
 import { longPress } from "../interaction/longPress.ts";
 import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
 import type { ShortcutAction } from "../interaction/shortcuts.tsx";
@@ -54,7 +54,7 @@ const unfoldDelay = 480;
 const scrollEdge = 120;
 const scrollStep = 10;
 
-function Composer({ draft, onChange, onClose, onDelete }: { draft: Draft; onChange: (draft: Draft) => void; onClose: () => void; onDelete: () => void }) {
+function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Draft; onChange: (draft: Draft) => void; onCommit: (task: Task) => void; onClose: () => void; onDelete: () => void }) {
   const store = useStore();
   const field = useRef<HTMLTextAreaElement>(null);
   const parsed = parseTask({ text: draft.text, today: store.today });
@@ -81,13 +81,13 @@ function Composer({ draft, onChange, onClose, onDelete }: { draft: Draft; onChan
     if (parsed.every) {
       const nextDefinition = definitionFromParsed({ parsed, existing: definition, id: definition?.id ?? identifier(), today: store.today });
       if (existing) {
-        store.putTask(taskFromParsed({ parsed, existing, id: existing.id, today: store.today, now, definition: nextDefinition }));
+        onCommit(taskFromParsed({ parsed, existing, id: existing.id, today: store.today, now, definition: nextDefinition }));
       } else if (dueToday({ definition: nextDefinition, today: store.today })) {
-        store.putTask(taskFromParsed({ parsed, existing: null, id: identifier(), today: store.today, now, definition: nextDefinition }));
+        onCommit(taskFromParsed({ parsed, existing: null, id: identifier(), today: store.today, now, definition: nextDefinition }));
       }
       store.putDefinition(nextDefinition);
     } else {
-      store.putTask(taskFromParsed({ parsed, existing, id: existing?.id ?? identifier(), today: store.today, now, definition: null }));
+      onCommit(taskFromParsed({ parsed, existing, id: existing?.id ?? identifier(), today: store.today, now, definition: null }));
     }
     onClose();
   };
@@ -197,8 +197,18 @@ export function Tasks() {
   const [running, setRunning] = useState<{ taskIds: string[]; label: string } | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [openedByDrag, setOpenedByDrag] = useState<Set<string>>(new Set());
+  const [landed, setLanded] = useState<string | null>(null);
   const dragRef = useRef<Drag | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!landed) return;
+    const settled = window.setTimeout(() => {
+      listRef.current?.querySelector(`[data-task="${landed}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setLanded(null);
+    }, 500);
+    return () => window.clearTimeout(settled);
+  }, [landed]);
 
   const placing = { today: store.today, entries: store.journal, comments: store.comments };
   const onToday = store.tasks.filter((task) => isOnToday({ task, ...placing }));
@@ -238,6 +248,15 @@ export function Tasks() {
     setAsking({ question: `delete ${task.parts[index]?.name ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutPart({ host: task, index })); setAsking(null); } }] });
 
   const bringForward = (task: Task) => store.putTask({ ...task, date: store.today });
+
+  const reveal = (task: Task) => {
+    store.putTask(task);
+    const section = task.date !== null && task.date <= store.today ? "today" : "backlog";
+    folds.set({ key: section, open: true });
+    folds.set({ key: section + ":" + task.group, open: true });
+    folds.set({ key: openKey(task.id), open: true });
+    setLanded(task.id);
+  };
 
   const todayGroups = grouped(onToday);
   const backlogGroups = grouped(backlog);
@@ -461,7 +480,7 @@ export function Tasks() {
       if (commenting) return setCommenting(null);
       if (running) return setRunning(null);
       if (selection) return setSelection(null);
-      if (target && folds.isOpen({ key: commentsKey(target.host.id), fallback: false })) return folds.set({ key: commentsKey(target.host.id), open: false });
+      if (target && folds.isOpen({ key: openKey(target.host.id), fallback: false })) return folds.set({ key: openKey(target.host.id), open: false });
       return (document.activeElement as HTMLElement | null)?.blur();
     }
     if (focused?.startsWith("group:")) {
@@ -470,7 +489,7 @@ export function Tasks() {
     }
     if (!target) return;
     const { host, index } = target;
-    if (action === "fold" || action === "unfold") return folds.set({ key: partsKey(focused ?? ""), open: action === "unfold" });
+    if (action === "fold" || action === "unfold") return folds.set({ key: openKey(focused ?? ""), open: action === "unfold" });
     if (action === "select") return selection ? toggleSelected([host.id]) : setSelection(new Set([host.id]));
     if (action === "complete") return index === null ? tick(host) : store.putTask(partToggled({ task: host, index, now: nowStamp() }));
     if (action === "edit") return edit(host);
@@ -479,7 +498,11 @@ export function Tasks() {
       if (host.definitionId) return;
       return store.putTask({ ...host, date: host.date === null ? store.today : null });
     }
-    if (action === "thread" && commentsFor({ task: host, comments: store.comments }).length > 0) folds.set({ key: commentsKey(host.id), open: !folds.isOpen({ key: commentsKey(host.id), fallback: false }) });
+    if (action === "thread" && commentsFor({ task: host, comments: store.comments }).length > 0) {
+      const on = !folds.isOpen({ key: commentsKey(host.id), fallback: false });
+      folds.set({ key: commentsKey(host.id), open: on });
+      folds.set({ key: openKey(host.id), open: on });
+    }
   };
 
   useShortcuts(shortcut);
@@ -550,7 +573,7 @@ export function Tasks() {
           }}
         />
       )}
-      {draft && <Composer draft={draft} onChange={setDraft} onClose={() => setDraft(null)} onDelete={() => draft.editing && askDelete(draft.editing)} />}
+      {draft && <Composer draft={draft} onChange={setDraft} onCommit={reveal} onClose={() => setDraft(null)} onDelete={() => draft.editing && askDelete(draft.editing)} />}
       {commenting && (
         <EditorScreen
           heading="Comment"

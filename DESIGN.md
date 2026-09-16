@@ -102,6 +102,8 @@ tap past the end of a line. There is never more than one caret.
   `2026-09-20`, `3pm` or `15:00`; the round-trip writes `15:00`. No `#every`
   and no date means backlog. `=` sets the current value.
 - Tap a title to edit; the same text round-trips with progress kept.
+- What is added ends up visible: the section and the group it lands in unfold,
+  the row scrolls slowly into view, and its parts start unfolded.
 - Delete lives at the bottom of the composer, with the "today / every day"
   distinction for scheduled things.
 
