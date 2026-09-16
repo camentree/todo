@@ -58,9 +58,12 @@ an entry exists for the day.
 Notebook is things. The editor's heading is Journal or Notebook, so the
 entry's meta line does not repeat it. In the editor bold and italic render in
 a colour of their own as well as their weight and fenced code blocks render
-in mono on the raised colour; the list is plain text throughout. The editor opens in read mode with no caret; tapping puts
-the caret where you tapped, snapped to the end of the nearest word when you
-tap past the end of a line. There is never more than one caret.
+in mono on the raised colour; the list is plain text throughout. The editor
+opens in read mode with no caret; tapping puts the caret where you tapped,
+snapped to the end of the nearest word when you tap past the end of a line.
+CodeMirror draws the caret itself and the browser's own is hidden, so there
+is never more than one. Escape leaves the editor, asking whether to save when
+the text changed; cmd+enter saves and leaves.
 
 **Runner**
 - Top: the scope name (task or group) as the heading, a round `×` button.

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { Confirm } from "./Confirm.tsx";
 import { Editor } from "./Editor.tsx";
 import { CrossGlyph } from "./Glyphs.tsx";
 import { Overlay } from "./Overlay.tsx";
@@ -22,6 +23,7 @@ export function EditorScreen({
   onSave: (text: string) => void;
 }) {
   const [text, setText] = useState(initial);
+  const [leaving, setLeaving] = useState(false);
   const save = () => text.trim() && onSave(text);
 
   useEffect(() => {
@@ -30,11 +32,13 @@ export function EditorScreen({
       event.preventDefault();
       event.stopPropagation();
       if (event.key === "Enter") save();
+      else if (leaving) setLeaving(false);
+      else if (markdown && text !== initial) setLeaving(true);
       else onCancel();
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [text]);
+  }, [text, leaving]);
 
   return (
     <Overlay>
@@ -65,6 +69,16 @@ export function EditorScreen({
           </div>
         </div>
       </div>
+      {leaving && (
+        <Confirm
+          question="save this entry?"
+          choices={[
+            { label: "discard", onChoose: onCancel },
+            { label: "save", onChoose: save },
+          ]}
+          onCancel={() => setLeaving(false)}
+        />
+      )}
     </Overlay>
   );
 }

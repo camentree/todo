@@ -776,7 +776,7 @@ textarea.editor {
 
 .editor .cm-content {
   padding: 0;
-  caret-color: var(--accent);
+  caret-color: transparent;
   -webkit-user-select: text;
   user-select: text;
 }

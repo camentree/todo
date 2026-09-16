@@ -4,7 +4,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { syntaxTree } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import type { Range } from "@codemirror/state";
-import { Decoration, EditorView, ViewPlugin, keymap } from "@codemirror/view";
+import { Decoration, EditorView, ViewPlugin, drawSelection, keymap } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 
@@ -78,6 +78,7 @@ export function Editor({ value, onChange }: { value: string; onChange: (value: s
         extensions: [
           markdown(),
           history(),
+          drawSelection(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           livePreview,
