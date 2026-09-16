@@ -1,20 +1,4 @@
-import { daysUntilDue, isDue } from "@shared/schedule.ts";
-import type { Definition } from "@shared/types.ts";
-
-const definition = (every: string, anchor = "2026-09-01"): Definition => ({
-  id: "d",
-  name: "x",
-  group: "habits",
-  kind: "bool",
-  target: 1,
-  unit: "",
-  rest: 0,
-  every,
-  note: "",
-  tapIncrement: false,
-  children: [],
-  anchor,
-});
+import { isDue, nextDue } from "@shared/schedule.ts";
 
 describe("isDue", () => {
   it("counts day intervals from the anchor", () => {
@@ -43,15 +27,12 @@ describe("isDue", () => {
   });
 });
 
-describe("daysUntilDue", () => {
-  it("finds the next occurrence inside the coming six days", () => {
-    expect(daysUntilDue({ definition: definition("sa"), date: "2026-09-13" })).toBe(6);
-    expect(daysUntilDue({ definition: definition("tu,th"), date: "2026-09-13" })).toBe(2);
-    expect(daysUntilDue({ definition: definition("1d"), date: "2026-09-13" })).toBe(1);
-  });
-
-  it("returns null when the next occurrence is a week or more away", () => {
-    expect(daysUntilDue({ definition: definition("1w", "2026-09-13"), date: "2026-09-13" })).toBeNull();
-    expect(daysUntilDue({ definition: definition("1m", "2026-09-13"), date: "2026-09-13" })).toBeNull();
+describe("nextDue", () => {
+  it("finds the next occurrence after a date", () => {
+    expect(nextDue({ every: "sa", anchor: "2026-09-01", after: "2026-09-13" })).toBe("2026-09-19");
+    expect(nextDue({ every: "tu,th", anchor: "2026-09-01", after: "2026-09-13" })).toBe("2026-09-15");
+    expect(nextDue({ every: "1d", anchor: "2026-09-01", after: "2026-09-13" })).toBe("2026-09-14");
+    expect(nextDue({ every: "1w", anchor: "2026-09-13", after: "2026-09-13" })).toBe("2026-09-20");
+    expect(nextDue({ every: "1m", anchor: "2026-09-13", after: "2026-09-13" })).toBe("2026-10-13");
   });
 });

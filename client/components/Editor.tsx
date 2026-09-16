@@ -57,7 +57,7 @@ const livePreview = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations },
 );
 
-export function MarkdownEditor({ value, onChange, autoFocus }: { value: string; onChange: (value: string) => void; autoFocus: boolean }) {
+export function Editor({ value, onChange, autoFocus }: { value: string; onChange: (value: string) => void; autoFocus: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const latestChange = useRef(onChange);
   latestChange.current = onChange;

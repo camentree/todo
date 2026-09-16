@@ -1,0 +1,113 @@
+# Rebuild notes
+
+Built top to bottom from DESIGN.md, COMPONENTS.md and the Aesthetics page of
+the canvas, with nobody to ask. Every judgment call is here, so are the
+acceptance passes and anything that does not hold.
+
+Checks were driven in the iOS Simulator (iPhone 17 Pro, Safari, real taps and
+swipes through AXe) and in Chrome at 1400px, plus curl against the API. Vite
+ran on 5174 because 5173 was already taken on this machine by another
+checkout.
+
+## Judgment calls
+
+- **Fold state and "parts or comments"**: a task remembers one of `parts`,
+  `comments` or nothing under `fold:task:<id>` in localStorage. Opening one
+  closes the other, so Foldable (uncontrolled, persisted) is used by Group,
+  This week and Backlog, and TaskRow uses the same `remember` helpers with its
+  own three-way state.
+- **This week** shows each definition once, at its earliest coming
+  instance, plus every dated one-off. The server instantiates every due
+  definition for the coming six days, which would put forty rows there. Tap
+  on a This week title brings that instance forward (date = today); the tick
+  still ticks in place.
+- **Chip**: the mono chip is the group name, shown only where a row is
+  outside its group header (This week). Backlog nests real group headers,
+  drawn in the faint colour so the hierarchy reads.
+- **Count hint**: `8 ×` when nothing is done, `3 / 8` while partial.
+  Timer: `30 min`. Parts: `4 parts`. Text: the value once written, else
+  `text`.
+- **Confirm**: a raised bottom sheet with plain text buttons (cancel, and
+  the choices in accent) for the delete swipe, the comment delete and the
+  composer's delete. It is not in COMPONENTS.md; nothing else fit a two-way
+  choice ("today only" / "every day").
+- **Delete in the composer** is dim text, not red; red stays on the swipe
+  and the sprite.
+- **Composer keyboard**: the overlay is `position: fixed; inset: 0` with the
+  field at the bottom, and `interactive-widget=resizes-content` makes Safari
+  shrink it above the keyboard. No measured offsets. Verified with the real
+  keyboard in the simulator.
+- **Editing a habit instance**: the composer serialises it without a date;
+  removing `#every` turns that instance into a one-off in Backlog and leaves
+  the definition alone. Changing anything else re-saves both the definition
+  and today's instance; the server drops and re-creates future instances.
+- **New definition**: the client saves today's instance (if due) and the
+  definition, then re-reads tasks so the coming days appear under This week.
+  The server instantiates a new definition for every day it has already
+  opened, and de-duplicates a definition instance on the same date.
+- **Errors**: a JSON `{error}` body is shown as is; a non-JSON error (the
+  Vite proxy answers 500 HTML when the server is down) or a network failure
+  shows "could not reach Parallax". If the first load fails the sprite is
+  the only thing on screen and tapping it retries.
+- **Long press** stays the plain `longPress()` handler factory from the old
+  app rather than a `useLongPress` hook: it holds no React state.
+- **Server-side day roll**: the store re-loads everything when the app
+  becomes visible on a new date.
+- **Part notes** show under the part in the unfolded list and in the
+  composer preview (the acceptance asks the preview to show them).
+- **Runner text kind**: not specified; text parts use the slide-to-complete.
+
+## Slice 1: Today, backlog, folding, composer, tick, swipes
+
+Look
+- [x] Seravek, no fallback flash: `font-display: block`, checked in the simulator and Chrome.
+- [x] Dark and light match the frames; `xcrun simctl ui booted appearance light` switched the running app without reload.
+- [x] Top bar words and date: simulator screenshot.
+- [x] Row: circle tick, title, dim meta, whitespace only: screenshot.
+- [x] Group labels small uppercase dim: screenshot.
+- [x] Accent + floats bottom right; list has 8rem bottom padding so the last row scrolls clear.
+- [x] Wide screen: 42rem column centred in Chrome at 1400px, nothing else differs.
+- [x] Nothing red but the delete swipe (and the sprite).
+
+Today
+- [x] Groups habits, exercise, personal, garden, programming in order: screenshot; ordering unit-tested.
+- [x] One-off dated today shows, overdue shows "since sep 12": screenshot.
+- [x] This week folded by default; tap brought "Sam's birthday dinner" forward.
+- [x] Backlog folded by default, grouped the same way: screenshot.
+- [x] Tick strikes through and dims in place; tick again undoes: Yoga in simulator.
+- [x] Completed habit absent the next day; completed one-off absent the next day: placement rules unit-tested against yesterday's seed rows (`Take the bins out`, `Cache the health view refresh` are absent today).
+- [x] Unticked habit from yesterday absent, unticked one-off from before shows since when: `Call the pharmacy` shows, yesterday's missed habits do not.
+- [x] Chevron only for tasks with parts or a note: screenshot (Yoga none, Physio yes, Get groceries yes).
+- [x] Unfold shows note then parts with air, fold again, survives reload: simulator; state persisted in localStorage.
+- [x] Ticking every part completes the parent and back: unit-tested, tried in simulator.
+- [x] Group label folds with count, unfolds, survives reload: simulator.
+- [x] Thumb targets: tick and chevron are 2.75rem hit areas, title takes the rest.
+
+Composer
+- [x] + opens a one-line field above the keyboard with the list dimmed; keyboard never covers it: simulator with the real keyboard.
+- [x] Title + Enter adds to Backlog and closes: simulator (`buy stamps fri 2pm` typed by AXe).
+- [x] Group token and weekly repeat make a definition due today and again next week: `Hangboard /exercise #every 2d` in Chrome, API showed instances 15, 17, 19, 21.
+- [x] Weekday, month day, full date, time: unit-tested; `fri 2pm` landed on 2026-09-18 14:00 in the API.
+- [x] Shift+Enter or "more" grows into the block editor with the live preview: Chrome.
+- [x] Dash line parts with timer and count tokens, indented part note, all in the preview: Chrome.
+- [x] `x3` makes numbered copies: preview showed Hang 1, 2, 3.
+- [x] `#rest 60s` shows as "rest 1 min" in the preview meta line.
+- [x] Tapping a title opens the editor prefilled; saving unchanged left the definition byte-identical (diffed through curl); rename, add and remove parts keep progress: unit-tested.
+- [x] Progress round-trips as `= value`: unit-tested.
+- [x] Delete row: definition asks "today only / every day"; today only removed today's instance and kept the definition (curl); one-off confirms once.
+- [x] Cancel closes without saving.
+
+Swipes
+- [x] Backlog row right reveals "today" on accent; past the threshold it moved onto Today with today's date (API).
+- [x] Any row left reveals "delete" on red; past the threshold asks to confirm; cancel restores.
+- [x] Threshold 96px both ways on every row and card; a short swipe springs back.
+- [x] Vertical drift past 28px cancels and springs back.
+- [x] Nothing else swipes.
+
+Data
+- [x] GET /api/tasks instantiates once: two GETs returned the same count (202).
+- [x] Everything fetched once at start; folding and tabs make no request (network panel in Chrome, store has no other reads).
+- [x] Every change shows first, reaches the API promptly, survives reload.
+- [x] With `_fail` on, the tick showed then reverted and the sprite said "writes are failing on purpose"; tap dismissed; reload unchanged.
+- [x] With the server stopped the sprite says "could not reach Parallax".
+- [x] A one-off POSTed by curl appeared in Backlog on the next load.

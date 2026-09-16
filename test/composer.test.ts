@@ -1,76 +1,68 @@
-import { commitEntry } from "@shared/composer.ts";
-import { serializeEntry } from "@shared/grammar.ts";
-import { derive } from "@shared/tasks.ts";
+import { definitionFromParsed, dueToday, taskFromParsed } from "@shared/composer.ts";
+import { parseTask, serializeTask } from "@shared/grammar.ts";
+import type { Task } from "@shared/model.ts";
 
-const date = "2026-09-13";
+const today = "2026-09-15";
+const now = "2026-09-15T10:00:00";
 
-describe("commitEntry", () => {
-  it("adds a one-off for today without a definition", () => {
-    const result = commitEntry({ text: "Call mum", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date });
-    expect(result?.tasks).toHaveLength(1);
-    expect(result?.tasks[0]).toMatchObject({ name: "Call mum", group: "personal", definitionId: null });
-    expect(result?.definitions).toEqual([]);
+function parse(text: string) {
+  const parsed = parseTask({ text, today });
+  if (!parsed) throw new Error("nothing parsed");
+  return parsed;
+}
+
+describe("taskFromParsed", () => {
+  it("makes a backlog one-off in personal by default", () => {
+    const task = taskFromParsed({ parsed: parse("Call mum"), existing: null, id: "t1", today, now, definition: null });
+    expect(task).toMatchObject({ id: "t1", name: "Call mum", group: "personal", date: null, time: null, definitionId: null, kind: "boolean", doneAt: null, created: now });
   });
 
-  it("makes a boolean called Journal complete itself from journal entries", () => {
-    const result = commitEntry({ text: "Journal /habits #every 1d", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date })!;
-    expect(result.tasks[0]?.auto).toBe("journal");
+  it("dates a one-off from the text", () => {
+    const task = taskFromParsed({ parsed: parse("Dentist /personal fri 3pm"), existing: null, id: "t1", today, now, definition: null });
+    expect(task).toMatchObject({ date: "2026-09-18", time: "15:00" });
   });
 
-  it("only makes today's instance when the schedule lands on today", () => {
-    const monday = "2026-09-14";
-    const saturdays = commitEntry({ text: "Long run #timer 1h #every sa", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date: monday })!;
-    expect(saturdays.tasks).toEqual([]);
-    expect(saturdays.definitions).toHaveLength(1);
-    const mondays = commitEntry({ text: "Pull-ups #count 5 #every mo,we,fr", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date: monday })!;
-    expect(mondays.tasks).toHaveLength(1);
-    const daily = commitEntry({ text: "Read #every 1d", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date: monday })!;
-    expect(daily.tasks).toHaveLength(1);
+  it("keeps progress when the text has no value, and takes the value when it does", () => {
+    const existing = taskFromParsed({ parsed: parse("Pull-ups #count 5 /exercise today"), existing: null, id: "t1", today, now, definition: null });
+    const progressed: Task = { ...existing, current: 2 };
+    const edited = taskFromParsed({ parsed: parse("Pull-ups #count 8 /exercise today"), existing: progressed, id: "t1", today, now, definition: null });
+    expect(edited).toMatchObject({ id: "t1", target: 8, current: 2, date: today });
+    const overridden = taskFromParsed({ parsed: parse("Pull-ups #count 8 /exercise today = 7"), existing: progressed, id: "t1", today, now, definition: null });
+    expect(overridden.current).toBe(7);
   });
 
-  it("keeps existing tasks when adding another", () => {
-    const first = commitEntry({ text: "Call mum", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date })!;
-    const second = commitEntry({ text: "Read /habits", tasks: first.tasks, definitions: [], editTaskId: null, editDefinitionId: null, date })!;
-    expect(second.tasks.map((task) => task.name)).toEqual(["Call mum", "Read"]);
+  it("keeps part progress by name when a part is removed", () => {
+    const existing = taskFromParsed({ parsed: parse("Stretch /exercise\n- a #count 5\n- b #count 5\n- c #count 5"), existing: null, id: "t1", today, now, definition: null });
+    const progressed: Task = { ...existing, parts: existing.parts.map((part) => ({ ...part, current: 3 })) };
+    const edited = taskFromParsed({ parsed: parse("Stretch /exercise\n- b #count 5\n- c #count 5"), existing: progressed, id: "t1", today, now, definition: null });
+    expect(edited.parts.map((part) => [part.name, part.current])).toEqual([["b", 3], ["c", 3]]);
+    const added = taskFromParsed({ parsed: parse("Stretch /exercise\n- a #count 5\n- b #count 5\n- c #count 5\n- d #count 5"), existing: progressed, id: "t1", today, now, definition: null });
+    expect(added.parts.map((part) => part.current)).toEqual([3, 3, 3, 0]);
   });
 
-  it("creates a definition and today's instance from #every", () => {
-    const result = commitEntry({
-      text: "Hangboard #every 2d /exercise #rest 60s\n\n- Hang #timer 30s\n- Hang #timer 30s",
-      tasks: [],
-      definitions: [],
-      editTaskId: null,
-      editDefinitionId: null,
-      date,
-    });
-    expect(result?.definitions).toHaveLength(1);
-    expect(result?.definitions[0]).toMatchObject({ name: "Hangboard", every: "2d", rest: 60, anchor: date, children: [{ name: "Hang" }, { name: "Hang" }] });
-    expect(result?.tasks.map((task) => task.parent)).toEqual([null, result?.rootId, result?.rootId]);
-    expect(result?.tasks[0]?.definitionId).toBe(result?.definitions[0]?.id);
-    expect(result?.tasks[1]?.rest).toBe(60);
+  it("round-trips through serializeTask without change", () => {
+    const first = taskFromParsed({ parsed: parse("Morning stretch /exercise #rest 30s today\n  Keep hips level.\n- neck rolls #timer 30s\n- cat cow #count 10"), existing: null, id: "t1", today, now, definition: null });
+    const progressed: Task = { ...first, parts: [{ ...first.parts[0]!, current: 30, doneAt: now }, { ...first.parts[1]!, current: 4 }] };
+    const text = serializeTask({ task: progressed, every: null, today });
+    const again = taskFromParsed({ parsed: parse(text), existing: progressed, id: "t1", today, now, definition: null });
+    expect(again).toEqual(progressed);
+  });
+});
+
+describe("definitionFromParsed", () => {
+  it("creates a definition anchored today with parts and says whether it is due", () => {
+    const parsed = parse("Hangboard /exercise #every 2d #rest 60s\n- Hang #timer 30s ×2");
+    const definition = definitionFromParsed({ parsed, existing: null, id: "d1", today });
+    expect(definition).toMatchObject({ id: "d1", name: "Hangboard", group: "exercise", every: "2d", rest: 60, anchor: today, created: today, ended: null });
+    expect(definition.parts.map((part) => part.name)).toEqual(["Hang 1", "Hang 2"]);
+    expect(dueToday({ definition, today })).toBe(true);
+    const saturdays = definitionFromParsed({ parsed: parse("Long run #timer 1h #every sa"), existing: null, id: "d2", today });
+    expect(dueToday({ definition: saturdays, today })).toBe(false);
   });
 
-  it("keeps ids and progress when editing, unless = overrides", () => {
-    const first = commitEntry({ text: "Pull-ups #count 5 /exercise", tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date })!;
-    const progressed = first.tasks.map((task) => ({ ...task, current: 2 }));
-    const edited = commitEntry({ text: "Pull-ups #count 8 /exercise", tasks: progressed, definitions: [], editTaskId: first.rootId, editDefinitionId: null, date })!;
-    expect(edited.tasks[0]).toMatchObject({ id: first.rootId, target: 8, current: 2 });
-    const overridden = commitEntry({ text: "Pull-ups #count 8 /exercise = 7", tasks: progressed, definitions: [], editTaskId: first.rootId, editDefinitionId: null, date })!;
-    expect(overridden.tasks[0]?.current).toBe(7);
-  });
-
-  it("round-trips through serializeEntry", () => {
-    const text = "Hangboard #every 2d /exercise #rest 1m\n\nHalf crimp.\n\n- Hang #timer 30s\n- Hang #timer 30s";
-    const result = commitEntry({ text, tasks: [], definitions: [], editTaskId: null, editDefinitionId: null, date })!;
-    const derived = derive({ tasks: result.tasks, entries: [], date });
-    const root = derived[0]!;
-    const serialized = serializeEntry({
-      root,
-      children: derived.filter((task) => task.parent === root.id),
-      group: root.group,
-      every: result.definitions[0]?.every ?? null,
-      rest: root.rest,
-    });
-    expect(serialized).toBe(text);
+  it("keeps the anchor of an existing definition", () => {
+    const existing = definitionFromParsed({ parsed: parse("Read #every 1d /habits"), existing: null, id: "d1", today: "2026-09-01" });
+    const edited = definitionFromParsed({ parsed: parse("Read more #every 2d /habits"), existing, id: "d1", today });
+    expect(edited).toMatchObject({ name: "Read more", every: "2d", anchor: "2026-09-01", created: "2026-09-01" });
   });
 });

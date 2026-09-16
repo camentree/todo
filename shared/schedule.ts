@@ -1,5 +1,4 @@
 import { dateFromKey, dateKey } from "./format.ts";
-import type { Definition } from "./types.ts";
 
 const dayIndex: Record<string, number> = { su: 0, mo: 1, tu: 2, we: 3, th: 4, fr: 5, sa: 6 };
 
@@ -35,12 +34,12 @@ export function isDue({ every, anchor, date }: { every: string; anchor: string; 
   return daysOk && day.getDate() === start.getDate() && months % count === 0;
 }
 
-export function daysUntilDue({ definition, date }: { definition: Definition; date: string }): number | null {
-  const start = dateFromKey(date);
-  for (let offset = 1; offset <= 6; offset++) {
+export function nextDue({ every, anchor, after }: { every: string; anchor: string; after: string }): string | null {
+  const start = dateFromKey(after);
+  for (let offset = 1; offset <= 366; offset++) {
     const candidate = new Date(start);
     candidate.setDate(start.getDate() + offset);
-    if (isDue({ every: definition.every, anchor: definition.anchor, date: dateKey(candidate) })) return offset;
+    if (isDue({ every, anchor, date: dateKey(candidate) })) return dateKey(candidate);
   }
   return null;
 }

@@ -23,12 +23,12 @@ app.post("/api/_fail", async (context) => {
 });
 
 app.get("/api/definitions", (context) => context.json(store.definitions()));
-app.post("/api/definitions", async (context) => context.json(store.putDefinition(await context.req.json()), 201));
+app.post("/api/definitions", async (context) => context.json(store.putDefinition({ definition: await context.req.json(), today: today() }), 201));
 app.put("/api/definitions/:id", async (context) =>
-  context.json(store.putDefinition({ ...(await context.req.json()), id: context.req.param("id") })),
+  context.json(store.putDefinition({ definition: { ...(await context.req.json()), id: context.req.param("id") }, today: today() })),
 );
 app.delete("/api/definitions/:id", (context) => {
-  store.deleteDefinition(context.req.param("id"));
+  store.deleteDefinition({ id: context.req.param("id"), today: today() });
   return context.body(null, 204);
 });
 

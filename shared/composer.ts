@@ -1,103 +1,69 @@
-import type { ParsedEntry, ParsedTask } from "./grammar.ts";
-import { parseEntry } from "./grammar.ts";
+import type { ParsedPart, ParsedTask } from "./grammar.ts";
+import type { Definition, Part, Task, TaskPart } from "./model.ts";
 import { isDue } from "./schedule.ts";
-import { autoRule } from "./tasks.ts";
-import type { Definition, Task } from "./types.ts";
-import { newId } from "./types.ts";
 
-function taskFrom({ parsed, id, parent, group }: { parsed: ParsedTask; id: string; parent: string | null; group: string }): Task {
+function progressOf({ parsed, previous, now }: { parsed: ParsedPart; previous: { current: number; value: string; doneAt: string | null } | undefined; now: string }): { current: number; value: string; doneAt: string | null } {
+  if (parsed.current === null && parsed.value === null && parsed.done === null) {
+    return previous ? { current: previous.current, value: previous.value, doneAt: previous.doneAt } : { current: 0, value: "", doneAt: null };
+  }
   return {
-    id,
-    name: parsed.title,
-    type: parsed.type,
-    kind: parsed.kind,
-    target: parsed.target,
-    current: parsed.current ?? 0,
-    unit: parsed.unit,
-    rest: parsed.rest,
-    parent,
-    group,
-    note: parsed.note,
+    current: parsed.current ?? (parsed.done ? (parsed.kind === "count" ? parsed.target : parsed.kind === "timer" ? parsed.timer : 0) : 0),
     value: parsed.value ?? "",
-    doneManual: parsed.doneManual,
-    tapIncrement: parsed.tapIncrement,
-    definitionId: null,
-    auto: parent ? null : autoRule({ name: parsed.title, kind: parsed.kind }),
+    doneAt: parsed.done ? (previous?.doneAt ?? now) : null,
   };
 }
 
-function definitionFrom({ parsed, id, anchor }: { parsed: ParsedEntry; id: string; anchor: string }): Definition {
+function partsFrom({ parsed, previous, now }: { parsed: ParsedPart[]; previous: TaskPart[]; now: string }): TaskPart[] {
+  const unused = [...previous];
+  return parsed.map((part, index) => {
+    let match = unused.findIndex((each) => each.name === part.name);
+    if (match === -1 && unused[index] && previous.length === parsed.length && !parsed.some((each) => each.name === unused[index]?.name)) match = index;
+    const before = match === -1 ? undefined : unused.splice(match, 1)[0];
+    return { name: part.name, kind: part.kind, target: part.target, timer: part.timer, note: part.note, ...progressOf({ parsed: part, previous: before, now }) };
+  });
+}
+
+export function taskFromParsed({ parsed, existing, id, today, now, definition }: { parsed: ParsedTask; existing: Task | null; id: string; today: string; now: string; definition: Definition | null }): Task {
   return {
     id,
-    name: parsed.title,
-    group: parsed.group,
+    definitionId: definition?.id ?? null,
+    date: definition ? (existing?.date ?? today) : parsed.date,
+    time: parsed.time,
+    name: parsed.name,
+    group: parsed.group ?? existing?.group ?? "personal",
     kind: parsed.kind,
     target: parsed.target,
-    unit: parsed.unit,
+    timer: parsed.timer,
     rest: parsed.rest,
-    every: parsed.every ?? "1d",
+    ...progressOf({ parsed, previous: existing ?? undefined, now }),
     note: parsed.note,
-    tapIncrement: parsed.tapIncrement,
-    children: parsed.children.map((child) => ({ name: child.title, kind: child.kind, target: child.target, unit: child.unit, note: child.note })),
-    anchor,
+    parts: partsFrom({ parsed: parsed.parts, previous: existing?.parts ?? [], now }),
+    sort: existing?.sort ?? 0,
+    created: existing?.created ?? now,
   };
 }
 
-export function commitEntry({
-  text,
-  tasks,
-  definitions,
-  editTaskId,
-  editDefinitionId,
-  date,
-}: {
-  text: string;
-  tasks: Task[];
-  definitions: Definition[];
-  editTaskId: string | null;
-  editDefinitionId: string | null;
-  date: string;
-}): { tasks: Task[]; definitions: Definition[]; rootId: string } | null {
-  const parsed = parseEntry(text);
-  if (!parsed) return null;
-  const rootId = editTaskId ?? newId("t");
-  const root = taskFrom({ parsed, id: rootId, parent: null, group: parsed.group });
-  root.rest = parsed.rest;
-  const old = editTaskId ? tasks.find((task) => task.id === editTaskId) : undefined;
-  if (old) {
-    root.definitionId = old.definitionId;
-    if (parsed.current === null && parsed.value === null && parsed.doneManual === null) {
-      root.current = old.current;
-      root.doneManual = old.doneManual;
-      root.value = old.value;
-    }
-  }
-  const oldChildren = editTaskId ? tasks.filter((task) => task.parent === editTaskId) : [];
-  const children = parsed.children.map((child, index) => {
-    const previous = oldChildren[index];
-    const task = taskFrom({ parsed: child, id: previous?.id ?? newId("t"), parent: rootId, group: parsed.group });
-    task.rest = parsed.rest;
-    if (previous && child.current === null && child.value === null && child.doneManual === null) {
-      task.current = previous.current;
-      task.doneManual = previous.doneManual;
-      task.value = previous.value;
-    }
-    return task;
-  });
-  const block = [root, ...children];
-  const at = editTaskId ? tasks.findIndex((task) => task.id === editTaskId) : -1;
-  const remaining = editTaskId ? tasks.filter((task) => task.id !== editTaskId && task.parent !== editTaskId) : [...tasks];
-  let nextDefinitions = definitions;
-  let dueToday = true;
-  if (parsed.every) {
-    const id = editDefinitionId ?? root.definitionId ?? newId("d");
-    const existing = definitions.find((definition) => definition.id === id);
-    const definition = definitionFrom({ parsed, id, anchor: existing?.anchor ?? date });
-    root.definitionId = id;
-    nextDefinitions = existing ? definitions.map((each) => (each.id === id ? definition : each)) : [...definitions, definition];
-    dueToday = isDue({ every: definition.every, anchor: definition.anchor, date });
-  }
-  if (at >= 0) remaining.splice(Math.min(at, remaining.length), 0, ...block);
-  else if (dueToday) remaining.push(...block);
-  return { tasks: remaining, definitions: nextDefinitions, rootId };
+export function definitionFromParsed({ parsed, existing, id, today }: { parsed: ParsedTask; existing: Definition | null; id: string; today: string }): Definition {
+  const parts: Part[] = parsed.parts.map((part) => ({ name: part.name, kind: part.kind, target: part.target, timer: part.timer, note: part.note }));
+  return {
+    id,
+    name: parsed.name,
+    group: parsed.group ?? existing?.group ?? "personal",
+    kind: parsed.kind,
+    target: parsed.target,
+    timer: parsed.timer,
+    rest: parsed.rest,
+    time: parsed.time,
+    every: parsed.every ?? existing?.every ?? "1d",
+    anchor: existing?.anchor ?? today,
+    parts,
+    note: parsed.note,
+    sort: existing?.sort ?? 0,
+    created: existing?.created ?? today,
+    ended: null,
+  };
+}
+
+export function dueToday({ definition, today }: { definition: Definition; today: string }): boolean {
+  return isDue({ every: definition.every, anchor: definition.anchor, date: today });
 }

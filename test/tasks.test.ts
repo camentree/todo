@@ -1,108 +1,124 @@
-import { derive, metaText, toggled } from "@shared/tasks.ts";
-import type { Task } from "@shared/types.ts";
+import type { Task } from "@shared/model.ts";
+import { grouped, isBacklog, isDone, isOnToday, isThisWeek, partToggled, toggled, whenHint } from "@shared/tasks.ts";
 
-const task = (id: string, overrides: Partial<Task>): Task => ({
-  id,
-  name: id,
-  type: "boolean",
-  kind: "bool",
-  target: 1,
-  current: 0,
-  unit: "",
-  rest: 0,
-  parent: null,
-  group: "habits",
-  note: "",
-  value: "",
-  doneManual: null,
-  tapIncrement: false,
-  definitionId: null,
-  auto: null,
-  ...overrides,
-});
+const today = "2026-09-15";
+const now = "2026-09-15T10:00:00";
 
-const date = "2026-09-13";
+function task(id: string, overrides: Partial<Task>): Task {
+  return {
+    id,
+    definitionId: null,
+    date: null,
+    time: null,
+    name: id,
+    group: "personal",
+    kind: "boolean",
+    target: 0,
+    timer: 0,
+    rest: 0,
+    current: 0,
+    value: "",
+    doneAt: null,
+    note: "",
+    parts: [],
+    sort: 0,
+    created: "2026-09-01T00:00:00",
+    ...overrides,
+  };
+}
 
-describe("derive", () => {
-  it("derives done for each kind", () => {
-    const derived = derive({
-      tasks: [
-        task("timer", { type: "numeric", kind: "timer", target: 30, current: 30 }),
-        task("count", { type: "numeric", kind: "count", target: 5, current: 2 }),
-        task("text", { type: "text", kind: "text", value: "yes" }),
-        task("bool", {}),
-        task("manual", { doneManual: true }),
-        task("journal", { auto: "journal" }),
-      ],
-      entries: [{ id: "e", at: date + "T07:42:00.000Z", notebook: "daily", taskId: null, text: "hi" }],
-      date,
-    });
-    expect(derived.map((each) => each.done)).toEqual([true, false, true, false, true, true]);
-  });
-
-  it("never finishes an open-ended count on its own, and keeps its count when ticked", () => {
-    const open = task("open", { type: "numeric", kind: "count", target: 1, tapIncrement: true, current: 4 });
-    const derived = derive({ tasks: [open], entries: [], date });
-    expect(derived[0]?.done).toBe(false);
-    const ticked = derive({ tasks: toggled({ tasks: derived, task: derived[0]! }), entries: [], date });
-    expect(ticked[0]).toMatchObject({ done: true, current: 4 });
-  });
-
-  it("gives a parent its children's progress", () => {
-    const derived = derive({
-      tasks: [
-        task("parent", { type: "numeric", kind: "count", target: 3 }),
-        task("a", { parent: "parent", type: "numeric", kind: "timer", target: 30, current: 30 }),
-        task("b", { parent: "parent", type: "numeric", kind: "timer", target: 30 }),
-      ],
-      entries: [],
-      date,
-    });
-    expect(derived[0]).toMatchObject({ current: 1, target: 2, done: false });
+describe("isDone", () => {
+  it("derives done from the tick, the parts, the target, the text and the journal", () => {
+    expect(isDone({ task: task("a", { doneAt: now }), entries: [] })).toBe(true);
+    expect(isDone({ task: task("b", { kind: "count", target: 5, current: 5 }), entries: [] })).toBe(true);
+    expect(isDone({ task: task("c", { kind: "count", target: 5, current: 2 }), entries: [] })).toBe(false);
+    expect(isDone({ task: task("d", { kind: "text", value: "yes" }), entries: [] })).toBe(true);
+    const parts = [
+      { name: "x", kind: "boolean" as const, target: 0, timer: 0, note: "", current: 0, value: "", doneAt: now },
+      { name: "y", kind: "timer" as const, target: 0, timer: 30, note: "", current: 30, value: "", doneAt: null },
+    ];
+    expect(isDone({ task: task("e", { parts }), entries: [] })).toBe(true);
+    expect(isDone({ task: task("f", { parts: [parts[0]!, { ...parts[1]!, current: 3 }] }), entries: [] })).toBe(false);
+    expect(isDone({ task: task("Journal", { date: today }), entries: [{ id: "j", at: today + "T07:00", tags: [], task: null, body: "" }] })).toBe(true);
+    expect(isDone({ task: task("Journal", { date: today }), entries: [] })).toBe(false);
   });
 });
 
 describe("toggled", () => {
-  it("fills a numeric to target and resets it back", () => {
-    const derived = derive({ tasks: [task("count", { type: "numeric", kind: "count", target: 5, current: 2 })], entries: [], date });
-    const filled = derive({ tasks: toggled({ tasks: derived, task: derived[0]! }), entries: [], date });
-    expect(filled[0]).toMatchObject({ current: 5, done: true });
-    const reset = derive({ tasks: toggled({ tasks: filled, task: filled[0]! }), entries: [], date });
-    expect(reset[0]).toMatchObject({ current: 0, done: false, doneManual: null });
+  it("completes every part with the parent and clears them again", () => {
+    const parent = task("p", { parts: [{ name: "x", kind: "count", target: 5, timer: 0, note: "", current: 1, value: "", doneAt: null }] });
+    const done = toggled({ task: parent, entries: [], now });
+    expect(done.doneAt).toBe(now);
+    expect(done.parts[0]).toMatchObject({ doneAt: now, current: 5 });
+    const undone = toggled({ task: done, entries: [], now });
+    expect(undone.doneAt).toBeNull();
+    expect(undone.parts[0]).toMatchObject({ doneAt: null, current: 0 });
   });
 
-  it("toggles every part of a parent", () => {
-    const derived = derive({
-      tasks: [
-        task("parent", { type: "numeric", kind: "count", target: 2 }),
-        task("a", { parent: "parent", type: "numeric", kind: "timer", target: 30 }),
-        task("b", { parent: "parent" }),
+  it("completes the parent when the last part is ticked", () => {
+    const parent = task("p", {
+      parts: [
+        { name: "x", kind: "boolean", target: 0, timer: 0, note: "", current: 0, value: "", doneAt: now },
+        { name: "y", kind: "boolean", target: 0, timer: 0, note: "", current: 0, value: "", doneAt: null },
       ],
-      entries: [],
-      date,
     });
-    const filled = derive({ tasks: toggled({ tasks: derived, task: derived[0]! }), entries: [], date });
-    expect(filled.map((each) => each.done)).toEqual([true, true, true]);
-    expect(filled[1]?.current).toBe(30);
-    const reset = derive({ tasks: toggled({ tasks: filled, task: filled[0]! }), entries: [], date });
-    expect(reset.map((each) => each.done)).toEqual([false, false, false]);
-    expect(reset[1]?.current).toBe(0);
+    const ticked = partToggled({ task: parent, index: 1, now });
+    expect(isDone({ task: ticked, entries: [] })).toBe(true);
+    const unticked = partToggled({ task: ticked, index: 0, now });
+    expect(isDone({ task: unticked, entries: [] })).toBe(false);
   });
 });
 
-describe("metaText", () => {
-  it("shows target, partial progress and answers", () => {
-    const derived = derive({
-      tasks: [
-        task("timer", { type: "numeric", kind: "timer", target: 1200 }),
-        task("partial", { type: "numeric", kind: "timer", target: 1200, current: 180 }),
-        task("water", { type: "numeric", kind: "amount", target: 2000, current: 1200, unit: "ml" }),
-        task("open", { type: "numeric", kind: "count", target: 1, tapIncrement: true, current: 4 }),
-        task("text", { type: "text", kind: "text", value: "slept well" }),
-      ],
-      entries: [],
-      date,
-    });
-    expect(derived.map(metaText)).toEqual(["20 min", "3 min / 20 min", "1200 / 2000 ml", "4", "slept well"]);
+describe("placing rows", () => {
+  const habitToday = task("h1", { definitionId: "d", date: today });
+  const habitYesterday = task("h2", { definitionId: "d", date: "2026-09-14" });
+  const overdue = task("o1", { date: "2026-09-12" });
+  const overdueDone = task("o2", { date: "2026-09-12", doneAt: "2026-09-12T10:00:00" });
+  const soon = task("o3", { date: "2026-09-18" });
+  const later = task("o4", { date: "2026-09-22" });
+  const backlog = task("b1", {});
+  const backlogDoneToday = task("b2", { doneAt: now });
+  const backlogDoneYesterday = task("b3", { doneAt: "2026-09-14T10:00:00" });
+  const commented = task("b4", { name: "Refactor" });
+  const comments = [{ id: "c", definitionId: null, taskName: "Refactor", body: "?", author: "claude", writtenAt: now, seenAt: null }];
+
+  it("puts today's habits, overdue one-offs and unseen-comment tasks on Today", () => {
+    const onToday = (each: Task) => isOnToday({ task: each, today, entries: [], comments });
+    expect([habitToday, habitYesterday, overdue, overdueDone, soon, backlog, commented].map(onToday)).toEqual([true, false, true, false, false, false, true]);
+  });
+
+  it("puts the coming six days under This week", () => {
+    expect([soon, later, habitToday].map((each) => isThisWeek({ task: each, today }))).toEqual([true, false, false]);
+  });
+
+  it("keeps undated one-offs in Backlog until the day after they are done", () => {
+    const inBacklog = (each: Task) => isBacklog({ task: each, today, entries: [], comments });
+    expect([backlog, backlogDoneToday, backlogDoneYesterday, commented, habitToday].map(inBacklog)).toEqual([true, true, false, false, false]);
+  });
+
+  it("orders groups habits, exercise, personal, then the rest alphabetically, rows by sort", () => {
+    const rows = [
+      task("z", { group: "programming", sort: 1 }),
+      task("y", { group: "garden" }),
+      task("x", { group: "personal", sort: 2 }),
+      task("w", { group: "personal", sort: 1 }),
+      task("v", { group: "exercise" }),
+      task("u", { group: "habits" }),
+    ];
+    expect(grouped(rows).map((each) => [each.group, each.tasks.map((row) => row.id)])).toEqual([
+      ["habits", ["u"]],
+      ["exercise", ["v"]],
+      ["personal", ["w", "x"]],
+      ["garden", ["y"]],
+      ["programming", ["z"]],
+    ]);
+  });
+
+  it("says since when for overdue rows and the day for coming ones", () => {
+    expect(whenHint({ task: overdue, today })).toBe("since sep 12");
+    expect(whenHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("since yesterday");
+    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("fri 5:00pm");
+    expect(whenHint({ task: later, today })).toBe("sep 22");
+    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3:00pm");
   });
 });

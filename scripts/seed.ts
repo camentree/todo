@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { isDue } from "../shared/schedule.ts";
-import { serializeMarkdown } from "../server/store.ts";
+import { serializeMarkdown } from "../shared/journal.ts";
 import type { Comment, Definition, JournalEntry, Part, Task } from "../shared/model.ts";
 
 const directory = process.argv[2] ?? process.env.DATA_DIR ?? "data/dev";

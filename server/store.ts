@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { parseMarkdown, serializeMarkdown } from "@shared/journal.ts";
 import { isDue } from "@shared/schedule.ts";
 import type { Comment, Definition, JournalEntry, Task } from "@shared/model.ts";
 
@@ -35,17 +36,24 @@ export class Store {
     return this.data.definitions;
   }
 
-  putDefinition(definition: Definition): Definition {
+  putDefinition({ definition, today }: { definition: Definition; today: string }): Definition {
     const stored = { ...definition, id: definition.id ?? identifier() };
     const index = this.data.definitions.findIndex((each) => each.id === stored.id);
     if (index === -1) this.data.definitions.push(stored);
     else this.data.definitions[index] = stored;
+    this.data.tasks = this.data.tasks.filter((task) => !(task.definitionId === stored.id && task.date !== null && task.date > today));
+    for (const date of this.data.instantiated) {
+      if (date < today) continue;
+      if (this.data.tasks.some((task) => task.definitionId === stored.id && task.date === date)) continue;
+      if (isDue({ every: stored.every, anchor: stored.anchor, date })) this.data.tasks.push(instanceOf({ definition: stored, date }));
+    }
     this.save();
     return stored;
   }
 
-  deleteDefinition(id: string): void {
+  deleteDefinition({ id, today }: { id: string; today: string }): void {
     this.data.definitions = this.data.definitions.filter((each) => each.id !== id);
+    this.data.tasks = this.data.tasks.filter((task) => !(task.definitionId === id && task.date !== null && task.date >= today));
     this.save();
   }
 
@@ -60,25 +68,7 @@ export class Store {
       if (definition.ended && definition.ended <= date) continue;
       if (definition.created > date) continue;
       if (!isDue({ every: definition.every, anchor: definition.anchor, date })) continue;
-      this.data.tasks.push({
-        id: identifier(),
-        definitionId: definition.id,
-        date,
-        time: definition.time,
-        name: definition.name,
-        group: definition.group,
-        kind: definition.kind,
-        target: definition.target,
-        timer: definition.timer,
-        rest: definition.rest,
-        current: 0,
-        value: "",
-        doneAt: null,
-        note: definition.note,
-        parts: definition.parts.map((part) => ({ ...part, current: 0, value: "", doneAt: null })),
-        sort: definition.sort,
-        created: `${date}T00:00:00`,
-      });
+      this.data.tasks.push(instanceOf({ definition, date }));
     }
     this.data.instantiated.push(date);
     this.save();
@@ -86,6 +76,9 @@ export class Store {
 
   putTask(task: Task): Task {
     const stored = { ...task, id: task.id ?? identifier() };
+    if (stored.definitionId && stored.date) {
+      this.data.tasks = this.data.tasks.filter((each) => each.id === stored.id || each.definitionId !== stored.definitionId || each.date !== stored.date);
+    }
     const index = this.data.tasks.findIndex((each) => each.id === stored.id);
     if (index === -1) this.data.tasks.push(stored);
     else this.data.tasks[index] = stored;
@@ -151,39 +144,26 @@ function journalFile(name: string): string {
   return name;
 }
 
-export function parseMarkdown(markdown: string): JournalEntry[] {
-  const blocks = markdown.split(/^## /m).slice(1);
-  return blocks.map((block) => {
-    const newline = block.indexOf("\n");
-    const heading = (newline === -1 ? block : block.slice(0, newline)).trim();
-    const lines = (newline === -1 ? "" : block.slice(newline + 1)).replace(/\n+$/, "");
-    const metadata = lines.match(/^<!--\s*([\s\S]*?)\s*-->\n?/);
-    const fields: Record<string, string> = {};
-    for (const line of (metadata?.[1] ?? "").split("\n")) {
-      const colon = line.indexOf(":");
-      if (colon === -1) continue;
-      const key = line.slice(0, colon).trim();
-      if (key) fields[key] = line.slice(colon + 1).trim();
-    }
-    return {
-      id: fields.id ?? heading,
-      at: heading,
-      tags: fields.tags ? fields.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
-      task: fields.task || null,
-      body: metadata ? lines.slice(metadata[0].length) : lines,
-    };
-  });
-}
-
-export function serializeMarkdown(entries: JournalEntry[]): string {
-  return entries
-    .map((entry) => {
-      const metadata = [`id: ${entry.id}`, `tags: ${entry.tags.join(", ")}`, entry.task ? `task: ${entry.task}` : ""]
-        .filter(Boolean)
-        .join("\n");
-      return `## ${entry.at}\n<!--\n${metadata}\n-->\n${entry.body}\n`;
-    })
-    .join("\n");
+function instanceOf({ definition, date }: { definition: Definition; date: string }): Task {
+  return {
+    id: identifier(),
+    definitionId: definition.id,
+    date,
+    time: definition.time,
+    name: definition.name,
+    group: definition.group,
+    kind: definition.kind,
+    target: definition.target,
+    timer: definition.timer,
+    rest: definition.rest,
+    current: 0,
+    value: "",
+    doneAt: null,
+    note: definition.note,
+    parts: definition.parts.map((part) => ({ ...part, current: 0, value: "", doneAt: null })),
+    sort: definition.sort,
+    created: `${date}T00:00:00`,
+  };
 }
 
 function datesUpTo(through: string): string[] {
