@@ -7,7 +7,7 @@ import { everyLabel, parseTask, serializeTask } from "@shared/grammar.ts";
 import type { Comment, Definition, Task } from "@shared/model.ts";
 import { changedOnly, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
 import type { Container, Target } from "@shared/move.ts";
-import { byPosition, commentsFor, grouped, isBacklog, isOnToday, isThisWeek, partToggled, toggled } from "@shared/tasks.ts";
+import { byPosition, commentsFor, grouped, groupLabel, isBacklog, isOnToday, partToggled, toggled } from "@shared/tasks.ts";
 
 import { Confirm } from "../components/Confirm.tsx";
 import type { Choice } from "../components/Confirm.tsx";
@@ -185,7 +185,7 @@ function Composer({ draft, onChange, onClose, onDelete }: { draft: Draft; onChan
   );
 }
 
-export function Today() {
+export function Tasks() {
   const store = useStore();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [asking, setAsking] = useState<Asking | null>(null);
@@ -202,11 +202,10 @@ export function Today() {
 
   const placing = { today: store.today, entries: store.journal, comments: store.comments };
   const onToday = store.tasks.filter((task) => isOnToday({ task, ...placing }));
-  const thisWeek = store.tasks
-    .filter((task) => isThisWeek({ task, today: store.today }))
+  const backlog = store.tasks
+    .filter((task) => isBacklog({ task, ...placing }))
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || byPosition(a, b))
     .filter((task, index, all) => task.definitionId === null || all.findIndex((each) => each.definitionId === task.definitionId) === index);
-  const backlog = store.tasks.filter((task) => isBacklog({ task, ...placing }));
 
   const edit = (task: Task) => {
     const definition = task.definitionId ? (store.definitions.find((each) => each.id === task.definitionId) ?? null) : null;
@@ -242,7 +241,7 @@ export function Today() {
 
   const todayGroups = grouped(onToday);
   const backlogGroups = grouped(backlog);
-  const listOrder = [...todayGroups.flatMap((each) => each.tasks), ...thisWeek, ...backlogGroups.flatMap((each) => each.tasks)];
+  const listOrder = [...todayGroups.flatMap((each) => each.tasks), ...backlogGroups.flatMap((each) => each.tasks)];
 
   const toggleSelected = (ids: string[]) =>
     setSelection((current) => {
@@ -264,10 +263,9 @@ export function Today() {
     setRunning({ taskIds: chosen.map((task) => task.id), label });
   };
 
-  const rowsOf = ({ container, group }: { container: Container; group: string | null }): Task[] => {
-    if (container === "today") return todayGroups.find((each) => each.group === group)?.tasks ?? [];
-    if (container === "week") return thisWeek;
-    return backlogGroups.find((each) => each.group === group)?.tasks ?? [];
+  const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] => {
+    const groups = container === "today" ? todayGroups : backlogGroups;
+    return groups.find((each) => each.group === group)?.tasks ?? [];
   };
 
   const resolveTarget = ({ current, x, y }: { current: Drag; x: number; y: number }): { target: Target | null; line: Drag["line"]; hovered: string | null } => {
@@ -299,7 +297,7 @@ export function Today() {
     if (current.ids.includes(taskId)) return { target: null, line: null, hovered: null };
     const holder = taskElement.closest<HTMLElement>("[data-container]");
     const container = (holder?.dataset.container ?? "today") as Container;
-    const group = holder?.dataset.group || null;
+    const group = holder?.dataset.group ?? "";
     const main = taskElement.querySelector(".main")?.getBoundingClientRect() ?? taskElement.getBoundingClientRect();
     const rect = taskElement.getBoundingClientRect();
     if (nesting && !leaving) {
@@ -310,7 +308,7 @@ export function Today() {
     const rows = rowsOf({ container, group });
     const position = rows.findIndex((each) => each.id === taskId);
     return {
-      target: { kind: "top", container, group: group ?? rows.find((each) => each.id === taskId)?.group ?? "personal", index: position + (after ? 1 : 0) },
+      target: { kind: "top", container, group, index: position + (after ? 1 : 0) },
       line: { top: after ? rect.bottom : rect.top, left: column.left, width: column.width },
       hovered: taskId,
     };
@@ -489,31 +487,28 @@ export function Today() {
   return (
     <>
       <div className="list" ref={listRef}>
-        {todayGroups.map(({ group, tasks }) => (
-          <div key={group} data-container="today" data-group={group}>
-            <Group storageKey={"group:" + group} label={group} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:group:" + group}>
-              {tasks.map((task) => row({ task, chip: null, onToday: null, onTick: () => tick(task) }))}
-            </Group>
-          </div>
-        ))}
-        {thisWeek.length > 0 && (
-          <div data-container="week" data-group="">
-            <Group storageKey="week" label="This week" count={thisWeek.length} defaultOpen={false} select={groupSelect(thisWeek)} press={groupPress(thisWeek)} focused={focused === "group:week"}>
-              {thisWeek.map((task) => row({ task, chip: task.group, onToday: null, onTick: () => store.putTask({ ...toggled({ task, entries: store.journal, now: nowStamp() }), date: store.today }) }))}
-            </Group>
-          </div>
-        )}
-        {backlog.length > 0 && (
+        <div className="section">
+          <Group storageKey="today" label="Today" count={onToday.length} defaultOpen select={groupSelect(onToday)} press={groupPress(onToday)} focused={focused === "group:today"}>
+            {todayGroups.map(({ group, tasks }) => (
+              <div key={group} data-container="today" data-group={group}>
+                <Group storageKey={"today:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:today:" + group}>
+                  {tasks.map((task) => row({ task, chip: null, onToday: null, onTick: () => tick(task) }))}
+                </Group>
+              </div>
+            ))}
+          </Group>
+        </div>
+        <div className="section">
           <Group storageKey="backlog" label="Backlog" count={backlog.length} defaultOpen={false} select={groupSelect(backlog)} press={groupPress(backlog)} focused={focused === "group:backlog"}>
             {backlogGroups.map(({ group, tasks }) => (
               <div key={group} data-container="backlog" data-group={group}>
-                <Group storageKey={"backlog:" + group} label={group} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:backlog:" + group}>
+                <Group storageKey={"backlog:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:backlog:" + group}>
                   {tasks.map((task) => row({ task, chip: null, onToday: () => bringForward(task), onTick: () => tick(task) }))}
                 </Group>
               </div>
             ))}
           </Group>
-        )}
+        </div>
       </div>
       {drag && drag.line && <div className="drop-line" style={{ top: drag.line.top, left: drag.line.left, width: drag.line.width }} />}
       {drag && (

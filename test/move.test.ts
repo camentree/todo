@@ -1,5 +1,5 @@
 import type { Definition, Task } from "@shared/model.ts";
-import { changedOnly, dateFor, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
+import { changedOnly, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
 
 const today = "2026-09-15";
 
@@ -40,8 +40,8 @@ describe("placed", () => {
     expect(onToday[1]).toMatchObject({ id: "x", group: "personal", date: today, sort: 1 });
     const intoBacklog = placed({ rows: [], moving: [rows[0]!], target: { kind: "top", container: "backlog", group: "garden", index: 0 }, today });
     expect(intoBacklog[0]).toMatchObject({ id: "a", group: "garden", date: null });
-    expect(dateFor({ container: "week", date: null, today })).toBe("2026-09-16");
-    expect(dateFor({ container: "week", date: "2026-09-18", today })).toBe("2026-09-18");
+    const dated = placed({ rows: [], moving: [task("d", { date: "2026-09-20" })], target: { kind: "top", container: "backlog", group: "", index: 0 }, today });
+    expect(dated[0]).toMatchObject({ id: "d", group: "", date: null });
   });
 
   it("lands a bundle together in order", () => {

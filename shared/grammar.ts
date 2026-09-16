@@ -219,7 +219,7 @@ function noteLines(note: string): string {
 }
 
 export function serializeTask({ task, every, today }: { task: Task; every: string | null; today: string }): string {
-  let text = task.name + " /" + task.group;
+  let text = task.group ? task.name + " /" + task.group : task.name;
   if (every) text += " #every " + every;
   if (task.parts.length === 0) text += kindTokens(task);
   if (task.rest) text += " #rest " + durationToken(task.rest);

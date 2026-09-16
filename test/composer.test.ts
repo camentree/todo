@@ -12,9 +12,9 @@ function parse(text: string) {
 }
 
 describe("taskFromParsed", () => {
-  it("makes a backlog one-off in personal by default", () => {
+  it("makes an ungrouped backlog one-off by default", () => {
     const task = taskFromParsed({ parsed: parse("Call mum"), existing: null, id: "t1", today, now, definition: null });
-    expect(task).toMatchObject({ id: "t1", name: "Call mum", group: "personal", date: null, time: null, definitionId: null, kind: "boolean", doneAt: null, created: now });
+    expect(task).toMatchObject({ id: "t1", name: "Call mum", group: "", date: null, time: null, definitionId: null, kind: "boolean", doneAt: null, created: now });
   });
 
   it("dates a one-off from the text", () => {

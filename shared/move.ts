@@ -1,7 +1,6 @@
-import { shiftDate } from "./format.ts";
 import type { Definition, Task, TaskPart } from "./model.ts";
 
-export type Container = "today" | "week" | "backlog";
+export type Container = "today" | "backlog";
 
 export interface TopTarget {
   kind: "top";
@@ -18,17 +17,11 @@ export interface PartTarget {
 
 export type Target = TopTarget | PartTarget;
 
-export function dateFor({ container, date, today }: { container: Container; date: string | null; today: string }): string | null {
-  if (container === "today") return today;
-  if (container === "backlog") return null;
-  return date && date > today ? date : shiftDate({ key: today, days: 1 });
-}
-
 export function placed({ rows, moving, target, today }: { rows: Task[]; moving: Task[]; target: TopTarget; today: string }): Task[] {
   const movingIds = new Set(moving.map((task) => task.id));
   const remaining = rows.filter((task) => !movingIds.has(task.id));
   const index = Math.max(0, Math.min(target.index, remaining.length));
-  const arrivals = moving.map((task) => ({ ...task, group: target.group, date: dateFor({ container: target.container, date: task.date, today }) }));
+  const arrivals = moving.map((task) => ({ ...task, group: target.group, date: target.container === "today" ? today : null }));
   const ordered = [...remaining.slice(0, index), ...arrivals, ...remaining.slice(index)];
   return ordered.map((task, sort) => ({ ...task, sort }));
 }

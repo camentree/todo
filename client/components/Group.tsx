@@ -36,8 +36,8 @@ export function Group({
             <TextButton active={false} onSelect={fold.toggle} press={press}>
               {fold.chevron}
               {label}
+              <span className={fold.open ? "group-count" : "group-count shown"}>{count}</span>
             </TextButton>
-            <span className={fold.open ? "group-count" : "group-count shown"}>{count}</span>
           </div>
         )}
       >

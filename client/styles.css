@@ -41,6 +41,7 @@
   --font: "Seravek", -apple-system, system-ui, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --heading: 1.6rem;
+  --section: 1.3rem;
   --title: 1.02rem;
   --body: 0.95rem;
   --meta: 0.86rem;
@@ -206,6 +207,22 @@ textarea {
   margin-top: 0.7rem;
 }
 
+.section + .section {
+  margin-top: 1.6rem;
+}
+
+.section > .group > .group-head .text {
+  font-size: var(--section);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--text);
+}
+
+.section > .group > .group-head .chevron {
+  display: none;
+}
+
 .roll {
   display: grid;
   grid-template-rows: 0fr;
@@ -246,14 +263,10 @@ textarea {
   color: var(--faint);
 }
 
-.group .group .group-head .text {
-  color: var(--faint);
-}
-
 .group-count {
-  margin-left: auto;
-  font-size: 0.85rem;
-  color: var(--faint);
+  font-size: var(--meta);
+  letter-spacing: normal;
+  color: var(--dim);
   opacity: 0;
   transition: opacity 0.45s ease;
 }

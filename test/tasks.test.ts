@@ -1,5 +1,5 @@
 import type { Task } from "@shared/model.ts";
-import { grouped, isBacklog, isDone, isOnToday, isThisWeek, partToggled, toggled, whenHint } from "@shared/tasks.ts";
+import { grouped, isBacklog, isDone, isOnToday, partToggled, toggled, whenHint } from "@shared/tasks.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
@@ -87,18 +87,16 @@ describe("placing rows", () => {
     expect([habitToday, habitYesterday, overdue, overdueDone, soon, backlog, commented].map(onToday)).toEqual([true, false, true, false, false, false, true]);
   });
 
-  it("puts the coming six days under This week", () => {
-    expect([soon, later, habitToday].map((each) => isThisWeek({ task: each, today }))).toEqual([true, false, false]);
-  });
-
-  it("keeps undated one-offs in Backlog until the day after they are done", () => {
+  it("puts every future date and every undated one-off in Backlog, until the day after they are done", () => {
     const inBacklog = (each: Task) => isBacklog({ task: each, today, entries: [], comments });
     expect([backlog, backlogDoneToday, backlogDoneYesterday, commented, habitToday].map(inBacklog)).toEqual([true, true, false, false, false]);
+    expect([soon, later, habitYesterday, overdue].map(inBacklog)).toEqual([true, true, false, false]);
   });
 
-  it("orders groups habits, exercise, personal, then the rest alphabetically, rows by sort", () => {
+  it("orders groups habits, exercise, personal, then the rest alphabetically, ungrouped last, rows by sort", () => {
     const rows = [
       task("z", { group: "programming", sort: 1 }),
+      task("t", { group: "" }),
       task("y", { group: "garden" }),
       task("x", { group: "personal", sort: 2 }),
       task("w", { group: "personal", sort: 1 }),
@@ -111,6 +109,7 @@ describe("placing rows", () => {
       ["personal", ["w", "x"]],
       ["garden", ["y"]],
       ["programming", ["z"]],
+      ["", ["t"]],
     ]);
   });
 

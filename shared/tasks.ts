@@ -1,4 +1,4 @@
-import { dayLabel, formatDuration, formatTime, shiftDate } from "./format.ts";
+import { dayLabel, formatDuration, formatTime } from "./format.ts";
 import type { Comment, JournalEntry, Task, TaskPart } from "./model.ts";
 import { groupOrder } from "./model.ts";
 
@@ -48,8 +48,13 @@ export function partToggled({ task, index, now }: { task: Task; index: number; n
 }
 
 export function orderedGroups(names: Iterable<string>): string[] {
-  const others = [...new Set(names)].filter((name) => !groupOrder.includes(name)).sort();
-  return [...groupOrder.filter((name) => [...names].includes(name)), ...others];
+  const all = [...new Set(names)];
+  const others = all.filter((name) => name !== "" && !groupOrder.includes(name)).sort();
+  return [...groupOrder.filter((name) => all.includes(name)), ...others, ...(all.includes("") ? [""] : [])];
+}
+
+export function groupLabel(group: string): string {
+  return group === "" ? "ungrouped" : group;
 }
 
 export function byPosition(a: Task, b: Task): number {
@@ -77,13 +82,10 @@ export function isOnToday({ task, today, entries, comments }: { task: Task; toda
   return false;
 }
 
-export function isThisWeek({ task, today }: { task: Task; today: string }): boolean {
-  return task.date !== null && task.date > today && task.date <= shiftDate({ key: today, days: 6 });
-}
-
 export function isBacklog({ task, today, entries, comments }: { task: Task; today: string; entries: JournalEntry[]; comments: Comment[] }): boolean {
-  if (task.date !== null || task.definitionId !== null) return false;
   if (isOnToday({ task, today, entries, comments })) return false;
+  if (task.date !== null) return task.date > today;
+  if (task.definitionId !== null) return false;
   if (!isDone({ task, entries })) return true;
   return (task.doneAt ?? "").slice(0, 10) === today;
 }

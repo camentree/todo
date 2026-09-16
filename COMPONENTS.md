@@ -11,8 +11,8 @@ sets a primitive's size, the primitive never takes a variant prop.
 One stylesheet. `:root` holds the light palette, dark is the same names
 redefined. Colour: ground, raised, text, dim, faint, accent, hairline,
 chip-bg, chip-text, warn. Type: Seravek 400/500/700 from the three woff2
-files in `client/public`; heading, title, body, meta, label, chip, big
-number. Sizes: tick, round button (small, normal, big), ring, gutter, row
+files in `client/public`; heading, section, title, body, meta, label, chip,
+big number. Sizes: tick, round button (small, normal, big), ring, gutter, row
 padding, card radius. Values are the ones on the canvas frames.
 
 ## Primitives
@@ -21,7 +21,8 @@ padding, card radius. Values are the ones on the canvas frames.
 - **SquareTick**: the select box; on or off; the same slot as CircleTick.
 - **Handle**: the three-line drag grip.
 - **Foldable**: owns the chevron (closed › open ⌄) and the open state. Used by
-  Group, This week and Backlog. The same file holds FoldsProvider, which
+  Group, and so by the Today and Backlog sections. The same file holds
+  FoldsProvider, which
   remembers every fold by key so keyboard shortcuts can drive them, and Roll,
   the grid that rolls content open and closed slowly; TaskRow's thread and
   parts use Roll directly.
@@ -40,7 +41,7 @@ padding, card radius. Values are the ones on the canvas frames.
 - **Swipeable**: wraps a row or a Card; right reveals today on accent, left
   reveals delete on red; one threshold everywhere; vertical drift cancels.
 - **Editor**: CodeMirror markdown with markers hidden off the caret line.
-- **Overlay**: full-screen surface over Today that returns to where you were.
+- **Overlay**: full-screen surface over Tasks that returns to where you were.
   Runner, Composer and EditorScreen sit in one.
 - **Glyphs**: every icon in one file: plus, tick, chevron, play, arrows, ×,
   speech mark, grip. Nothing draws its own.
@@ -52,13 +53,14 @@ padding, card radius. Values are the ones on the canvas frames.
   its kind hint, part count, chevron, Meta), then the CommentList and then the
   note and parts, each in its own Roll. A part is a TaskRow of its own, built
   from the part with its host's callbacks; the note line lives in this file.
-- **Group**: label as TextButton plus count, Foldable, rows; a SquareTick in
-  select mode. This week and Backlog are Groups.
+- **Group**: label as TextButton with the count right after it, Foldable,
+  rows; a SquareTick in select mode. The Today and Backlog sections are
+  Groups, sized and stripped of their chevron by the screen's stylesheet.
 - **CommentList**: the thread, oldest at the top and newest at the bottom,
   user on the left and agent on the right, in a scroll box that opens at the
   first unseen card or the bottom, plus the Field pinned under it that opens
   EditorScreen. The Field (an outlined placeholder that only opens the
-  editor) lives here. Same component on Today and in the runner.
+  editor) lives here. Same component on Tasks and in the runner.
 - **EditorScreen**: heading, dim line, Editor, cancel and save. Used for a
   comment, a journal entry, and a note.
 - **Entries**: the Journal and Notebook screen, given its source file. Filters
@@ -66,7 +68,7 @@ padding, card radius. Values are the ones on the canvas frames.
 
 ## Local composites
 
-- **Today**: Composer (one-line field that grows; preview is TaskRows),
+- **Tasks**: Composer (one-line field that grows; preview is TaskRows),
   SelectBar (small × and big play), the drag (Handle plus the accent DropLine
   that follows the finger).
 - **Runner**: QueueHorizontal and QueueVertical (TextButtons, current in
@@ -89,7 +91,7 @@ ErrorSprite. Nothing else talks to the API.
 - **useLongPress**: one duration, one slop. Hold a tick, hold a group label,
   pause over a folded task while dragging.
 - **useShortcuts**: the desktop key bindings, in `interaction/shortcuts.tsx`
-  with the list they come from and the ShortcutsSheet that shows it. Today
+  with the list they come from and the ShortcutsSheet that shows it. Tasks
   owns the focus ring and what each action does.
 
 ## Custom

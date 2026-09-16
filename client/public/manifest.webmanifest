@@ -1,6 +1,6 @@
 {
-  "name": "Today",
-  "short_name": "Today",
+  "name": "Tasks",
+  "short_name": "Tasks",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

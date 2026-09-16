@@ -30,7 +30,7 @@ export function taskFromParsed({ parsed, existing, id, today, now, definition }:
     date: definition ? (existing?.date ?? today) : parsed.date,
     time: parsed.time,
     name: parsed.name,
-    group: parsed.group ?? existing?.group ?? "personal",
+    group: parsed.group ?? existing?.group ?? "",
     kind: parsed.kind,
     target: parsed.target,
     timer: parsed.timer,
@@ -48,7 +48,7 @@ export function definitionFromParsed({ parsed, existing, id, today }: { parsed: 
   return {
     id,
     name: parsed.name,
-    group: parsed.group ?? existing?.group ?? "personal",
+    group: parsed.group ?? existing?.group ?? "",
     kind: parsed.kind,
     target: parsed.target,
     timer: parsed.timer,

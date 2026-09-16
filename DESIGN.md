@@ -1,6 +1,7 @@
 # todo, final design
 
-One app for one person. Today is the home screen; a backlog sits under it.
+One app for one person. Tasks is the home screen; Today and Backlog are its
+two sections.
 Habits reset each day, one-offs carry over. The runner and the journal come
 from the habit app; the backlog, dated one-offs, Postgres and the look come
 from main. The agent queue leaves the app. Mockups:
@@ -9,14 +10,22 @@ Structure page is earlier thinking, right on behaviour, wrong on skin).
 
 ## Screens
 
-Three tabs in the top bar, Today, Journal, Notebook, plus a floating `+` that
-follows the tab. Runner, composer and comment editor are full-screen overlays.
+Three tabs in the top bar, Tasks, Journal, Notebook, plus a floating `+` that
+follows the tab. The date line under the tab words stays on every tab. Runner,
+composer and comment editor are full-screen overlays.
 
-**Today**
-- Groups in fixed order (habits, exercise, personal, then any `/name`), each
-  a label with a fold chevron that stays visible in both states and turns
-  smoothly between them. No buttons on headers. Generous space between
-  groups.
+**Tasks**
+- Two sections, Today and Backlog, each a large Title Case heading that folds
+  by tapping the heading itself, with no chevron. Folded, the count of tasks
+  inside sits right after the heading in small dim text. Today holds every
+  group whose tasks are due today or in the past; Backlog holds the rest,
+  future dates included, and a definition shows once at its earliest coming
+  instance. A group appears in both sections when it has tasks in both.
+- Groups in fixed order (habits, exercise, personal, then any `/name`, then
+  `ungrouped` last), each a label with a fold chevron that stays visible in
+  both states and turns smoothly between them. A task with no group is
+  `ungrouped`; the model and the composer default to no group. No buttons on
+  headers. Generous space between groups.
 - Row: tick circle on the left, then the title with its kind hint in dim
   right after it on the same line (`30 min`, `2 times`, `8 ×`, `500 ml`,
   `3 / 8`), and at the far right, only when the task has parts, the part
@@ -31,12 +40,10 @@ follows the tab. Runner, composer and comment editor are full-screen overlays.
 - A part is a TaskRow: same look, same tick, same swipes, same hold, indented
   under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
-  shows `since Saturday` in muted text, never red.
-- **This week**: definitions due in the next six days, each once at its
-  earliest coming instance, and one-offs dated within the week. Tap the title
-  to edit, as anywhere; tick to bring it forward to today and complete it.
-- **Backlog**: collapsed by default. Every undated, unfinished one-off, grouped
-  the same way. Tick works in place.
+  shows `since sept 12` in muted text, never red.
+- **Backlog**: collapsed by default. Everything not due today or past: future
+  one-offs, the next instance of each coming definition, and every undated,
+  unfinished one-off, grouped the same way. Tick works in place.
 - Finished rows stay struck through until the day rolls over.
 
 **Journal**: a view over the one `journal.md` Parallax already splits on H2.
