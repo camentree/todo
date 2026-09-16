@@ -1,0 +1,207 @@
+# Acceptance
+
+Each slice is done when every line under it holds. A line is checked by
+driving the app in the iOS Simulator at phone width and in a desktop browser
+at 1200px, or with curl against the API, whichever the line implies. Check
+every line of every earlier slice again before calling a later slice done.
+Reference for the look: https://claude.ai/artifact/6PBTb4n79UMN6PeSz87j5p
+(Aesthetics page). Reference for behaviour: DESIGN.md.
+
+## Slice 1: Today, backlog, folding, composer, tick, swipes
+
+Look
+- Text renders in Seravek; the fallback face is never visible after load.
+- Dark mode uses ground #1c1a1e, text #ddd8d3, accent #7fb996; light mode uses
+  ground #f5f8f6, text #1b2120, accent #356b52; the theme follows the device.
+- The top bar shows Today, Journal, Notes at 1.6rem bold; the active word is in
+  text colour, the others faint; the date sits under them in the meta size.
+- A task row is a 1.3rem circle tick, the title at 1.02rem, and a meta line at
+  0.86rem in dim under the title; rows are separated by whitespace only.
+- Group labels are 0.76rem, 600, uppercase, dim, with 0.06em tracking.
+- A round accent + of 3.25rem floats bottom right and the last row can be
+  scrolled fully above it.
+- At 1200px wide the column is centred and no wider than 40rem; nothing else
+  differs from the phone.
+- Nothing on Today is red except the delete swipe.
+
+Today
+- Opening the app shows today's date and every definition due today as a row
+  in its group, groups in the order habits, exercise, personal, then any other
+  group alphabetically.
+- A one-off dated today or earlier shows in its group with "since <date>" in
+  the meta line when the date is before today.
+- A one-off dated within the next six days shows under This week, folded by
+  default; tapping its row moves it onto Today.
+- Every undated unfinished one-off shows under Backlog, folded by default,
+  grouped the same way as Today.
+- Tapping a tick completes the task: the title strikes through and the row
+  dims, and stays in place; tapping again uncompletes it.
+- A completed habit is absent from Today the next day; a completed one-off is
+  absent from Today and Backlog the next day.
+- An unticked habit from yesterday does not appear today; an unticked one-off
+  dated yesterday appears today with "since yesterday".
+- A task with parts or a note shows › at the far right of its title; a task
+  with neither shows nothing there.
+- Tapping › unfolds the note (dim text) and then the parts (small rows with
+  their own ticks) under the title with visible air between title, note and
+  parts; tapping again folds them; reloading the page keeps the fold state.
+- Ticking every part completes the parent; ticking the parent completes every
+  part.
+- Tapping a group label folds its rows and shows a count; tapping again
+  unfolds; reloading keeps the state.
+- Every tap target on the row (tick, title, ›) is at least 44px tall.
+
+Composer
+- Tapping + opens a single-line field directly above the keyboard, with the
+  list dimmed behind it; the keyboard does not cover the field on iOS.
+- Typing a title and pressing Enter adds the task to Backlog and closes the
+  field.
+- Typing `Water the plants /garden #every 1w` and pressing Enter adds a
+  definition in group garden due today and every seven days from today.
+- Typing `Call the dentist fri` adds a one-off dated the coming Friday; `sep 20`
+  and `2026-09-20` set that date; `3pm` sets the time and shows it in the meta.
+- Pressing Shift+Enter, or tapping "more", grows the field into a multi-line
+  editor with a live preview above it rendered as task rows.
+- In the editor, `- neck rolls #timer 30s` makes a part with a 30s timer,
+  `- cat cow #count 10` a part with a target of 10, and an indented line under
+  a part becomes that part's note; the preview shows the parts and the note.
+- `- plank #timer 45s ×3` makes three parts named plank 1, plank 2, plank 3.
+- `#rest 60s` on the task sets the rest between parts; the preview meta shows
+  it.
+- Tapping a title opens the editor prefilled with the same text; saving without
+  changes leaves the task identical; changing the title renames it; adding a
+  `- ` line adds a part; removing one removes it, keeping other parts'
+  progress.
+- A part with progress round-trips as `= 4` (count) or `= done` (timer) in the
+  text and keeps that progress on save.
+- The editor's bottom row shows delete; for a definition, delete asks "today
+  only" or "every day" and does what was chosen; for a one-off it confirms once.
+- Cancel closes the editor without saving.
+
+Swipes
+- Swiping a Backlog row right past 40% of its width shows "today" on an accent
+  background and, on release, moves the row onto Today in its group with
+  today's date.
+- Swiping any row left past 40% shows "delete" on a red background and, on
+  release, asks to confirm; confirming removes the row; cancelling restores it.
+- A swipe that moves more than 10px vertically cancels and the row springs
+  back.
+- Nothing else swipes.
+
+Data
+- GET /api/day/<date> returns the tasks for that date, creating instances from
+  due definitions the first time the date is requested and not again.
+- Every change made in the UI is visible in the API within one second and
+  survives a reload.
+- An agent can POST a one-off through the API and it appears on Today or
+  Backlog within five seconds without a reload.
+
+## Slice 2: select mode, play, runner
+
+Select mode
+- Holding a tick for 480ms with less than 8px of movement enters select mode
+  with that row selected; a tap does not.
+- Holding a group label enters select mode with every row in the group
+  selected.
+- In select mode every row shows a drag handle at the far left, then a square
+  select where the tick was, then the title; group labels show a square in
+  line with the task squares, left of the label; the top bar is unchanged.
+- Tapping a square toggles that row; tapping a group square toggles every row
+  in the group; a group square shows on only when all its rows are on.
+- Bottom right shows a small raised × and a larger round accent play; nothing
+  else appears anywhere.
+- Tapping × leaves select mode and restores ticks; play opens the runner with
+  the selected rows in list order.
+- Selection is lost on leaving select mode.
+
+Runner
+- The runner is a full-screen overlay; the heading is the task name for one
+  task or the group name for several; a round raised × top right returns to
+  Today exactly as it was, keeping any progress made.
+- Under the heading the queue runs across one line; the current item is in
+  accent, others faint; when the current item would be off screen the row
+  scrolls it into view behind a fade at the edge.
+- For a group run, a second block lists the current task's parts in an
+  indented column, current in accent, at most four lines tall, scrolling the
+  current part into view.
+- The centre is a 250px ring with a 3px track; the part name is centred inside
+  and wraps at two lines for long names.
+- A timer part shows m:ss counting down; the ring empties as it runs; tapping
+  inside starts, pauses and resumes; at zero the part is done.
+- A count part shows the number and "of N"; the ring fills; tapping inside adds
+  one; holding inside takes one away; reaching N marks the part done.
+- A boolean part shows a slide-to-complete inside the ring; sliding past 90%
+  completes it.
+- Between parts with a rest set, a rest countdown shows with the next part's
+  name and a skip; it auto-advances at zero; with no rest the next part shows
+  immediately.
+- Between tasks, the last part's screen stays as it ended (timer at 0:00, count
+  at its number) until done or next is tapped.
+- The bottom row is a round raised previous arrow, a round accent done tick,
+  and a round raised next arrow; they never move when content above changes.
+- Done marks the current part complete and advances; next advances without
+  marking; previous goes back one.
+- After the last item a screen says done; its only control returns to Today.
+- The screen does not sleep while the runner is open.
+- Progress made in the runner is visible on Today's rows on return.
+
+## Slice 3: comments
+
+- A row with comments shows a speech mark and count in the meta line; a row
+  with none shows nothing.
+- A comment posted through the API by another author shows the mark in accent
+  and the task appears on Today in its group even if it was in Backlog.
+- Tapping the mark unfolds the comments under the task, newest first, each as
+  a raised card with the body and the date in faint, then an "Add a comment"
+  field; tapping the mark again folds them; the mark returns to dim once
+  unfolded.
+- Parts and comments never show under a task at the same time; unfolding one
+  folds the other.
+- In the runner, the newest comment shows as a card under the ring with
+  "▾ N more" in faint under it when there are more, or "add a comment" when
+  there are none.
+- Tapping "▾ N more" shows the older cards above the newest, scrolling up into
+  view, and the "Add a comment" field below; the bottom buttons do not move.
+- Tapping "Add a comment" anywhere opens a full-screen editor: heading
+  "Comment", the task and part name under it, a markdown editor, cancel and
+  save; save posts the comment and returns to where you were with the new card
+  visible.
+- Swiping a card left past 40% shows delete on red and, on release, removes it
+  after confirmation.
+- A comment on a habit is attached to its definition and shows on tomorrow's
+  instance too.
+
+## Slice 4: Journal and Notes
+
+- Journal and Notes are the second and third words in the top bar; tapping
+  switches; the + follows the tab.
+- Journal lists the H2 entries of journal.md newest first; each shows the
+  timestamp and tag in meta style and up to three lines of body; Notes does
+  the same for notebook.md.
+- A row of tag words sits above the list, "all" first, one per tag in use; the
+  active word is in text colour; tapping one filters the list.
+- Tapping + opens the full-screen editor with heading "Entry" or "Note"; save
+  appends a new H2 with the timestamp and a tag line to the right file; the
+  new entry appears at the top of the list.
+- Markdown markers are hidden on every line except the one with the caret.
+- Tapping an entry opens it in the editor; saving updates that H2 only.
+- An entry created from a task carries the task name in its meta.
+- A task named Journal is complete on any day that has a journal entry.
+
+## Slice 5: drag
+
+- In select mode, pressing a handle and moving lifts the row (raised, shadow)
+  and shows one accent line where it would land; the line moves with the
+  finger.
+- Releasing drops the row at the line; the list reorders and the order
+  survives a reload.
+- Dragging right by more than 2rem while over a row nests the line under that
+  row; releasing makes the dragged task a part of it.
+- Holding over a folded task for 600ms unfolds it so the line can go inside.
+- Dropping into a different group changes the row's group; dropping into a
+  group on Today gives a Backlog row today's date; dropping into Backlog
+  removes the date.
+- With several rows selected, dragging any handle drags them all as one lifted
+  row titled with the count, and they land together in order.
+- Dragging a part out to the left edge makes it a top-level task.
+- Nothing moves until the handle is used; dragging elsewhere on the row scrolls.
