@@ -4,7 +4,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { Compartment, EditorState } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
-import { Decoration, EditorView, ViewPlugin, keymap, placeholder } from "@codemirror/view";
+import { Decoration, EditorView, ViewPlugin, drawSelection, keymap, placeholder } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 
 import { definitionFromParsed, dueToday, taskFromParsed } from "@shared/composer.ts";
@@ -143,6 +143,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
             ...historyKeymap,
           ]),
           history(),
+          drawSelection(),
           EditorView.lineWrapping,
           grammarHighlighting(store.today),
           mode.of(modeExtensions(draft.block)),
@@ -154,7 +155,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     });
     field.current = view;
     view.focus();
-    view.dispatch({ selection: { anchor: view.state.doc.length } });
+    view.dispatch({ selection: { anchor: view.state.doc.line(1).to } });
     return () => view.destroy();
   }, []);
 
