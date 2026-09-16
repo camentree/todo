@@ -70,7 +70,9 @@ export function TaskRow({
     const value = unfolded === next ? null : next;
     setUnfolded(value);
     remember({ key: "task:" + task.id, value });
-    if (value === "comments") for (const comment of comments) if (comment.seenAt === null) store.putComment({ ...comment, seenAt: now });
+    if (value !== "comments" || !unseen) return;
+    for (const comment of comments) if (comment.seenAt === null) store.putComment({ ...comment, seenAt: now });
+    if (task.date === null) store.putTask({ ...task, date: store.today });
   };
 
   const hints = [kindHint(task), whenHint({ task, today: store.today })].filter(Boolean);

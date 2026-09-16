@@ -10,7 +10,7 @@ interface Gesture {
   startX: number;
   startY: number;
   committed: boolean;
-  fired: boolean;
+  offset: number;
 }
 
 export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void) | null; onLeft: (() => void) | null; children: ReactNode }) {
@@ -25,7 +25,8 @@ export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void)
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, committed: false, fired: false };
+    event.stopPropagation();
+    gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, committed: false, offset: 0 };
     setSettling(false);
   };
 
@@ -49,13 +50,10 @@ export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void)
       return;
     }
     const allowed = dx > 0 ? onRight !== null : onLeft !== null;
-    if (!allowed) {
-      setOffset(0);
-      return;
-    }
     const magnitude = Math.abs(dx);
     const eased = magnitude <= swipeThreshold ? magnitude : swipeThreshold + (magnitude - swipeThreshold) * 0.35;
-    setOffset(Math.sign(dx) * eased);
+    current.offset = allowed ? Math.sign(dx) * eased : 0;
+    setOffset(current.offset);
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
@@ -63,15 +61,18 @@ export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void)
     if (!current || current.pointerId !== event.pointerId) return;
     gesture.current = null;
     if (!current.committed) return;
-    current.fired = true;
-    if (offset >= swipeThreshold && onRight) onRight();
-    else if (offset <= -swipeThreshold && onLeft) onLeft();
+    if (current.offset >= swipeThreshold && onRight) onRight();
+    else if (current.offset <= -swipeThreshold && onLeft) onLeft();
     springBack();
   };
 
   const onPointerCancel = () => {
     gesture.current = null;
     springBack();
+  };
+
+  const onLostPointerCapture = () => {
+    if (gesture.current?.committed) onPointerCancel();
   };
 
   const onClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -88,6 +89,7 @@ export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void)
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
+      onLostPointerCapture={onLostPointerCapture}
       onClickCapture={onClickCapture}
     >
       {offset > 0 && (

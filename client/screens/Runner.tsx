@@ -190,6 +190,11 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
 
   const comments = task ? commentsFor({ task, comments: store.comments }) : [];
   const newest = comments[0];
+  const commentBox = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (commentsOpen) commentBox.current?.scrollTo({ top: commentBox.current.scrollHeight });
+  }, [commentsOpen, comments.length]);
 
   const ringContent = (): { fraction: number; onTap: (() => void) | null; onHold: (() => void) | null; inside: ReactNode } => {
     if (state.phase === "end") return { fraction: 1, onTap: null, onHold: null, inside: <div className="ring-part">done</div> };
@@ -318,9 +323,9 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
             {ring.inside}
           </Ring>
           {task && state.phase !== "rest" && (
-            <div className={commentsOpen ? "runner-comments open" : "runner-comments"}>
+            <div ref={commentBox} className={commentsOpen ? "runner-comments open" : "runner-comments"}>
               {commentsOpen ? (
-                <CommentList comments={comments} onAdd={() => setCommenting(true)} onDelete={setDeleting} />
+                <CommentList comments={[...comments].reverse()} onAdd={() => setCommenting(true)} onDelete={setDeleting} />
               ) : newest ? (
                 <>
                   <Card body={newest.body} when={formatWhen({ at: newest.writtenAt, today: store.today })} />

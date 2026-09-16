@@ -1001,6 +1001,7 @@ textarea {
 }
 
 .runner-comments {
+  scrollbar-width: none;
   width: 100%;
   max-width: 320px;
   display: flex;
@@ -1031,7 +1032,6 @@ textarea {
 }
 
 .runner-comments.open {
-  justify-content: flex-end;
   mask-image: linear-gradient(to bottom, transparent, black 2rem);
   -webkit-mask-image: linear-gradient(to bottom, transparent, black 2rem);
 }
@@ -1039,7 +1039,7 @@ textarea {
 .runner-comments .comment-list {
   width: 100%;
   flex: none;
-  margin-top: auto;
+  padding-top: 2rem;
 }
 
 .nav {

@@ -144,3 +144,20 @@ Judgment calls in this slice
 - Timer progress is kept in the runner and written to the API on pause, finish and close, not every second.
 - The runner label for a selection across groups is "Selection".
 - Chrome's screenshot frame is 1.05× the CSS pixel grid on this machine, which cost an hour chasing a "broken" skip button that was fine.
+
+## Slice 3: comments
+
+- [x] Rows with comments show the speech mark and count in the meta line; rows without show nothing: simulator and Chrome.
+- [x] The seed's unseen comment from `claude` on a Backlog task shows the mark in accent and the task under Programming on Today.
+- [x] Tapping the mark unfolds the cards newest first with the date in faint, then the "Add a comment" field; tapping again folds; the mark goes dim once unfolded (comments PUT with `seenAt`).
+- [x] Parts and comments never show together: one three-way fold state per task.
+- [x] Runner: newest card under the ring with "▾ N more" in faint, or "add a comment" in accent when there are none.
+- [x] "more" shows the older cards above (oldest at the top, fading at the edge), the newest just above the "Add a comment" field, scrolled into view; the nav row stays put.
+- [x] "Add a comment" opens the full-screen editor: heading Comment, `task · part` under it, the markdown editor, cancel and save (and the raised × the frame shows); saving posted the comment and the new card was visible on return, on Today and in the runner.
+- [x] Swiping a card left: same 96px threshold, same red reveal, same confirm sheet, then the card is gone.
+- [x] A comment on a habit is keyed by definition id: Morning stretch's two comments show on tomorrow's instance under This week.
+
+Judgment calls in this slice
+- Reading unseen comments on a Backlog task also dates the task today, so it stays where the unseen mark pulled it instead of dropping back into Backlog the moment the mark goes dim.
+- Today unfolds newest first (TodayComments frame); the runner lists oldest to newest with the newest beside the field (RunnerComments frame). Same CommentList, different order given.
+- A card's swipe stops at the card; the row underneath never sees it.

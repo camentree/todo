@@ -1,7 +1,9 @@
 import { useState } from "react";
 
 import { Editor } from "./Editor.tsx";
+import { CrossGlyph } from "./Glyphs.tsx";
 import { Overlay } from "./Overlay.tsx";
+import { RoundButton } from "./RoundButton.tsx";
 import { TextButton } from "./TextButton.tsx";
 
 export function EditorScreen({
@@ -23,6 +25,9 @@ export function EditorScreen({
       <div className="page">
         <div className="screen-head">
           <span className="heading">{heading}</span>
+          <RoundButton label="close" onSelect={onCancel}>
+            <CrossGlyph />
+          </RoundButton>
         </div>
         <div className="dateline">{subheading}</div>
         <div className="editor-host">
