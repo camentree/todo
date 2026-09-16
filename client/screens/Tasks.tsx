@@ -93,6 +93,8 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
   const store = useStore();
   const host = useRef<HTMLDivElement>(null);
   const field = useRef<EditorView | null>(null);
+  const opened = useRef(draft.text);
+  const [leaving, setLeaving] = useState(false);
   const parsed = parseTask({ text: draft.text, today: store.today });
   const definition = draft.editing?.definitionId ? (store.definitions.find((each) => each.id === draft.editing?.definitionId) ?? null) : null;
 
@@ -159,6 +161,20 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     field.current?.dispatch({ effects: mode.reconfigure(modeExtensions(draft.block)) });
   }, [draft.block]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" && !(event.key === "Enter" && event.metaKey)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Enter") commit();
+      else if (leaving) setLeaving(false);
+      else if (parsed && draft.text !== opened.current) setLeaving(true);
+      else onClose();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [draft.text, leaving]);
+
   const preview = parsed ? taskFromParsed({ parsed, existing: draft.editing, id: "preview", today: store.today, now: nowStamp(), definition: null }) : null;
   const metaline = parsed ? [parsed.every ? everyLabel(parsed.every) : "", preview?.group ?? "", parsed.rest ? "rest " + formatDuration(parsed.rest) : ""].filter(Boolean).join(" · ") : "";
 
@@ -220,6 +236,16 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           </div>
         </div>
       </div>
+      {leaving && (
+        <Confirm
+          question="save this task?"
+          choices={[
+            { label: "discard", onChoose: onClose },
+            { label: "save", onChoose: commit },
+          ]}
+          onCancel={() => setLeaving(false)}
+        />
+      )}
     </Overlay>
   );
 }

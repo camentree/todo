@@ -124,6 +124,9 @@ the text changed; cmd+enter saves and leaves.
   line standing between the title, the note and the parts.
 - What is added ends up visible: the section and the group it lands in unfold,
   the row scrolls slowly into view, and its parts start unfolded.
+- Escape leaves the composer, asking whether to save when the text changed
+  since it opened; cmd+enter saves and leaves. Enter keeps its own meaning: it
+  adds from the single line and makes a new line in the block.
 - Delete lives at the bottom of the composer, with the "today / every day"
   distinction for scheduled things.
 
