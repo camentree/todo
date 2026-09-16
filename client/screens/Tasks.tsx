@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { Compartment, EditorState } from "@codemirror/state";
+import type { Extension } from "@codemirror/state";
+import { Decoration, EditorView, ViewPlugin, keymap, placeholder } from "@codemirror/view";
+import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 
 import { definitionFromParsed, dueToday, taskFromParsed } from "@shared/composer.ts";
 import { formatDuration } from "@shared/format.ts";
-import { everyLabel, parseTask, serializeTask } from "@shared/grammar.ts";
+import { everyLabel, parseTask, serializeTask, tokenSpans } from "@shared/grammar.ts";
 import type { Comment, Definition, Task } from "@shared/model.ts";
 import { changedOnly, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
 import type { Container, Target } from "@shared/move.ts";
@@ -54,25 +60,41 @@ const unfoldDelay = 480;
 const scrollEdge = 120;
 const scrollStep = 10;
 
+const mode = new Compartment();
+
+function modeExtensions(block: boolean): Extension {
+  return [
+    placeholder(block ? "Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s" : "add a task"),
+    EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: block ? "enter" : "done" }),
+  ];
+}
+
+function grammarHighlighting(today: string): Extension {
+  const marks = (view: EditorView): DecorationSet =>
+    Decoration.set(
+      tokenSpans({ text: view.state.doc.toString(), today }).map((span) => Decoration.mark({ class: span.kind === "bullet" ? "cm-bullet" : "cm-attribute" }).range(span.from, span.to)),
+      true,
+    );
+  return ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet;
+      constructor(view: EditorView) {
+        this.decorations = marks(view);
+      }
+      update(update: ViewUpdate) {
+        if (update.docChanged) this.decorations = marks(update.view);
+      }
+    },
+    { decorations: (plugin) => plugin.decorations },
+  );
+}
+
 function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Draft; onChange: (draft: Draft) => void; onCommit: (task: Task) => void; onClose: () => void; onDelete: () => void }) {
   const store = useStore();
-  const field = useRef<HTMLTextAreaElement>(null);
+  const host = useRef<HTMLDivElement>(null);
+  const field = useRef<EditorView | null>(null);
   const parsed = parseTask({ text: draft.text, today: store.today });
   const definition = draft.editing?.definitionId ? (store.definitions.find((each) => each.id === draft.editing?.definitionId) ?? null) : null;
-
-  useEffect(() => {
-    const element = field.current;
-    if (!element) return;
-    element.focus();
-    element.setSelectionRange(element.value.length, element.value.length);
-  }, []);
-
-  useEffect(() => {
-    const element = field.current;
-    if (!element) return;
-    element.style.height = "0";
-    element.style.height = element.scrollHeight + "px";
-  }, [draft.text, draft.block]);
 
   const commit = () => {
     if (!parsed) return;
@@ -92,23 +114,50 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     onClose();
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Escape") onClose();
-    if (event.key !== "Enter") return;
-    if (event.shiftKey) {
-      if (!draft.block) {
-        event.preventDefault();
-        onChange({ ...draft, text: draft.text + "\n", block: true });
-      }
-      return;
-    }
-    if (!draft.block) {
-      event.preventDefault();
-      commit();
-    }
-  };
-
   const onText = (text: string) => onChange({ ...draft, text, block: draft.block || text.includes("\n") });
+
+  const latest = useRef({ block: draft.block, commit, onText });
+  latest.current = { block: draft.block, commit, onText };
+
+  useEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    const view = new EditorView({
+      parent: element,
+      state: EditorState.create({
+        doc: draft.text,
+        extensions: [
+          keymap.of([
+            {
+              key: "Enter",
+              run: () => {
+                if (latest.current.block) return false;
+                latest.current.commit();
+                return true;
+              },
+            },
+            ...defaultKeymap,
+            ...historyKeymap,
+          ]),
+          history(),
+          EditorView.lineWrapping,
+          grammarHighlighting(store.today),
+          mode.of(modeExtensions(draft.block)),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) latest.current.onText(update.state.doc.toString());
+          }),
+        ],
+      }),
+    });
+    field.current = view;
+    view.focus();
+    view.dispatch({ selection: { anchor: view.state.doc.length } });
+    return () => view.destroy();
+  }, []);
+
+  useEffect(() => {
+    field.current?.dispatch({ effects: mode.reconfigure(modeExtensions(draft.block)) });
+  }, [draft.block]);
 
   const preview = parsed ? taskFromParsed({ parsed, existing: draft.editing, id: "preview", today: store.today, now: nowStamp(), definition: null }) : null;
   const metaline = parsed ? [parsed.every ? everyLabel(parsed.every) : "", preview?.group ?? "", parsed.rest ? "rest " + formatDuration(parsed.rest) : ""].filter(Boolean).join(" · ") : "";
@@ -146,17 +195,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           </div>
         )}
         <div className="composer-field">
-          <textarea
-            ref={field}
-            rows={1}
-            value={draft.text}
-            placeholder={draft.block ? "Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s" : "add a task"}
-            spellCheck={false}
-            autoCapitalize="sentences"
-            enterKeyHint={draft.block ? "enter" : "done"}
-            onChange={(event) => onText(event.target.value)}
-            onKeyDown={onKeyDown}
-          />
+          <div className="editor" ref={host} />
           <div className="actions">
             <div className="actions-left">
               {draft.editing && (

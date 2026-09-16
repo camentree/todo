@@ -1,4 +1,4 @@
-import { everyLabel, parseTask, serializeTask } from "@shared/grammar.ts";
+import { everyLabel, parseTask, serializeTask, tokenSpans } from "@shared/grammar.ts";
 import type { Task } from "@shared/model.ts";
 
 const today = "2026-09-15";
@@ -47,6 +47,55 @@ describe("parseTask", () => {
   it("returns null for an empty first line", () => {
     expect(parseTask({ text: "\nsomething", today })).toBeNull();
     expect(parseTask({ text: "/exercise", today })).toBeNull();
+  });
+
+  it("keeps a word that only looks like a token in the title", () => {
+    expect(parseTask({ text: "Read #chapter 3 of the manual", today })?.name).toBe("Read #chapter 3 of the manual");
+  });
+});
+
+describe("tokenSpans", () => {
+  function marked(text: string) {
+    return tokenSpans({ text, today }).map((span) => [span.kind, text.slice(span.from, span.to)]);
+  }
+
+  it("marks every attribute on the task line and nothing else", () => {
+    expect(marked("Morning stretch /exercise #every mo,we,fr #rest 30s tomorrow 3pm = done")).toEqual([
+      ["attribute", "/exercise"],
+      ["attribute", "#every"],
+      ["attribute", "mo,we,fr"],
+      ["attribute", "#rest"],
+      ["attribute", "30s"],
+      ["attribute", "tomorrow"],
+      ["attribute", "3pm"],
+      ["attribute", "="],
+      ["attribute", "done"],
+    ]);
+  });
+
+  it("marks both words of a month and day, an iso date and a 24 hour time", () => {
+    expect(marked("Dinner sept 20 19:30")).toEqual([
+      ["attribute", "sept"],
+      ["attribute", "20"],
+      ["attribute", "19:30"],
+    ]);
+    expect(marked("Flight 2026-10-02 09:15")).toEqual([
+      ["attribute", "2026-10-02"],
+      ["attribute", "09:15"],
+    ]);
+  });
+
+  it("marks the dash and the attributes of a part, and leaves a note bare", () => {
+    expect(marked("Hangboard\n\n  keep the elbows soft\n\n- Hang #timer 30s ×3")).toEqual([
+      ["bullet", "-"],
+      ["attribute", "#timer"],
+      ["attribute", "30s"],
+      ["attribute", "×3"],
+    ]);
+  });
+
+  it("marks nothing in a word that is not a token", () => {
+    expect(marked("Read #chapter 3 of the manual")).toEqual([]);
   });
 });
 

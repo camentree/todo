@@ -572,24 +572,19 @@ textarea {
   flex: none;
 }
 
-.composer-field textarea {
-  width: 100%;
-  font-size: var(--title);
-  line-height: 1.5;
-  color: var(--text);
+.composer-field .cm-content {
   padding: 0.5rem 0.25rem;
-  max-height: 40vh;
-  overflow-y: auto;
-  scrollbar-width: none;
   caret-color: var(--accent);
 }
 
-.composer-field textarea::-webkit-scrollbar {
-  display: none;
+.composer-field .cm-scroller {
+  max-height: 40vh;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
-.composer-field textarea::placeholder {
-  color: var(--faint);
+.composer-field .cm-scroller::-webkit-scrollbar {
+  display: none;
 }
 
 .actions {
@@ -857,6 +852,15 @@ textarea.editor {
 .editor .cm-bullet,
 .editor .cm-marker {
   color: var(--faint);
+}
+
+.editor .cm-attribute {
+  color: var(--accent);
+}
+
+.editor .cm-placeholder {
+  color: var(--faint);
+  white-space: pre-wrap;
 }
 
 .editor .cm-selectionBackground,

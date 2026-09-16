@@ -115,6 +115,11 @@ the text changed; cmd+enter saves and leaves.
   rest between. Dates for one-offs: `tomorrow`, `fri`, `sep 20`,
   `2026-09-20`, `3pm` or `15:00`; the round-trip writes `15:00`. No `#every`
   and no date means backlog. `=` sets the current value.
+- Every token the grammar knows is in the accent colour as you type, and the
+  `- ` of a part is faint. Anything it does not know, a `#word` included, is
+  title text in the text colour, never an error. The highlighter reads the
+  spans from the parser, so the colours cannot say one thing and the preview
+  another.
 - Tap a title to edit; the same text round-trips with progress kept, a blank
   line standing between the title, the note and the parts.
 - What is added ends up visible: the section and the group it lands in unfold,
