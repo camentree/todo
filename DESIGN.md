@@ -60,8 +60,11 @@ Notes is things.
   swipe left to delete. The field opens the comment editor.
 - Bottom: previous and next as round raised arrows, done as the round accent
   tick between them. These never move.
-- Rest phases between parts with auto-start; group summary at the end; wake
-  lock. Amounts are dropped; water is `#count 8`.
+- Between parts: the rest timer if there is one, auto-advancing; otherwise
+  straight on. Between tasks: the last part's screen stays as it ended, timer
+  at zero, count at the number you stopped on, until done or next. At the end
+  of the queue a screen that says done. Wake lock throughout. Amounts are
+  dropped; water is `#count 8`.
 
 **Composer**: one text field, one grammar, used for adding and editing.
 - Opens as a single line above the keyboard. Enter adds. Typing a newline (or
@@ -91,10 +94,11 @@ select, title, with the squares exactly where the ticks were. Group headers
 get a square in line with the task squares, left of the title. Bottom right:
 a small raised `×` cancels, and play, larger and round in the accent, runs
 the selection in order. Nothing else appears.
-- Drag a handle: the row lifts, one accent line follows the finger, dragging
-  right nests it under the row above, a folded task unfolds when hovered.
-  Dropping in a Today group dates a backlog row today. Multi-selected rows
-  drag together.
+- Drag a handle: the row lifts, one accent line shows the target, dragging
+  right nests it under the row above. A bundle drags the same way as one row,
+  with the count as its title. Hold over a folded task and it unfolds. What
+  lands takes the attributes of where it lands: the group, the date if the
+  group is on Today, parenthood if it went inside a task.
 - No move button, no delete button, no picker.
 
 **Swipes**: right on a backlog row is today; left on any row or comment is
