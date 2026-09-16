@@ -43,6 +43,7 @@ function EntryRow({ entry, today, filter, onOpen }: { entry: JournalEntry; today
   const words = wordCount(entry.body);
   return (
     <button className="entry" onClick={onOpen}>
+      <div className="entry-title">{entry.title}</div>
       <div className="entry-head">
         <span>{when({ entry, today })}</span>
         {tags.length > 0 && <span className="entry-tag">{tags.join(", ")}</span>}

@@ -1201,6 +1201,12 @@ textarea.editor {
   width: 100%;
 }
 
+.entry-title {
+  font-size: var(--title);
+  font-weight: 500;
+  padding-bottom: 0.1rem;
+}
+
 .entry-head {
   display: flex;
   gap: 0.5rem;

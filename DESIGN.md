@@ -43,8 +43,9 @@ follows the tab. Runner, composer and comment editor are full-screen overlays.
 Each H2 is an entry: its section title, a metadata block under it holding the
 timestamp and the tags, then the body, which may carry its own deeper
 subheadings. A new entry is titled `YYYY-MM-DD - HH:MM` in 24-hour time until
-it is renamed. Entries newest first: timestamp, the tags and the word count
-in the meta style, then the first three lines of body as plain text. Filters
+it is renamed. Entries newest first: the title on its own line in text
+colour, then timestamp, the tags and the word count in the meta style, then
+the first three lines of body as plain text. Filters
 are plain words above the list, every tag in use in alphabetical order after
 `all`, each with its count in dim, the active one in text colour; the
 filtered tag is not repeated on its entries, and an entry's task name is kept
