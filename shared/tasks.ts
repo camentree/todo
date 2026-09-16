@@ -1,4 +1,4 @@
-import { dayLabel, formatDuration, formatTime } from "./format.ts";
+import { formatDuration, shortDate } from "./format.ts";
 import type { Comment, JournalEntry, Task, TaskPart } from "./model.ts";
 import { groupOrder } from "./model.ts";
 
@@ -105,12 +105,11 @@ export function partCount(task: Task): string {
 }
 
 export function whenHint({ task, today }: { task: Task; today: string }): string {
-  const time = task.time ? formatTime(task.time) : "";
-  if (task.date === null || task.date <= today) return time;
-  const day = dayLabel({ key: task.date, today });
-  return time ? day + " " + time : day;
+  if (task.date === null || task.date <= today) return task.time ?? "";
+  const day = shortDate(task.date);
+  return task.time ? day + ", " + task.time : day;
 }
 
 export function sinceHint({ task, today }: { task: Task; today: string }): string {
-  return task.date !== null && task.date < today ? "since " + dayLabel({ key: task.date, today }) : "";
+  return task.date !== null && task.date < today ? "since " + shortDate(task.date) : "";
 }

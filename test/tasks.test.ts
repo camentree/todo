@@ -114,15 +114,15 @@ describe("placing rows", () => {
   });
 
   it("leads the title with the time, and the day too when it is still to come", () => {
-    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("friday 5pm");
-    expect(whenHint({ task: later, today })).toBe("september 22");
-    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3pm");
+    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("sept 18, 17:00");
+    expect(whenHint({ task: later, today })).toBe("sept 22");
+    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("15:00");
     expect(whenHint({ task: overdue, today })).toBe("");
   });
 
   it("puts an overdue date under the title and nothing else", () => {
-    expect(sinceHint({ task: overdue, today })).toBe("since saturday");
-    expect(sinceHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("since yesterday");
+    expect(sinceHint({ task: overdue, today })).toBe("since sept 12");
+    expect(sinceHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("since sept 14");
     expect(sinceHint({ task: soon, today })).toBe("");
     expect(sinceHint({ task: backlog, today })).toBe("");
   });

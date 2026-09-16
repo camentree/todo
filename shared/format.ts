@@ -50,33 +50,16 @@ export function daysBetween({ from, to }: { from: string; to: string }): number 
   return Math.round((Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()) - Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())) / 86400000);
 }
 
-export function formatTime(time: string): string {
-  const [hoursText, minutesText] = time.split(":");
-  const hours = Number(hoursText);
-  const suffix = hours < 12 ? "am" : "pm";
-  const clock = hours % 12 || 12;
-  return minutesText && minutesText !== "00" ? `${clock}:${minutesText}${suffix}` : `${clock}${suffix}`;
-}
-
-export function fullDate(key: string): string {
-  return dateFromKey(key).toLocaleDateString("en-US", { month: "long", day: "numeric" }).toLowerCase();
+export function shortDate(key: string): string {
+  const date = dateFromKey(key);
+  return date.toLocaleDateString("en-GB", { month: "short" }).toLowerCase() + " " + date.getDate();
 }
 
 export function longDate(key: string): string {
   return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }).toLowerCase();
 }
 
-export function weekdayName(key: string): string {
-  return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
-}
-
-export function dayLabel({ key, today }: { key: string; today: string }): string {
-  if (key === today) return "today";
-  if (key === shiftDate({ key: today, days: -1 })) return "yesterday";
-  return Math.abs(daysBetween({ from: today, to: key })) <= 6 ? weekdayName(key) : fullDate(key);
-}
-
-export function formatWhen({ at, today }: { at: string; today: string }): string {
-  const day = dayLabel({ key: at.slice(0, 10), today });
-  return at.length >= 16 ? day + " " + formatTime(at.slice(11, 16)) : day;
+export function formatWhen({ at }: { at: string; today: string }): string {
+  const day = shortDate(at.slice(0, 10));
+  return at.length >= 16 ? day + ", " + at.slice(11, 16) : day;
 }

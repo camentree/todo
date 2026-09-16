@@ -99,8 +99,8 @@ tap past the end of a line. There is never more than one caret.
   notes. Tokens: `/group`, `#every 2d|1w|mo,we,fr`, `#timer 30s`, `#count 10`,
   `#rest 60s`, `#text`, `×3` on a part to repeat it as three parts with the
   rest between. Dates for one-offs: `tomorrow`, `fri`, `sep 20`,
-  `2026-09-20`, `3pm`. No `#every` and no date means backlog. `=` sets the
-  current value.
+  `2026-09-20`, `3pm` or `15:00`; the round-trip writes `15:00`. No `#every`
+  and no date means backlog. `=` sets the current value.
 - Tap a title to edit; the same text round-trips with progress kept.
 - Delete lives at the bottom of the composer, with the "today / every day"
   distinction for scheduled things.
@@ -226,7 +226,11 @@ faint; the date sits under it in the meta size. Round buttons are 3.25rem:
 (comments) are raised with a 0.7rem radius, the only cards in the app. The
 ring is 250px, 3px, raised track with an accent arc. Red only for the delete
 swipe. Phone first; desktop only widens the column. Light must survive sun.
-Everything the app writes is lowercase (`since saturday`, `wednesday,
-september 16`, `3pm`, `done`, `add a comment`); the two exceptions are group
-labels, which stay UPPERCASE, and the three tab names, which stay Title Case;
-task titles and journal text are whatever was typed.
+Everything the app writes is lowercase (`since sept 12`, `wednesday,
+september 16`, `15:00`, `done`, `add a comment`); the exceptions are group
+labels, which stay UPPERCASE, and the tab names and the two section
+headings, which stay Title Case; task titles and journal text are whatever
+was typed. One format everywhere the app writes a date: short month and day,
+`sept 16`; time in 24 hours, `15:00`; the two together, `sept 16, 15:00`.
+`shared/format.ts` owns it. The top bar's `wednesday, september 16` is the
+one exception.

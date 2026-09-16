@@ -77,7 +77,7 @@ const task: Task = {
 describe("serializeTask", () => {
   it("round-trips a task with progress", () => {
     const text = serializeTask({ task, every: null, today });
-    expect(text).toBe("Morning stretch /exercise #rest 30s today 3pm\n  Keep hips level.\n- neck rolls #timer 30s = done\n- cat cow #count 10 = 4\n  breathe out\n- plank #timer 45s");
+    expect(text).toBe("Morning stretch /exercise #rest 30s today 15:00\n  Keep hips level.\n- neck rolls #timer 30s = done\n- cat cow #count 10 = 4\n  breathe out\n- plank #timer 45s");
     const parsed = parseTask({ text, today });
     expect(parsed).toMatchObject({ name: "Morning stretch", group: "exercise", rest: 30, date: today, time: "15:00", note: "Keep hips level." });
     expect(parsed?.parts.map((part) => [part.done, part.current])).toEqual([[true, null], [null, 4], [null, null]]);
