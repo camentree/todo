@@ -27,43 +27,48 @@ padding, card radius. Values are the ones on the canvas frames.
   the grid that rolls content open and closed slowly; TaskRow's thread and
   parts use Roll directly.
 - **Chip**: mono attribute pill.
-- **Meta**: the dim line under a title; holds the overdue date and the Chip.
-- **Mark**: count plus a glyph; dim, or accent when active. The comment mark
-  and the parts mark are both one of these.
+- **Meta**: the dim line under a title; holds the Chip.
+- **Mark**: count plus a glyph; dim, or accent when active; dead when its
+  `onSelect` is null. The comment mark and the parts mark are both one of
+  these, and the comment mark carries the unseen dot as a child.
 - **RoundButton**: circle with a glyph; accent or raised; sizes small and
   normal. Used for +, done, previous, next, ×, play.
 - **TextButton**: text, `active`, `onSelect`. The words in the top bar, the
   items in both runner queues, the filter words, the group labels, and every
-  plain action (done, cancel, save, more, add a comment). The parent sets
+  plain action (done, cancel, save, more, delete, add). The parent sets
   size and colour.
 - **Card**: block with a body and a faint author and date; raised for the
   user, tinted accent for the agent. The only card in the app.
 - **Swipeable**: wraps a row or a Card; right reveals today on accent, left
   reveals delete on red; one threshold everywhere; vertical drift cancels.
 - **Editor**: CodeMirror markdown with markers hidden off the caret line.
-- **Overlay**: full-screen surface over Tasks that returns to where you were.
-  Runner, Composer and EditorScreen sit in one.
+- **Overlay**: full-screen surface over Tasks that holds the screen behind it
+  still while it is up and returns it to where it was. Runner, Composer and
+  EditorScreen sit in one.
 - **Glyphs**: every icon in one file: plus, tick, chevron, play, arrows, ×,
   speech mark, parts, grip. Nothing draws its own.
 
 ## Shared composites
 
 - **TopBar**: three TextButtons and the date line.
-- **TaskRow**: Swipeable around (CircleTick or Handle + SquareTick, the time,
-  title and target hint on one line, then the fixed-width cluster of the two
-  Marks and the chevron, then Meta), then the CommentList and then the note
-  and parts, each in its own Roll. A part is a TaskRow of its own, built from
+- **TaskRow**: Swipeable around (CircleTick or Handle + SquareTick, the
+  title, the target hint and the date and time on one line, then the
+  fixed-width cluster of the two Marks and the chevron, then Meta), then the
+  CommentList and then the note and parts, each in its own Roll. The row
+  itself takes the click that opens the editor, so everything in it but its
+  own buttons opens the editor. A part is a TaskRow of its own, built from
   the part with its host's callbacks; the note line lives in this file.
 - **Group**: label as TextButton with the count right after it, Foldable,
   rows; a SquareTick in select mode. The Today and Backlog sections are
   Groups, sized and stripped of their chevron by the screen's stylesheet.
 - **CommentList**: the thread, oldest at the top and newest at the bottom,
   user on the left and agent on the right, in a scroll box that opens at the
-  first unseen card or the bottom, plus the Field pinned under it that opens
-  EditorScreen. The Field (an outlined placeholder that only opens the
-  editor) lives here. Same component on Tasks and in the runner.
-- **EditorScreen**: heading, dim line, Editor, cancel and save. Used for a
-  comment, a journal entry, and a note.
+  first unseen card or the bottom, plus CommentField pinned under it.
+  CommentField, a raised textarea that grows with the text and fades an
+  accent `add` in beside it, lives here. Same component on Tasks and in the
+  runner.
+- **EditorScreen**: heading, dim line, Editor, delete on the left, cancel and
+  save on the right. Used for a journal entry and a note.
 - **Entries**: the Journal and Notebook screen, given its source file. Filters
   (a row of TextButtons) and EntryRow live in this file.
 
@@ -78,7 +83,7 @@ padding, card radius. Values are the ones on the canvas frames.
   (track plus arc plus centred children; fills for counts, empties for
   timers), the nav row.
 
-- **ErrorSprite**: the one red thing besides the delete swipe; shows the
+- **ErrorSprite**: red, with delete and the unseen dot; shows the
   message of a failed write, dismisses on tap. Lives with the store.
 
 ## Store

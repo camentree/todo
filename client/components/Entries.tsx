@@ -83,7 +83,6 @@ export function Entries({ name }: { name: JournalName }) {
         <EditorScreen
           heading={headings[name]}
           subheading={[formatEntryWhen(editing.at), editing.tags.join(", ")].filter(Boolean).join(" · ")}
-          markdown
           initial={entryText(editing)}
           onCancel={() => setEditing(null)}
           onDelete={() => {

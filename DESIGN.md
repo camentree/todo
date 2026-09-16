@@ -12,7 +12,8 @@ Structure page is earlier thinking, right on behaviour, wrong on skin).
 
 Three tabs in the top bar, Tasks, Journal, Notebook, plus a floating `+` that
 follows the tab. The date line under the tab words stays on every tab. Runner,
-composer and comment editor are full-screen overlays.
+composer and entry editor are full-screen overlays. Comments are not: they are
+written in place, under the thread.
 
 **Tasks**
 - Two sections, Today and Backlog, each a large Title Case heading that folds
@@ -115,8 +116,8 @@ colour, sits at the bottom left, opposite cancel and save, and asks first.
   Boolean is slide-to-complete inside the ring.
 - Under the ring: the newest comment as a card, then `▾ N more` in faint, or
   `add a comment` when there are none. Tapping opens the rest: older cards
-  above, scrolling up into view, and the `Add a comment` field below. Cards
-  swipe left to delete. The field opens the comment editor.
+  above, scrolling up into view, and the `add a comment` field below. Cards
+  swipe left to delete.
 - Bottom: previous and next as round raised arrows, done as the round accent
   tick between them. These never move.
 - Between parts: the rest timer if there is one, auto-advancing; otherwise
@@ -158,13 +159,17 @@ follow a habit across days. Agents post them too, through the HTTP API.
   oldest at the top, newest at the bottom, the user's on the left in the
   raised colour, the agent's on the right in a tinted accent, each with its
   date in faint; the side it sits on already says who wrote it. The
-  `Add a comment` field is pinned under the
+  `add a comment` field is pinned under the
   thread. A thread opens scrolled to the first unseen comment, or to the
   bottom when all are seen; scrolling up reveals older ones. Cards swipe
   left to delete. The same thread component on Today and in the runner.
-- The field opens the comment editor: full screen, heading `comment`, the
-  task and part under it, a plain text field, cancel and save. Escape
-  cancels, cmd+enter saves.
+- The field takes the comment in place, so the task and the rest of the
+  thread stay in view while you type. It is a plain field on the raised
+  colour with no lines around it, one line to start, growing with the text,
+  and a small `add` in the accent that fades in beside it once there is
+  something to add. Enter adds on a keyboard and shift+enter makes a new
+  line; cmd+enter adds too; escape clears the field and leaves it. There is
+  no comment screen.
 - A newest comment from the agent that nobody has seen puts the warn dot on
   the row's comment glyph, and pulls the task onto Today in its group.
   Opening the thread marks them seen.

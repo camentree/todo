@@ -786,12 +786,42 @@ textarea {
 }
 
 .field {
-  border: 1.5px solid var(--hairline);
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  background: var(--raised);
   border-radius: var(--card-radius);
   padding: 0.7rem 1rem;
-  color: var(--faint);
+}
+
+.field textarea {
+  flex: 1;
+  min-width: 0;
   font-size: var(--body);
-  min-height: 2.75rem;
+  line-height: 1.45;
+  color: var(--text);
+  caret-color: var(--accent);
+  overflow: hidden;
+}
+
+.field textarea::placeholder {
+  color: var(--faint);
+}
+
+.field .text {
+  flex: none;
+  font-size: var(--meta);
+  color: var(--accent);
+  padding: 0.85rem 0.3rem;
+  margin: -0.7rem -0.2rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+.field .text.active {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .screen-head {
@@ -818,12 +848,6 @@ textarea {
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-textarea.editor {
-  display: block;
-  width: 100%;
-  caret-color: var(--accent);
 }
 
 .editor .cm-editor {
@@ -1345,9 +1369,12 @@ textarea.editor {
   .queue .text:not(.active):hover,
   .runner-comments > .text:not(.active):hover,
   .fold:hover,
-  .handle:hover,
-  .field:hover {
+  .handle:hover {
     color: var(--dim);
+  }
+
+  .field .text.active:hover {
+    color: var(--accent-hover);
   }
 
   .actions .text:not(.active):hover,

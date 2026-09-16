@@ -17,7 +17,6 @@ import { byPosition, commentsFor, grouped, groupLabel, isBacklog, isOnToday, par
 
 import { Confirm } from "../components/Confirm.tsx";
 import type { Choice } from "../components/Confirm.tsx";
-import { EditorScreen } from "../components/EditorScreen.tsx";
 import { CrossGlyph, GripGlyph, PlayGlyph, PlusGlyph, TickGlyph } from "../components/Glyphs.tsx";
 import { Group } from "../components/Group.tsx";
 import { Overlay } from "../components/Overlay.tsx";
@@ -259,7 +258,6 @@ export function Tasks() {
   const [helping, setHelping] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const folds = useFolds();
-  const [commenting, setCommenting] = useState<Task | null>(null);
   const [selection, setSelection] = useState<Set<string> | null>(null);
   const [running, setRunning] = useState<{ taskIds: string[]; label: string } | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -321,6 +319,9 @@ export function Tasks() {
     setAsking({ question: `delete ${task.parts[index]?.name ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutPart({ host: task, index })); setAsking(null); } }] });
 
   const bringForward = (task: Task) => store.putTask({ ...task, date: store.today });
+
+  const addComment = ({ task, body }: { task: Task; body: string }) =>
+    store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp() });
 
   const reveal = (task: Task) => {
     store.putTask(task);
@@ -527,7 +528,7 @@ export function Tasks() {
           onToday={onToday}
           onDelete={() => askDelete(task)}
           onDeletePart={(index) => askDeletePart({ task, index })}
-          onAddComment={() => setCommenting(task)}
+          onAddComment={(body) => addComment({ task, body })}
           onDeleteComment={askDeleteComment}
           fixedOpen={false}
           unfoldParts={openedByDrag.has(task.id)}
@@ -560,7 +561,6 @@ export function Tasks() {
       if (asking) return setAsking(null);
       if (helping) return setHelping(false);
       if (draft) return setDraft(null);
-      if (commenting) return setCommenting(null);
       if (running) return setRunning(null);
       if (selection) return setSelection(null);
       if (target && folds.isOpen({ key: openKey(target.host.id), fallback: false })) return folds.set({ key: openKey(target.host.id), open: false });
@@ -663,18 +663,6 @@ export function Tasks() {
         />
       )}
       {draft && <Composer draft={draft} onChange={setDraft} onCommit={reveal} onClose={() => setDraft(null)} onDelete={() => draft.editing && askDelete(draft.editing)} />}
-      {commenting && (
-        <EditorScreen
-          heading="comment"
-          subheading={commenting.name}
-          initial=""
-          onCancel={() => setCommenting(null)}
-          onSave={(body) => {
-            store.putComment({ id: identifier(), definitionId: commenting.definitionId, taskName: commenting.name, body: body.trim(), author: "user", writtenAt: nowStamp(), seenAt: nowStamp() });
-            setCommenting(null);
-          }}
-        />
-      )}
       {asking && <Confirm question={asking.question} choices={asking.choices} onCancel={() => setAsking(null)} />}
       {helping && <ShortcutsSheet onClose={() => setHelping(false)} />}
     </>

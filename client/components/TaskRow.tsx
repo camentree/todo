@@ -64,7 +64,7 @@ export function TaskRow({
   onToday: (() => void) | null;
   onDelete: (() => void) | null;
   onDeletePart: ((index: number) => void) | null;
-  onAddComment: () => void;
+  onAddComment: (body: string) => void;
   onDeleteComment: (comment: Comment) => void;
   fixedOpen: boolean;
   unfoldParts: boolean;

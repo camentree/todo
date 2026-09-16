@@ -10,7 +10,6 @@ import { TextButton } from "./TextButton.tsx";
 export function EditorScreen({
   heading,
   subheading,
-  markdown,
   initial,
   onCancel,
   onDelete,
@@ -18,7 +17,6 @@ export function EditorScreen({
 }: {
   heading: string;
   subheading: string;
-  markdown?: boolean;
   initial: string;
   onCancel: () => void;
   onDelete?: () => void;
@@ -36,7 +34,7 @@ export function EditorScreen({
       event.stopPropagation();
       if (event.key === "Enter") save();
       else if (leaving) setLeaving(false);
-      else if (markdown && text !== initial) setLeaving(true);
+      else if (text !== initial) setLeaving(true);
       else onCancel();
     };
     window.addEventListener("keydown", onKeyDown, true);
@@ -54,11 +52,7 @@ export function EditorScreen({
         </div>
         <div className="dateline">{subheading}</div>
         <div className="editor-host">
-          {markdown ? (
-            <Editor value={text} onChange={setText} />
-          ) : (
-            <textarea className="editor" autoFocus value={text} onChange={(event) => setText(event.target.value)} />
-          )}
+          <Editor value={text} onChange={setText} />
         </div>
         <div className="actions">
           <div className="actions-left">

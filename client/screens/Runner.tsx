@@ -109,7 +109,6 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   const [state, setState] = useState<RunnerState>(() => startRunner({ tasks: tasksInOrder, label }));
   const [elapsed, setElapsed] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [commenting, setCommenting] = useState(false);
   const [writing, setWriting] = useState<JournalEntry | null>(null);
   const [deleting, setDeleting] = useState<Comment | null>(null);
   const latest = useRef({ state, tasks: tasksInOrder, elapsed });
@@ -315,8 +314,6 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
     else finish();
   };
 
-  const scope = task ? (part && part !== task ? `${task.name} · ${part.name}` : task.name) : label;
-
   return (
     <Overlay>
       <div className="page runner">
@@ -335,7 +332,14 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
           {task && state.phase !== "rest" && (
             <div ref={commentBox} className={commentsOpen ? "runner-comments open" : "runner-comments"}>
               {commentsOpen ? (
-                <CommentList comments={comments} scrollTo={null} onAdd={() => setCommenting(true)} onDelete={setDeleting} />
+                <CommentList
+                  comments={comments}
+                  scrollTo={null}
+                  onAdd={(body) =>
+                    store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp() })
+                  }
+                  onDelete={setDeleting}
+                />
               ) : newest ? (
                 <>
                   <Card body={newest.body} author={newest.author} when={formatWhen(newest.writtenAt)} />
@@ -344,7 +348,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
                   </TextButton>
                 </>
               ) : (
-                <TextButton active onSelect={() => setCommenting(true)}>
+                <TextButton active onSelect={() => setCommentsOpen(true)}>
                   add a comment
                 </TextButton>
               )}
@@ -367,23 +371,10 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
           )}
         </div>
       </div>
-      {commenting && task && (
-        <EditorScreen
-          heading="comment"
-          subheading={scope}
-          initial=""
-          onCancel={() => setCommenting(false)}
-          onSave={(body) => {
-            store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body: body.trim(), author: "user", writtenAt: nowStamp(), seenAt: nowStamp() });
-            setCommenting(false);
-          }}
-        />
-      )}
       {writing && task && (
         <EditorScreen
           heading="Journal"
           subheading={task.name}
-          markdown
           initial={entryText(writing)}
           onCancel={() => setWriting(null)}
           onSave={(text) => {
