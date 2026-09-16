@@ -71,14 +71,15 @@ repeated or as a comma list, `display_title` and `task`, then a blank line
 and the body, which may carry its own deeper subheadings. A new entry's
 section title is the moment it was written and it has no `display_title`.
 The title an entry shows, everywhere the app shows one, is `display_title`
-when there is one and the section title otherwise. Entries newest first: the
-title on its own line in text colour, shown only once it has one, then
-timestamp, the tags and the word count in the meta style, then the first
-three lines of body as plain text. Filters are plain words above the list,
-every tag in use in alphabetical order after `all`, each with its count in
-dim, the active one in text colour; the filtered tag is not repeated on its
-entries, and an entry's task name is kept in the data but never shown.
-CodeMirror markdown with markers hidden off the caret line,
+when there is one and the section title otherwise. Entries newest first, and
+every one shows its title: the title on its own line in text colour, then the
+attribute line, the date, the time as `9:05 pm`, the tags and the word count,
+in the meta size and also in text colour, then the first three lines of body
+in dim. Filters are plain words above the list, every tag in use in
+alphabetical order after `all`; `all` shows no count, every other filter
+carries its own in dim, and the active one is in text colour. The filtered
+tag is not repeated on its entries, and an entry's task name is kept in the
+data but never shown. CodeMirror markdown with markers hidden off the caret line,
 except heading marks, which stay visible so the level reads; the `## title`
 line sits at the top, and editing it writes `display_title` and leaves the
 section title alone. An entry may name a task; a task named Journal
@@ -93,7 +94,9 @@ opens in read mode with no caret; tapping puts the caret where you tapped,
 snapped to the end of the nearest word when you tap past the end of a line.
 CodeMirror draws the caret itself and the browser's own is hidden, so there
 is never more than one. Escape leaves the editor, asking whether to save when
-the text changed; cmd+enter saves and leaves.
+the text changed; cmd+enter saves and leaves. The `×` at the top answers
+hover like every other clickable, and so does save. `delete`, in the warn
+colour, sits at the bottom left, opposite cancel and save, and asks first.
 
 **Runner**
 - Top: the scope name (task or group) as the heading, a round `×` button.
@@ -297,7 +300,8 @@ labels, which stay UPPERCASE, and the tab names and the two section
 headings, which stay Title Case; task titles and journal text are whatever
 was typed. One format everywhere the app writes a date: short month and day,
 `sept 16`; time in 24 hours, `15:00`; the two together, `sept 16, 15:00`.
-`shared/format.ts` owns it. Two exceptions: the top bar's
-`wednesday, september 16`, and the dim slot leading a task row, which says
-`tomorrow` for the day after today and writes the clock in 12 hours,
-`9:00 pm`, `7:30 am`.
+`shared/format.ts` owns it. Three exceptions: the top bar's
+`wednesday, september 16`; the dim slot on a task row, which says `tomorrow`
+for the day after today and writes the clock in 12 hours, `9:00 pm`,
+`7:30 am`; and an entry's attribute line, which writes the clock the same
+way, `sept 16, 9:05 pm`.

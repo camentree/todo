@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { formatWhen } from "@shared/format.ts";
+import { formatEntryWhen } from "@shared/format.ts";
 import { entryFrom, entryText, entryTitle, sectionTitleFrom, tagCounts } from "@shared/journal.ts";
 import { stripMarkers, wordCount } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/model.ts";
@@ -19,11 +19,11 @@ export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
   return { id: identifier(), at, sectionTitle: sectionTitleFrom(at), displayTitle: null, tags: tag ? [tag] : [], task: null, body: "" };
 }
 
-function Filters({ counts, total, active, onSelect }: { counts: { tag: string; count: number }[]; total: number; active: string | null; onSelect: (tag: string | null) => void }) {
+function Filters({ counts, active, onSelect }: { counts: { tag: string; count: number }[]; active: string | null; onSelect: (tag: string | null) => void }) {
   return (
     <div className="filters">
       <TextButton active={active === null} onSelect={() => onSelect(null)}>
-        all <span className="filter-count">{total}</span>
+        all
       </TextButton>
       {counts.map(({ tag, count }) => (
         <TextButton key={tag} active={active === tag} onSelect={() => onSelect(active === tag ? null : tag)}>
@@ -39,11 +39,11 @@ function EntryRow({ entry, filter, onOpen }: { entry: JournalEntry; filter: stri
   const words = wordCount(entry.body);
   return (
     <button className="entry" onClick={onOpen}>
-      {entry.displayTitle && <div className="entry-title">{entryTitle(entry)}</div>}
+      <div className="entry-title">{entryTitle(entry)}</div>
       <div className="entry-head">
-        <span>{formatWhen(entry.at)}</span>
-        {tags.length > 0 && <span className="entry-tag">{tags.join(", ")}</span>}
-        <span className="entry-words">
+        <span>{formatEntryWhen(entry.at)}</span>
+        {tags.length > 0 && <span>{tags.join(", ")}</span>}
+        <span>
           {words} {words === 1 ? "word" : "words"}
         </span>
       </div>
@@ -68,7 +68,7 @@ export function Entries({ name }: { name: JournalName }) {
 
   return (
     <>
-      <Filters counts={tagCounts(entries)} total={entries.length} active={filter} onSelect={setFilter} />
+      <Filters counts={tagCounts(entries)} active={filter} onSelect={setFilter} />
       <div className="list">
         {shown.map((entry) => (
           <EntryRow key={entry.id} entry={entry} filter={filter} onOpen={() => setEditing(entry)} />
@@ -82,10 +82,14 @@ export function Entries({ name }: { name: JournalName }) {
       {editing && (
         <EditorScreen
           heading={headings[name]}
-          subheading={[formatWhen(editing.at), editing.tags.join(", ")].filter(Boolean).join(" · ")}
+          subheading={[formatEntryWhen(editing.at), editing.tags.join(", ")].filter(Boolean).join(" · ")}
           markdown
           initial={entryText(editing)}
           onCancel={() => setEditing(null)}
+          onDelete={() => {
+            store.deleteEntry({ name, id: editing.id });
+            setEditing(null);
+          }}
           onSave={(text) => {
             store.putEntry({ name, entry: entryFrom({ entry: editing, text }) });
             setEditing(null);

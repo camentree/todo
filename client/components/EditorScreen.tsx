@@ -13,6 +13,7 @@ export function EditorScreen({
   markdown,
   initial,
   onCancel,
+  onDelete,
   onSave,
 }: {
   heading: string;
@@ -20,10 +21,12 @@ export function EditorScreen({
   markdown?: boolean;
   initial: string;
   onCancel: () => void;
+  onDelete?: () => void;
   onSave: (text: string) => void;
 }) {
   const [text, setText] = useState(initial);
   const [leaving, setLeaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const save = () => text.trim() && onSave(text);
 
   useEffect(() => {
@@ -58,7 +61,13 @@ export function EditorScreen({
           )}
         </div>
         <div className="actions">
-          <div />
+          <div className="actions-left">
+            {onDelete && (
+              <TextButton active={false} warn onSelect={() => setDeleting(true)}>
+                delete
+              </TextButton>
+            )}
+          </div>
           <div className="actions-right">
             <TextButton active={false} onSelect={onCancel}>
               cancel
@@ -78,6 +87,9 @@ export function EditorScreen({
           ]}
           onCancel={() => setLeaving(false)}
         />
+      )}
+      {deleting && onDelete && (
+        <Confirm question="delete this entry?" choices={[{ label: "delete", onChoose: onDelete }]} onCancel={() => setDeleting(false)} />
       )}
     </Overlay>
   );

@@ -33,6 +33,8 @@
   --tag: #68726f;
   --scrim: rgba(27, 33, 32, 0.16);
   --warn: #b46a5f;
+  --accent-hover: #26503c;
+  --warn-hover: #9c5449;
   --swipe-warn: #ba6155;
   --swipe-accent: #2d8059;
   --shadow: rgba(27, 33, 32, 0.22);
@@ -77,6 +79,8 @@
     --tag: #857f7a;
     --scrim: rgba(0, 0, 0, 0.5);
     --warn: #c9736c;
+    --accent-hover: #9ccfb0;
+    --warn-hover: #dc8b84;
     --swipe-warn: #d86d64;
     --swipe-accent: #6ec490;
     --shadow: rgba(0, 0, 0, 0.45);
@@ -1273,17 +1277,13 @@ textarea.editor {
   display: flex;
   gap: 0.5rem;
   font-size: var(--meta);
-  color: var(--dim);
-}
-
-.entry-tag,
-.entry-words {
-  color: var(--faint);
+  color: var(--text);
 }
 
 .entry-body {
   font-size: var(--title);
   line-height: 1.45;
+  color: var(--dim);
   padding: 0.25rem 0 0.2rem;
   overflow: hidden;
   display: -webkit-box;
@@ -1353,8 +1353,17 @@ textarea.editor {
   .confirm-choices .text:not(.active):hover,
   .ring-inside .text:not(.active):hover,
   .group-head .text:hover,
+  .screen-head .round:hover,
   .mark:not(.on):not(:disabled):hover {
     color: var(--text);
+  }
+
+  .actions .text.active:hover {
+    color: var(--accent-hover);
+  }
+
+  .actions .text.warn:hover {
+    color: var(--warn-hover);
   }
 
   .section > .group > .group-head .text:hover {

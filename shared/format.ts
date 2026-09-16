@@ -73,3 +73,8 @@ export function formatWhen(at: string): string {
   const day = shortDate(at.slice(0, 10));
   return at.length >= 16 ? day + ", " + at.slice(11, 16) : day;
 }
+
+export function formatEntryWhen(at: string): string {
+  const day = shortDate(at.slice(0, 10));
+  return at.length >= 16 ? day + ", " + timeOfDay(at.slice(11, 16)) : day;
+}
