@@ -17,6 +17,7 @@ import { Group } from "../components/Group.tsx";
 import { Overlay } from "../components/Overlay.tsx";
 import { RoundButton } from "../components/RoundButton.tsx";
 import { TaskRow } from "../components/TaskRow.tsx";
+import type { Select } from "../components/TaskRow.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { useFolds } from "../components/Foldable.tsx";
@@ -127,7 +128,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
                   comments={[]}
                   chip={null}
                   select={null}
-                  press={null}
+                  onHold={null}
                   focused={null}
                   onTick={() => null}
                   onTitle={() => field.current?.focus()}
@@ -262,13 +263,21 @@ export function Tasks() {
   const backlogGroups = grouped(backlog);
   const listOrder = [...todayGroups.flatMap((each) => each.tasks), ...backlogGroups.flatMap((each) => each.tasks)];
 
+  const rowAt = (id: string): { host: Task; index: number | null } | null => {
+    const whole = store.tasks.find((each) => each.id === id);
+    if (whole) return { host: whole, index: null };
+    const [hostId = "", indexText = ""] = id.split(":");
+    const host = store.tasks.find((each) => each.id === hostId);
+    return host && indexText !== "" ? { host, index: Number(indexText) } : null;
+  };
+
   const toggleSelected = (ids: string[]) =>
     setSelection((current) => {
       const next = new Set(current);
       const allOn = ids.every((id) => next.has(id));
       for (const id of ids) if (allOn) next.delete(id);
       else next.add(id);
-      return next;
+      return next.size === 0 ? null : next;
     });
 
   const groupSelect = (tasks: Task[]) =>
@@ -402,12 +411,35 @@ export function Tasks() {
       dragRef.current = null;
       setDrag(null);
       setOpenedByDrag(new Set());
-      if (current) applyDrop(current);
+      if (!current) return;
+      applyDrop(current);
+      if (current.fromPart && current.target) toggleSelected([current.fromPart.taskId + ":" + current.fromPart.index]);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", finish);
     window.addEventListener("pointercancel", finish);
   };
+
+  const select: Select | null = selection
+    ? {
+        selected: (id) => selection.has(id),
+        onToggle: (id) => toggleSelected([id]),
+        onHandle: ({ event, id }) => {
+          const dragged = rowAt(id);
+          if (!dragged) return;
+          const chosen = selection.has(id) ? selection : new Set(selection).add(id);
+          setSelection(chosen);
+          if (dragged.index !== null) {
+            beginDrag({ event, ids: [], fromPart: { taskId: dragged.host.id, index: dragged.index }, title: dragged.host.parts[dragged.index]?.name ?? "" });
+            return;
+          }
+          const bundle = listOrder.filter((each) => chosen.has(each.id)).map((each) => each.id);
+          beginDrag({ event, ids: bundle, fromPart: null, title: bundle.length > 1 ? `${bundle.length} tasks` : dragged.host.name });
+        },
+      }
+    : null;
+
+  const holdToSelect = (id: string) => setSelection((current) => new Set(current).add(id));
 
   const row = ({ task, chip, onToday, onTick }: { task: Task; chip: string | null; onToday: (() => void) | null; onTick: () => void }) => (
     <div key={task.id} className={drag?.ids.includes(task.id) ? "lifting" : undefined} data-task={task.id}>
@@ -415,20 +447,8 @@ export function Tasks() {
           task={task}
           comments={commentsFor({ task, comments: store.comments })}
           chip={chip}
-          select={
-            selection
-              ? {
-                  on: selection.has(task.id),
-                  onToggle: () => toggleSelected([task.id]),
-                  onHandle: (event) => {
-                    const bundle = selection.has(task.id) && selection.size > 1 ? listOrder.filter((each) => selection.has(each.id)).map((each) => each.id) : [task.id];
-                    beginDrag({ event, ids: bundle, fromPart: null, title: bundle.length > 1 ? `${bundle.length} tasks` : task.name });
-                  },
-                  onPartHandle: (event, index) => beginDrag({ event, ids: [], fromPart: { taskId: task.id, index }, title: task.parts[index]?.name ?? "" }),
-                }
-              : null
-          }
-          press={selection ? null : longPress(() => setSelection(new Set([task.id])))}
+          select={select}
+          onHold={holdToSelect}
           focused={focused}
           onTick={onTick}
           onTitle={() => edit(task)}
@@ -445,7 +465,7 @@ export function Tasks() {
 
   const tick = (task: Task) => store.putTask(toggled({ task, entries: store.journal, now: nowStamp() }));
 
-  const groupPress = (tasks: Task[]) => (selection ? null : longPress(() => setSelection(new Set(tasks.map((task) => task.id)))));
+  const groupPress = (tasks: Task[]) => longPress(() => setSelection((current) => new Set([...(current ?? []), ...tasks.map((task) => task.id)])));
 
   const focusOrder = (): string[] =>
     [...(listRef.current?.querySelectorAll<HTMLElement>("[data-focus]") ?? [])].filter((element) => !element.closest(".roll:not(.open)")).map((element) => element.dataset.focus ?? "");
@@ -458,17 +478,8 @@ export function Tasks() {
     listRef.current?.querySelector<HTMLElement>(`[data-focus="${next}"]`)?.scrollIntoView({ block: "nearest" });
   };
 
-  const focusedTask = (): { host: Task; index: number | null } | null => {
-    if (!focused || focused.startsWith("group:")) return null;
-    const whole = store.tasks.find((each) => each.id === focused);
-    if (whole) return { host: whole, index: null };
-    const [hostId = "", indexText = ""] = focused.split(":");
-    const host = store.tasks.find((each) => each.id === hostId);
-    return host && indexText !== "" ? { host, index: Number(indexText) } : null;
-  };
-
   const shortcut = (action: ShortcutAction) => {
-    const target = focusedTask();
+    const target = focused && !focused.startsWith("group:") ? rowAt(focused) : null;
     if (action === "help") return setHelping(true);
     if (action === "add") return setDraft({ text: "", block: false, editing: null });
     if (action === "down") return moveFocus(1);

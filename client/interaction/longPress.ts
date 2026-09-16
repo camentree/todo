@@ -8,9 +8,10 @@ export interface PressHandlers {
   onClickCapture: (event: MouseEvent) => void;
 }
 
+let fired = false;
+
 export function longPress(onLong: () => void): PressHandlers {
   let timer: number | null = null;
-  let fired = false;
   let startX = 0;
   let startY = 0;
   const cancel = () => {

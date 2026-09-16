@@ -6,7 +6,7 @@ import { partAsTask } from "@shared/move.ts";
 import { isDone, kindHint, partCount, partToggled, sinceHint, whenHint } from "@shared/tasks.ts";
 
 import { nowStamp, useStore } from "../data/store.tsx";
-import type { PressHandlers } from "../interaction/longPress.ts";
+import { longPress } from "../interaction/longPress.ts";
 import { Chip } from "./Chip.tsx";
 import { CircleTick } from "./CircleTick.tsx";
 import { CommentList } from "./CommentList.tsx";
@@ -20,10 +20,9 @@ import { Swipeable } from "./Swipeable.tsx";
 import { TextButton } from "./TextButton.tsx";
 
 export interface Select {
-  on: boolean;
-  onToggle: () => void;
-  onHandle: (event: PointerEvent<HTMLButtonElement>) => void;
-  onPartHandle: (event: PointerEvent<HTMLButtonElement>, index: number) => void;
+  selected: (id: string) => boolean;
+  onToggle: (id: string) => void;
+  onHandle: ({ event, id }: { event: PointerEvent<HTMLButtonElement>; id: string }) => void;
 }
 
 export function openKey(id: string): string {
@@ -43,7 +42,7 @@ export function TaskRow({
   comments,
   chip,
   select,
-  press,
+  onHold,
   focused,
   onTick,
   onTitle,
@@ -59,7 +58,7 @@ export function TaskRow({
   comments: Comment[];
   chip: string | null;
   select: Select | null;
-  press: PressHandlers | null;
+  onHold: ((id: string) => void) | null;
   focused: string | null;
   onTick: () => void;
   onTitle: () => void;
@@ -83,6 +82,7 @@ export function TaskRow({
   const partsOpen = fixedOpen || unfoldParts || (open && partsActive);
   const commentsOpen = open && commentsActive && comments.length > 0;
   const now = nowStamp();
+  const press = onHold ? longPress(() => onHold(task.id)) : null;
 
   useEffect(() => {
     if (!commentsOpen) return;
@@ -111,13 +111,13 @@ export function TaskRow({
           <div className="main">
             {select ? (
               <>
-                <Handle onPointerDown={select.onHandle} />
-                <SquareTick on={select.on} onToggle={select.onToggle} />
+                <Handle onPointerDown={(event) => select.onHandle({ event, id: task.id })} />
+                <SquareTick on={select.selected(task.id)} onToggle={() => select.onToggle(task.id)} />
               </>
             ) : (
               <CircleTick done={done} onToggle={onTick} press={press} />
             )}
-            <TextButton active={false} onSelect={onTitle} press={press}>
+            <TextButton active={false} onSelect={select ? () => select.onToggle(task.id) : onTitle} press={press}>
               {when && <span className="when">{when}</span>}
               {task.name}
               {hint && <span className="hint">{hint}</span>}
@@ -167,8 +167,8 @@ export function TaskRow({
                       task={{ ...partAsTask({ part, host: task, id: task.id + ":" + index, created: task.created }), date: null }}
                       comments={[]}
                       chip={null}
-                      select={select ? { ...select, onHandle: (event) => select.onPartHandle(event, index), onPartHandle: () => null } : null}
-                      press={press}
+                      select={select}
+                      onHold={onHold}
                       focused={focused}
                       onTick={() => (fixedOpen ? null : store.putTask(partToggled({ task, index, now })))}
                       onTitle={onTitle}

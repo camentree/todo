@@ -141,9 +141,16 @@ select, title, with the squares exactly where the ticks were. Group headers
 get a square in line with the task squares, left of the title. Bottom right:
 a small raised `×` cancels, and play, larger and round in the accent, runs
 the selection in order. Nothing else appears.
+- Tapping a title selects that row too; nothing opens the editor and there is
+  no tick to hit, so completing is a keyboard key. Holding a subtask selects
+  that subtask alone, never its parent. Deselecting the last row leaves
+  select mode.
 - Drag a handle: the row lifts, one accent line shows the target, dragging
-  right nests it under the row above. A bundle drags the same way as one row,
-  with the count as its title. Hold over a folded task and it unfolds. What
+  right nests it under the row above. Dragging a row that is not selected
+  adds it to the selection first, so the bundle moves together. A bundle
+  drags the same way as one row, with the count as its title. A subtask
+  drags to reorder inside its parent, or out to become a task of its own.
+  Hold over a folded task and it unfolds. What
   lands takes the attributes of where it lands: the group, today's date in
   the Today section and no date at all in Backlog, parenthood if it went
   inside a task.
