@@ -3,7 +3,7 @@ import type { PointerEvent } from "react";
 
 import type { Comment, Task } from "@shared/model.ts";
 import { partAsTask } from "@shared/move.ts";
-import { isDone, kindHint, partCount, partToggled, sinceHint, whenHint } from "@shared/tasks.ts";
+import { isDone, kindHint, partCount, partToggled, pastHint, whenHint } from "@shared/tasks.ts";
 
 import { nowStamp, useStore } from "../data/store.tsx";
 import { longPress } from "../interaction/longPress.ts";
@@ -101,7 +101,7 @@ export function TaskRow({
   };
 
   const when = whenHint({ task, today: store.today });
-  const since = sinceHint({ task, today: store.today });
+  const past = pastHint({ task, today: store.today });
   const hint = kindHint(task);
 
   return (
@@ -140,10 +140,10 @@ export function TaskRow({
               )}
             </div>
           </div>
-          {(since || chip) && (
+          {(past || chip) && (
             <Meta>
               {chip && <Chip>{chip}</Chip>}
-              {since && <span>{since}</span>}
+              {past && <span>{past}</span>}
             </Meta>
           )}
         </div>

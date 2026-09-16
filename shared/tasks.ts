@@ -109,6 +109,6 @@ export function whenHint({ task, today }: { task: Task; today: string }): string
   return task.time ? day + ", " + timeOfDay(task.time) : day;
 }
 
-export function sinceHint({ task, today }: { task: Task; today: string }): string {
-  return task.date !== null && task.date < today ? "since " + shortDate(task.date) : "";
+export function pastHint({ task, today }: { task: Task; today: string }): string {
+  return task.date !== null && task.date < today ? shortDate(task.date) : "";
 }

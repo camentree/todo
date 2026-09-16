@@ -1,5 +1,5 @@
 import type { Task } from "@shared/model.ts";
-import { grouped, isBacklog, isDone, isOnToday, kindHint, partToggled, sinceHint, toggled, whenHint } from "@shared/tasks.ts";
+import { grouped, isBacklog, isDone, isOnToday, kindHint, partToggled, pastHint, toggled, whenHint } from "@shared/tasks.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
@@ -123,10 +123,10 @@ describe("placing rows", () => {
   });
 
   it("puts an overdue date under the title and nothing else", () => {
-    expect(sinceHint({ task: overdue, today })).toBe("since sept 12");
-    expect(sinceHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("since sept 14");
-    expect(sinceHint({ task: soon, today })).toBe("");
-    expect(sinceHint({ task: backlog, today })).toBe("");
+    expect(pastHint({ task: overdue, today })).toBe("sept 12");
+    expect(pastHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("sept 14");
+    expect(pastHint({ task: soon, today })).toBe("");
+    expect(pastHint({ task: backlog, today })).toBe("");
   });
 
   it("writes a count target as its number alone", () => {

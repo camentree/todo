@@ -32,8 +32,8 @@ composer and comment editor are full-screen overlays.
   alone, there is no `×` anywhere) — and at the far right a cluster,
   `{n} comment-glyph {m} parts-glyph ›`, whose width is reserved on every row
   even when it is empty, so every title wraps at the same place. Under the
-  title, only when there is something to say: an overdue date as `since
-  sept 12` in dim, and the mono chip for a group-level attribute. Nothing else.
+  title, only when there is something to say: an overdue date as `sept 12` in
+  dim, and the mono chip for a group-level attribute. Nothing else.
 - The two glyphs are toggles: tapping one sets whether comments, parts (note
   and subtasks), or both roll open under the row, and an active glyph is in
   the accent colour, colour alone with no background. Only parts is active to
@@ -47,7 +47,7 @@ composer and comment editor are full-screen overlays.
 - A part is a TaskRow: same look, same tick, same swipes, same hold, indented
   under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
-  shows `since sept 12` in muted text, never red.
+  shows `sept 12` in muted text, never red.
 - **Backlog**: collapsed by default. Everything not due today or past: future
   one-offs, the next instance of each coming definition, and every undated,
   unfinished one-off, grouped the same way. Tick works in place.
