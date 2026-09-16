@@ -238,6 +238,13 @@ const notebook: JournalEntry[] = [
   entry({ prefix: "nte", at: stamp(-20, "15:15"), title: "the overstory", tags: ["books"], body: "Sam recommended The Overstory. Library has it, hold placed." }),
   entry({
     prefix: "nte",
+    at: stamp(-18, "22:05"),
+    title: "the dawn of everything",
+    tags: ["books"],
+    body: "Two hundred pages in and the argument is that the question itself is wrong. Worth finishing before the hold on The Overstory comes in.",
+  }),
+  entry({
+    prefix: "nte",
     at: stamp(-11, "20:40"),
     title: "dal",
     tags: ["recipes"],
@@ -245,10 +252,17 @@ const notebook: JournalEntry[] = [
   }),
   entry({
     prefix: "nte",
+    at: stamp(-8, "19:15"),
+    tags: ["recipes"],
+    body: "Roast tomatoes at 200 for forty minutes with garlic and thyme, then blend with the stock. Cream is optional and the bread is not.",
+  }),
+  entry({
+    prefix: "nte",
     at: stamp(-6, "11:02"),
     tags: ["programming"],
     body: "Parallax read-only role is `parallax_reader`. The todo schema is granted at migration time, so a new table needs a grant in the same migration.",
   }),
+  entry({ prefix: "nte", at: stamp(-4, "13:30"), title: "books to find", tags: ["books"], body: "Anything else by Powers. The Le Guin essays. The short one about walking that Ana mentioned." }),
   entry({
     prefix: "nte",
     at: stamp(-2, "18:20"),

@@ -1,4 +1,4 @@
-import { entryFrom, entryText, parseMarkdown, serializeMarkdown, tagsInUse } from "@shared/journal.ts";
+import { entryFrom, entryText, parseMarkdown, serializeMarkdown, tagCounts } from "@shared/journal.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
 const entries: JournalEntry[] = [
@@ -23,8 +23,11 @@ describe("journal markdown", () => {
     ]);
   });
 
-  it("lists tags by use", () => {
-    expect(tagsInUse(entries)).toEqual(["personal", "therapy"]);
+  it("counts every tag in use, alphabetically", () => {
+    expect(tagCounts(entries)).toEqual([
+      { tag: "personal", count: 2 },
+      { tag: "therapy", count: 1 },
+    ]);
   });
 });
 

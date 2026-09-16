@@ -1173,7 +1173,8 @@ textarea.editor {
 
 .filters {
   display: flex;
-  gap: 1rem;
+  column-gap: 1rem;
+  row-gap: 0;
   flex-wrap: wrap;
   padding: 0.3rem 0 0.2rem;
 }
@@ -1187,6 +1188,10 @@ textarea.editor {
 
 .filters .text.active {
   color: var(--text);
+}
+
+.filter-count {
+  color: var(--dim);
 }
 
 .entry {
@@ -1203,7 +1208,8 @@ textarea.editor {
   color: var(--dim);
 }
 
-.entry-tag {
+.entry-tag,
+.entry-words {
   color: var(--faint);
 }
 

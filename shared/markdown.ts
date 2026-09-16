@@ -22,3 +22,13 @@ export function firstLine(text: string): string {
     .map((line) => stripMarkers(line).trim())
     .find(Boolean) ?? "";
 }
+
+export function wordCount(text: string): number {
+  return text
+    .split("\n")
+    .map(stripMarkers)
+    .join(" ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}

@@ -58,7 +58,8 @@ some days missed and some counts left short, exercise definitions with parts,
 an overdue one-off, one due today, three due this week, a backlog across
 personal, garden and programming, comments on habits, one unseen comment from
 an agent on a backlog task, two weeks of journal entries across four tags, and
-five notes. Re-run it any time to start over; it is deterministic.
+eight notes across five tags, some of both left at their auto-generated title
+and some renamed. Re-run it any time to start over; it is deterministic.
 
 ## Isolation
 
