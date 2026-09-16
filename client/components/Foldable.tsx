@@ -1,23 +1,56 @@
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 
 import { ChevronGlyph } from "./Glyphs.tsx";
 
-export function remembered<T>({ key, fallback }: { key: string; fallback: T }): T {
-  try {
-    const stored = localStorage.getItem("fold:" + key);
-    return stored === null ? fallback : (JSON.parse(stored) as T);
-  } catch {
-    return fallback;
-  }
+export interface Folds {
+  isOpen: (fold: { key: string; fallback: boolean }) => boolean;
+  set: (fold: { key: string; open: boolean }) => void;
 }
 
-export function remember<T>({ key, value }: { key: string; value: T }): void {
+const FoldsContext = createContext<Folds | null>(null);
+
+function rememberedFolds(): Record<string, boolean> {
+  const folds: Record<string, boolean> = {};
   try {
-    localStorage.setItem("fold:" + key, JSON.stringify(value));
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const name = localStorage.key(index) ?? "";
+      if (name.startsWith("fold:")) folds[name.slice(5)] = localStorage.getItem(name) === "true";
+    }
   } catch {
-    return;
+    return folds;
   }
+  return folds;
+}
+
+export function FoldsProvider({ children }: { children: ReactNode }) {
+  const [folds, setFolds] = useState(rememberedFolds);
+  const value: Folds = {
+    isOpen: ({ key, fallback }) => folds[key] ?? fallback,
+    set: ({ key, open }) => {
+      setFolds((current) => ({ ...current, [key]: open }));
+      try {
+        localStorage.setItem("fold:" + key, String(open));
+      } catch {
+        return;
+      }
+    },
+  };
+  return <FoldsContext.Provider value={value}>{children}</FoldsContext.Provider>;
+}
+
+export function useFolds(): Folds {
+  const folds = useContext(FoldsContext);
+  if (!folds) throw new Error("useFolds outside FoldsProvider");
+  return folds;
+}
+
+export function Roll({ open, children }: { open: boolean; children: ReactNode }) {
+  return (
+    <div className={open ? "roll open" : "roll"} inert={!open}>
+      <div>{children}</div>
+    </div>
+  );
 }
 
 export interface Fold {
@@ -37,15 +70,13 @@ export function Foldable({
   trigger: (fold: Fold) => ReactNode;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(() => remembered({ key: storageKey, fallback: defaultOpen }));
-  const toggle = () => {
-    setOpen(!open);
-    remember({ key: storageKey, value: !open });
-  };
+  const folds = useFolds();
+  const open = folds.isOpen({ key: storageKey, fallback: defaultOpen });
+  const toggle = () => folds.set({ key: storageKey, open: !open });
   return (
     <>
       {trigger({ open, toggle, chevron: <ChevronGlyph open={open} /> })}
-      {open && children}
+      <Roll open={open}>{children}</Roll>
     </>
   );
 }

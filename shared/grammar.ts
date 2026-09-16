@@ -1,4 +1,4 @@
-import { dateFromKey, dateKey, durationToken, parseDuration, shiftDate, timeToken } from "./format.ts";
+import { dateFromKey, dateKey, durationToken, formatTime, parseDuration, shiftDate } from "./format.ts";
 import type { Kind, Task, TaskPart } from "./model.ts";
 
 export interface ParsedPart {
@@ -224,7 +224,7 @@ export function serializeTask({ task, every, today }: { task: Task; every: strin
   if (task.parts.length === 0) text += kindTokens(task);
   if (task.rest) text += " #rest " + durationToken(task.rest);
   if (!every && task.date) text += " " + (task.date === today ? "today" : task.date === shiftDate({ key: today, days: 1 }) ? "tomorrow" : task.date);
-  if (task.time) text += " " + timeToken(task.time);
+  if (task.time) text += " " + formatTime(task.time);
   if (task.parts.length === 0) text += valueTokens(task);
   else if (task.doneAt) text += " = done";
   text += noteLines(task.note);

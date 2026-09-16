@@ -1,5 +1,5 @@
-import type { Task } from "@shared/model.ts";
-import { changedOnly, dateFor, partAsTask, placed, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
+import type { Definition, Task } from "@shared/model.ts";
+import { changedOnly, dateFor, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
 
 const today = "2026-09-15";
 
@@ -48,6 +48,15 @@ describe("placed", () => {
     const after = placed({ rows, moving: [rows[0]!, rows[1]!], target: { kind: "top", container: "today", group: "personal", index: 1 }, today });
     expect(after.map((each) => each.id)).toEqual(["c", "a", "b"]);
     expect(changedOnly({ before: rows, after }).map((each) => each.id)).toEqual(["c", "a", "b"]);
+  });
+});
+
+describe("regrouped", () => {
+  it("moves each definition once and leaves one-offs and same-group definitions alone", () => {
+    const definition: Definition = { id: "d1", name: "Yoga", group: "exercise", kind: "timer", target: 0, timer: 1800, rest: 0, time: null, every: "1d", anchor: today, parts: [], note: "", sort: 0, created: today, ended: null };
+    const other = { ...definition, id: "d2", group: "garden" };
+    const moving = [task("a", { definitionId: "d1", date: today }), task("b", { definitionId: "d1", date: "2026-09-16" }), task("c", { definitionId: "d2" }), task("x", {})];
+    expect(regrouped({ moving, definitions: [definition, other], group: "garden" })).toEqual([{ ...definition, group: "garden" }]);
   });
 });
 

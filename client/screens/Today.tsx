@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { definitionFromParsed, dueToday, taskFromParsed } from "@shared/composer.ts";
-import { capitalise, formatDuration } from "@shared/format.ts";
+import { formatDuration } from "@shared/format.ts";
 import { everyLabel, parseTask, serializeTask } from "@shared/grammar.ts";
 import type { Comment, Definition, Task } from "@shared/model.ts";
-import { changedOnly, partAsTask, placed, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
+import { changedOnly, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
 import type { Container, Target } from "@shared/move.ts";
-import { byPosition, grouped, isBacklog, isOnToday, isThisWeek } from "@shared/tasks.ts";
+import { byPosition, commentsFor, grouped, isBacklog, isOnToday, isThisWeek, partToggled, toggled } from "@shared/tasks.ts";
 
 import { Confirm } from "../components/Confirm.tsx";
 import type { Choice } from "../components/Confirm.tsx";
@@ -16,11 +16,14 @@ import { CrossGlyph, GripGlyph, PlayGlyph, PlusGlyph, TickGlyph } from "../compo
 import { Group } from "../components/Group.tsx";
 import { Overlay } from "../components/Overlay.tsx";
 import { RoundButton } from "../components/RoundButton.tsx";
-import { Swipeable } from "../components/Swipeable.tsx";
 import { TaskRow } from "../components/TaskRow.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
+import { useFolds } from "../components/Foldable.tsx";
+import { commentsKey, partsKey } from "../components/TaskRow.tsx";
 import { longPress } from "../interaction/longPress.ts";
+import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
+import type { ShortcutAction } from "../interaction/shortcuts.tsx";
 import { Runner } from "./Runner.tsx";
 
 interface Draft {
@@ -119,10 +122,26 @@ function Composer({ draft, onChange, onClose, onDelete }: { draft: Draft; onChan
             {preview ? (
               <>
                 <div className="dateline">{metaline}</div>
-                <TaskRow task={preview} chip={null} select={null} press={null} onTitle={() => field.current?.focus()} onAddComment={() => null} onDeleteComment={() => null} fixedOpen unfoldParts={false} />
+                <TaskRow
+                  task={preview}
+                  comments={[]}
+                  chip={null}
+                  select={null}
+                  press={null}
+                  focused={null}
+                  onTick={() => null}
+                  onTitle={() => field.current?.focus()}
+                  onToday={null}
+                  onDelete={null}
+                  onDeletePart={null}
+                  onAddComment={() => null}
+                  onDeleteComment={() => null}
+                  fixedOpen
+                  unfoldParts={false}
+                />
               </>
             ) : (
-              <div className="dateline">Type a task below to see it here.</div>
+              <div className="dateline">type a task below to see it here</div>
             )}
           </div>
         )}
@@ -131,7 +150,7 @@ function Composer({ draft, onChange, onClose, onDelete }: { draft: Draft; onChan
             ref={field}
             rows={1}
             value={draft.text}
-            placeholder={draft.block ? "Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s" : "Add a task"}
+            placeholder={draft.block ? "Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s" : "add a task"}
             spellCheck={false}
             autoCapitalize="sentences"
             enterKeyHint={draft.block ? "enter" : "done"}
@@ -170,6 +189,9 @@ export function Today() {
   const store = useStore();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [asking, setAsking] = useState<Asking | null>(null);
+  const [helping, setHelping] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
+  const folds = useFolds();
   const [commenting, setCommenting] = useState<Task | null>(null);
   const [selection, setSelection] = useState<Set<string> | null>(null);
   const [running, setRunning] = useState<{ taskIds: string[]; label: string } | null>(null);
@@ -199,19 +221,22 @@ export function Today() {
     };
     if (definition) {
       setAsking({
-        question: `Delete ${task.name}?`,
+        question: `delete ${task.name}?`,
         choices: [
           { label: "today only", onChoose: () => { store.deleteTask(task.id); finish(); } },
           { label: "every day", onChoose: () => { store.deleteTask(task.id); store.deleteDefinition(definition.id); finish(); } },
         ],
       });
     } else {
-      setAsking({ question: `Delete ${task.name}?`, choices: [{ label: "delete", onChoose: () => { store.deleteTask(task.id); finish(); } }] });
+      setAsking({ question: `delete ${task.name}?`, choices: [{ label: "delete", onChoose: () => { store.deleteTask(task.id); finish(); } }] });
     }
   };
 
   const askDeleteComment = (comment: Comment) =>
-    setAsking({ question: "Delete this comment?", choices: [{ label: "delete", onChoose: () => { store.deleteComment(comment.id); setAsking(null); } }] });
+    setAsking({ question: "delete this comment?", choices: [{ label: "delete", onChoose: () => { store.deleteComment(comment.id); setAsking(null); } }] });
+
+  const askDeletePart = ({ task, index }: { task: Task; index: number }) =>
+    setAsking({ question: `delete ${task.parts[index]?.name ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutPart({ host: task, index })); setAsking(null); } }] });
 
   const bringForward = (task: Task) => store.putTask({ ...task, date: store.today });
 
@@ -235,7 +260,7 @@ export function Today() {
     const chosen = listOrder.filter((task) => selection?.has(task.id));
     if (chosen.length === 0) return;
     const groups = new Set(chosen.map((task) => task.group));
-    const label = chosen.length === 1 ? (chosen[0]?.name ?? "") : groups.size === 1 ? capitalise(chosen[0]?.group ?? "") : "Selection";
+    const label = chosen.length === 1 ? (chosen[0]?.name ?? "") : groups.size === 1 ? (chosen[0]?.group ?? "") : "selection";
     setRunning({ taskIds: chosen.map((task) => task.id), label });
   };
 
@@ -305,6 +330,7 @@ export function Today() {
       const rows = rowsOf({ container: target.container, group: target.group });
       const after = placed({ rows, moving, target, today: store.today });
       for (const task of changedOnly({ before: rows, after })) store.putTask(task);
+      for (const definition of regrouped({ moving, definitions: store.definitions, group: target.group })) store.putDefinition(definition);
       if (source && current.fromPart) store.putTask(withoutPart({ host: source, index: current.fromPart.index }));
       return;
     }
@@ -366,11 +392,11 @@ export function Today() {
     window.addEventListener("pointercancel", finish);
   };
 
-  const row = ({ task, chip, onRight, onTitle }: { task: Task; chip: string | null; onRight: (() => void) | null; onTitle: () => void }) => (
-    <Swipeable key={task.id} onRight={selection ? null : onRight} onLeft={selection ? null : () => askDelete(task)}>
-      <div className={drag?.ids.includes(task.id) ? "lifting" : undefined}>
+  const row = ({ task, chip, onToday, onTick }: { task: Task; chip: string | null; onToday: (() => void) | null; onTick: () => void }) => (
+    <div key={task.id} className={drag?.ids.includes(task.id) ? "lifting" : undefined} data-task={task.id}>
         <TaskRow
           task={task}
+          comments={commentsFor({ task, comments: store.comments })}
           chip={chip}
           select={
             selection
@@ -386,41 +412,103 @@ export function Today() {
               : null
           }
           press={selection ? null : longPress(() => setSelection(new Set([task.id])))}
-          onTitle={onTitle}
+          focused={focused}
+          onTick={onTick}
+          onTitle={() => edit(task)}
+          onToday={onToday}
+          onDelete={() => askDelete(task)}
+          onDeletePart={(index) => askDeletePart({ task, index })}
           onAddComment={() => setCommenting(task)}
           onDeleteComment={askDeleteComment}
           fixedOpen={false}
           unfoldParts={openedByDrag.has(task.id)}
         />
-      </div>
-    </Swipeable>
+    </div>
   );
 
+  const tick = (task: Task) => store.putTask(toggled({ task, entries: store.journal, now: nowStamp() }));
+
   const groupPress = (tasks: Task[]) => (selection ? null : longPress(() => setSelection(new Set(tasks.map((task) => task.id)))));
+
+  const focusOrder = (): string[] =>
+    [...(listRef.current?.querySelectorAll<HTMLElement>("[data-focus]") ?? [])].filter((element) => !element.closest(".roll:not(.open)")).map((element) => element.dataset.focus ?? "");
+
+  const moveFocus = (step: number) => {
+    const order = focusOrder();
+    const position = focused ? order.indexOf(focused) : -1;
+    const next = order[Math.max(0, Math.min(order.length - 1, position + step))] ?? null;
+    setFocused(next);
+    listRef.current?.querySelector<HTMLElement>(`[data-focus="${next}"]`)?.scrollIntoView({ block: "nearest" });
+  };
+
+  const focusedTask = (): { host: Task; index: number | null } | null => {
+    if (!focused || focused.startsWith("group:")) return null;
+    const whole = store.tasks.find((each) => each.id === focused);
+    if (whole) return { host: whole, index: null };
+    const [hostId = "", indexText = ""] = focused.split(":");
+    const host = store.tasks.find((each) => each.id === hostId);
+    return host && indexText !== "" ? { host, index: Number(indexText) } : null;
+  };
+
+  const shortcut = (action: ShortcutAction) => {
+    const target = focusedTask();
+    if (action === "help") return setHelping(true);
+    if (action === "add") return setDraft({ text: "", block: false, editing: null });
+    if (action === "down") return moveFocus(1);
+    if (action === "up") return moveFocus(-1);
+    if (action === "close") {
+      if (asking) return setAsking(null);
+      if (helping) return setHelping(false);
+      if (draft) return setDraft(null);
+      if (commenting) return setCommenting(null);
+      if (running) return setRunning(null);
+      if (selection) return setSelection(null);
+      if (target && folds.isOpen({ key: commentsKey(target.host.id), fallback: false })) return folds.set({ key: commentsKey(target.host.id), open: false });
+      return (document.activeElement as HTMLElement | null)?.blur();
+    }
+    if (focused?.startsWith("group:")) {
+      if (action === "fold" || action === "unfold") folds.set({ key: focused.slice(6), open: action === "unfold" });
+      return;
+    }
+    if (!target) return;
+    const { host, index } = target;
+    if (action === "fold" || action === "unfold") return folds.set({ key: partsKey(focused ?? ""), open: action === "unfold" });
+    if (action === "select") return selection ? toggleSelected([host.id]) : setSelection(new Set([host.id]));
+    if (action === "complete") return index === null ? tick(host) : store.putTask(partToggled({ task: host, index, now: nowStamp() }));
+    if (action === "edit") return edit(host);
+    if (action === "delete") return index === null ? askDelete(host) : askDeletePart({ task: host, index });
+    if (action === "today") {
+      if (host.definitionId) return;
+      return store.putTask({ ...host, date: host.date === null ? store.today : null });
+    }
+    if (action === "thread" && commentsFor({ task: host, comments: store.comments }).length > 0) folds.set({ key: commentsKey(host.id), open: !folds.isOpen({ key: commentsKey(host.id), fallback: false }) });
+  };
+
+  useShortcuts(shortcut);
 
   return (
     <>
       <div className="list" ref={listRef}>
         {todayGroups.map(({ group, tasks }) => (
           <div key={group} data-container="today" data-group={group}>
-            <Group storageKey={"group:" + group} label={group} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)}>
-              {tasks.map((task) => row({ task, chip: null, onRight: null, onTitle: () => edit(task) }))}
+            <Group storageKey={"group:" + group} label={group} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:group:" + group}>
+              {tasks.map((task) => row({ task, chip: null, onToday: null, onTick: () => tick(task) }))}
             </Group>
           </div>
         ))}
         {thisWeek.length > 0 && (
           <div data-container="week" data-group="">
-            <Group storageKey="week" label="This week" count={thisWeek.length} defaultOpen={false} select={groupSelect(thisWeek)} press={groupPress(thisWeek)}>
-              {thisWeek.map((task) => row({ task, chip: task.group, onRight: null, onTitle: () => bringForward(task) }))}
+            <Group storageKey="week" label="This week" count={thisWeek.length} defaultOpen={false} select={groupSelect(thisWeek)} press={groupPress(thisWeek)} focused={focused === "group:week"}>
+              {thisWeek.map((task) => row({ task, chip: task.group, onToday: null, onTick: () => store.putTask({ ...toggled({ task, entries: store.journal, now: nowStamp() }), date: store.today }) }))}
             </Group>
           </div>
         )}
         {backlog.length > 0 && (
-          <Group storageKey="backlog" label="Backlog" count={backlog.length} defaultOpen={false} select={groupSelect(backlog)} press={groupPress(backlog)}>
+          <Group storageKey="backlog" label="Backlog" count={backlog.length} defaultOpen={false} select={groupSelect(backlog)} press={groupPress(backlog)} focused={focused === "group:backlog"}>
             {backlogGroups.map(({ group, tasks }) => (
               <div key={group} data-container="backlog" data-group={group}>
-                <Group storageKey={"backlog:" + group} label={group} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)}>
-                  {tasks.map((task) => row({ task, chip: null, onRight: () => bringForward(task), onTitle: () => edit(task) }))}
+                <Group storageKey={"backlog:" + group} label={group} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:backlog:" + group}>
+                  {tasks.map((task) => row({ task, chip: null, onToday: () => bringForward(task), onTick: () => tick(task) }))}
                 </Group>
               </div>
             ))}
@@ -475,12 +563,13 @@ export function Today() {
           initial=""
           onCancel={() => setCommenting(null)}
           onSave={(body) => {
-            store.putComment({ id: identifier(), definitionId: commenting.definitionId, taskName: commenting.name, body: body.trim(), author: "camen", writtenAt: nowStamp(), seenAt: nowStamp() });
+            store.putComment({ id: identifier(), definitionId: commenting.definitionId, taskName: commenting.name, body: body.trim(), author: "user", writtenAt: nowStamp(), seenAt: nowStamp() });
             setCommenting(null);
           }}
         />
       )}
       {asking && <Confirm question={asking.question} choices={asking.choices} onCancel={() => setAsking(null)} />}
+      {helping && <ShortcutsSheet onClose={() => setHelping(false)} />}
     </>
   );
 }

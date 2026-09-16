@@ -1,4 +1,4 @@
-import { formatDuration, formatTime, shiftDate, shortDate, weekdayName } from "./format.ts";
+import { dayLabel, formatDuration, formatTime, shiftDate } from "./format.ts";
 import type { Comment, JournalEntry, Task, TaskPart } from "./model.ts";
 import { groupOrder } from "./model.ts";
 
@@ -88,29 +88,25 @@ export function isBacklog({ task, today, entries, comments }: { task: Task; toda
   return (task.doneAt ?? "").slice(0, 10) === today;
 }
 
-export function kindHint(task: Task): string {
-  if (task.parts.length) {
-    const done = task.parts.filter(partDone).length;
-    const total = task.parts.length;
-    return (done > 0 && done < total ? done + " / " + total : total) + (total === 1 ? " part" : " parts");
-  }
+export function kindHint(task: Pick<Task, "kind" | "timer" | "target" | "current" | "value">): string {
   if (task.kind === "timer") return formatDuration(task.timer);
   if (task.kind === "count") return task.current > 0 && task.current < task.target ? task.current + " / " + task.target : task.target + " ×";
-  if (task.kind === "text") return task.value || "text";
+  if (task.kind === "text") return task.value;
   return "";
+}
+
+export function partCount(task: Task): string {
+  if (task.parts.length === 0) return "";
+  const done = task.parts.filter(partDone).length;
+  const total = task.parts.length;
+  return done > 0 && done < total ? done + " / " + total : String(total);
 }
 
 export function whenHint({ task, today }: { task: Task; today: string }): string {
-  if (task.date && task.date < today) return "since " + (task.date === shiftDate({ key: today, days: -1 }) ? "yesterday" : shortDate(task.date));
+  if (task.date && task.date < today) return "since " + dayLabel({ key: task.date, today });
   if (task.date && task.date > today) {
-    const day = task.date <= shiftDate({ key: today, days: 6 }) ? weekdayName(task.date) : shortDate(task.date);
+    const day = dayLabel({ key: task.date, today });
     return task.time ? day + " " + formatTime(task.time) : day;
   }
   return task.time ? formatTime(task.time) : "";
-}
-
-export function partHint(part: TaskPart): string {
-  if (part.kind === "timer") return formatDuration(part.timer);
-  if (part.kind === "count") return part.current > 0 && part.current < part.target ? part.current + " / " + part.target : String(part.target);
-  return "";
 }

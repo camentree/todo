@@ -194,11 +194,11 @@ const stretch = definitions.find((each) => each.name === "Morning stretch")!;
 const physio = definitions.find((each) => each.name === "Physio and mobility")!;
 
 const comments: Comment[] = [
-  { id: identifier("cmt"), definitionId: stretch.id, taskName: stretch.name, body: "Left hip tight. Go slower on the second side of cat cow.", author: "camen", writtenAt: stamp(-3, "07:52:00"), seenAt: stamp(-3, "07:52:00") },
-  { id: identifier("cmt"), definitionId: stretch.id, taskName: stretch.name, body: "Plank felt easy at 45s, try 60s next week.", author: "camen", writtenAt: stamp(-10, "07:48:00"), seenAt: stamp(-10, "07:48:00") },
-  { id: identifier("cmt"), definitionId: physio.id, taskName: physio.name, body: "Bird dog: the cue that works is reaching, not lifting.", author: "camen", writtenAt: stamp(-5, "08:05:00"), seenAt: stamp(-5, "08:05:00") },
-  { id: identifier("cmt"), definitionId: null, taskName: "Refactor the auth middleware", body: "The middleware reads the session from two places. Which one is canonical, the cookie or the header?", author: "claude", writtenAt: stamp(0, "06:12:00"), seenAt: null },
-  { id: identifier("cmt"), definitionId: null, taskName: "Plan the trip to Portland", body: "Flights are cheapest the second week of October.", author: "camen", writtenAt: stamp(-4, "20:10:00"), seenAt: stamp(-4, "20:10:00") },
+  { id: identifier("cmt"), definitionId: stretch.id, taskName: stretch.name, body: "Left hip tight. Go slower on the second side of cat cow.", author: "user", writtenAt: stamp(-3, "07:52:00"), seenAt: stamp(-3, "07:52:00") },
+  { id: identifier("cmt"), definitionId: stretch.id, taskName: stretch.name, body: "Plank felt easy at 45s, try 60s next week.", author: "user", writtenAt: stamp(-10, "07:48:00"), seenAt: stamp(-10, "07:48:00") },
+  { id: identifier("cmt"), definitionId: physio.id, taskName: physio.name, body: "Bird dog: the cue that works is reaching, not lifting.", author: "user", writtenAt: stamp(-5, "08:05:00"), seenAt: stamp(-5, "08:05:00") },
+  { id: identifier("cmt"), definitionId: null, taskName: "Refactor the auth middleware", body: "The middleware reads the session from two places. Which one is canonical, the cookie or the header?", author: "agent", writtenAt: stamp(0, "06:12:00"), seenAt: null },
+  { id: identifier("cmt"), definitionId: null, taskName: "Plan the trip to Portland", body: "Flights are cheapest the second week of October.", author: "user", writtenAt: stamp(-4, "20:10:00"), seenAt: stamp(-4, "20:10:00") },
 ];
 
 const journal: JournalEntry[] = [

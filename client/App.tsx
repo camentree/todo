@@ -16,7 +16,7 @@ export function App() {
         <TopBar tab={tab} today={store.today} onTab={setTab} />
         {tab === "today" && <Today />}
         {tab === "journal" && <Entries key="journal" name="journal" />}
-        {tab === "notes" && <Entries key="notebook" name="notebook" />}
+        {tab === "notebook" && <Entries key="notebook" name="notebook" />}
       </div>
       <ErrorSprite />
     </>

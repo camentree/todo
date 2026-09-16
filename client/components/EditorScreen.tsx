@@ -31,7 +31,7 @@ export function EditorScreen({
         </div>
         <div className="dateline">{subheading}</div>
         <div className="editor-host">
-          <Editor value={text} onChange={setText} autoFocus />
+          <Editor value={text} onChange={setText} />
         </div>
         <div className="actions">
           <div />

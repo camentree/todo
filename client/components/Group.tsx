@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-import { capitalise } from "@shared/format.ts";
-
 import type { PressHandlers } from "../interaction/longPress.ts";
 import { Foldable } from "./Foldable.tsx";
 import { SquareTick } from "./SquareTick.tsx";
@@ -14,6 +12,7 @@ export function Group({
   defaultOpen,
   select,
   press,
+  focused,
   children,
 }: {
   storageKey: string;
@@ -22,6 +21,7 @@ export function Group({
   defaultOpen: boolean;
   select: { on: boolean; onToggle: () => void } | null;
   press: PressHandlers | null;
+  focused: boolean;
   children: ReactNode;
 }) {
   return (
@@ -30,14 +30,14 @@ export function Group({
         storageKey={storageKey}
         defaultOpen={defaultOpen}
         trigger={(fold) => (
-          <div className="group-head">
+          <div className={focused ? "group-head focused" : "group-head"} data-focus={"group:" + storageKey}>
             {select && <span className="handle-space" />}
             {select && <SquareTick on={select.on} onToggle={select.onToggle} />}
             <TextButton active={false} onSelect={fold.toggle} press={press}>
-              {!fold.open && fold.chevron}
-              {capitalise(label)}
+              {fold.chevron}
+              {label}
             </TextButton>
-            {!fold.open && <span className="group-count">{count}</span>}
+            <span className={fold.open ? "group-count" : "group-count shown"}>{count}</span>
           </div>
         )}
       >

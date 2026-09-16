@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { formatWhen } from "@shared/format.ts";
 import { tagsInUse } from "@shared/journal.ts";
-import { stripMarkers } from "@shared/markdown.ts";
+import { inlineSegments } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
 import type { JournalName } from "../data/store.tsx";
@@ -12,7 +12,7 @@ import { PlusGlyph } from "./Glyphs.tsx";
 import { RoundButton } from "./RoundButton.tsx";
 import { TextButton } from "./TextButton.tsx";
 
-const headings: Record<JournalName, string> = { journal: "Entry", notebook: "Note" };
+const headings: Record<JournalName, string> = { journal: "Journal", notebook: "Notebook" };
 
 export function splitTags(text: string): { tags: string[]; body: string } {
   const [first = "", ...rest] = text.split("\n");
@@ -48,7 +48,20 @@ function EntryRow({ entry, today, onOpen }: { entry: JournalEntry; today: string
         <span>{formatWhen({ at: entry.at, today })}</span>
         {meta && <span className="entry-tag">{meta}</span>}
       </div>
-      <div className="entry-body">{entry.body.split("\n").filter((line) => line.trim()).map(stripMarkers).join("\n")}</div>
+      <div className="entry-body">
+        {entry.body
+          .split("\n")
+          .filter((line) => line.trim() && !line.startsWith("```"))
+          .map((line, lineIndex) => (
+            <div key={lineIndex}>
+              {inlineSegments(line).map((segment, index) => (
+                <span key={index} className={segment.tone}>
+                  {segment.text}
+                </span>
+              ))}
+            </div>
+          ))}
+      </div>
     </button>
   );
 }

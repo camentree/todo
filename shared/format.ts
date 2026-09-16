@@ -26,10 +26,6 @@ export function parseDuration(token: string): number | null {
   return amount * 60;
 }
 
-export function capitalise(word: string): string {
-  return word.charAt(0).toUpperCase() + word.slice(1);
-}
-
 export function dateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -57,35 +53,30 @@ export function daysBetween({ from, to }: { from: string; to: string }): number 
 export function formatTime(time: string): string {
   const [hoursText, minutesText] = time.split(":");
   const hours = Number(hoursText);
-  const minutes = minutesText ?? "00";
-  return (hours % 12 || 12) + ":" + minutes + (hours < 12 ? "am" : "pm");
-}
-
-export function timeToken(time: string): string {
-  const [hoursText, minutesText] = time.split(":");
-  const hours = Number(hoursText);
   const suffix = hours < 12 ? "am" : "pm";
   const clock = hours % 12 || 12;
   return minutesText && minutesText !== "00" ? `${clock}:${minutesText}${suffix}` : `${clock}${suffix}`;
 }
 
-export function shortDate(key: string): string {
-  return dateFromKey(key).toLocaleDateString("en-US", { month: "short", day: "numeric" }).toLowerCase();
+export function fullDate(key: string): string {
+  return dateFromKey(key).toLocaleDateString("en-US", { month: "long", day: "numeric" }).toLowerCase();
 }
 
 export function longDate(key: string): string {
-  return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }).toLowerCase();
 }
 
 export function weekdayName(key: string): string {
-  return dateFromKey(key).toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+  return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+}
+
+export function dayLabel({ key, today }: { key: string; today: string }): string {
+  if (key === today) return "today";
+  if (key === shiftDate({ key: today, days: -1 })) return "yesterday";
+  return Math.abs(daysBetween({ from: today, to: key })) <= 6 ? weekdayName(key) : fullDate(key);
 }
 
 export function formatWhen({ at, today }: { at: string; today: string }): string {
-  const date = at.slice(0, 10);
-  const time = at.length >= 16 ? formatTime(at.slice(11, 16)) : "";
-  if (date === today) return time ? "Today " + time : "Today";
-  if (date === shiftDate({ key: today, days: -1 })) return time ? "Yesterday " + time : "Yesterday";
-  const label = capitalise(shortDate(date));
-  return time ? label + " " + time : label;
+  const day = dayLabel({ key: at.slice(0, 10), today });
+  return at.length >= 16 ? day + " " + formatTime(at.slice(11, 16)) : day;
 }

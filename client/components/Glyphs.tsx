@@ -24,8 +24,8 @@ export function ChevronGlyph({ open }: { open: boolean }) {
 
 export function PlayGlyph() {
   return (
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M8 5.5c0-1.1 1.2-1.8 2.2-1.2l9.5 5.9c.9.6.9 1.9 0 2.5l-9.5 5.9c-1 .6-2.2-.1-2.2-1.2z" />
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round">
+      <path d="M7.5 5.2c0-1 1.1-1.6 2-1.1l10 5.9c.9.5.9 1.8 0 2.3l-10 5.9c-.9.5-2-.1-2-1.1z" />
     </svg>
   );
 }

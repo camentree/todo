@@ -22,16 +22,20 @@
 :root {
   color-scheme: light;
   --ground: #f5f8f6;
-  --raised: #e6ece9;
+  --raised: #ebefec;
+  --hover: #eef2ef;
   --text: #1b2120;
-  --dim: #5e6865;
-  --faint: #98a29e;
+  --dim: #68726f;
+  --faint: #9da6a3;
   --accent: #356b52;
-  --hairline: #dde4e0;
-  --chip-bg: rgba(53, 107, 82, 0.14);
-  --chip-text: #2b5a45;
-  --warn: #b3473d;
+  --hairline: #dfe5e2;
+  --chip-bg: #356b5224;
+  --chip-text: #356b52;
+  --tag: #68726f;
   --scrim: rgba(245, 248, 246, 0.72);
+  --warn: #b46a5f;
+  --swipe-warn: #ba6155;
+  --swipe-accent: #2d8059;
   --shadow: rgba(27, 33, 32, 0.22);
 
   --font: "Seravek", -apple-system, system-ui, sans-serif;
@@ -64,6 +68,7 @@
     color-scheme: dark;
     --ground: #1c1a1e;
     --raised: #26242a;
+    --hover: #262428;
     --text: #ddd8d3;
     --dim: #857f7a;
     --faint: #605b58;
@@ -71,8 +76,11 @@
     --hairline: #2c2a2e;
     --chip-bg: #7fb99629;
     --chip-text: #96c8ab;
-    --warn: #c9736c;
+    --tag: #857f7a;
     --scrim: rgba(28, 26, 30, 0.72);
+    --warn: #c9736c;
+    --swipe-warn: #d86d64;
+    --swipe-accent: #6ec490;
     --shadow: rgba(0, 0, 0, 0.45);
   }
 }
@@ -88,6 +96,10 @@ body {
   padding: 0;
   min-height: 100%;
   overscroll-behavior-y: none;
+}
+
+html {
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -155,7 +167,8 @@ textarea {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--faint);
-  padding: 0.2rem 0;
+  padding: 0.5rem 0;
+  margin: -0.3rem 0;
 }
 
 .tabs .text.active {
@@ -186,11 +199,26 @@ textarea {
 }
 
 .group + .group {
-  margin-top: 0.4rem;
+  margin-top: 1.3rem;
 }
 
-.group .group {
-  margin-top: 0;
+.group .group + .group {
+  margin-top: 0.7rem;
+}
+
+.roll {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.45s ease;
+}
+
+.roll.open {
+  grid-template-rows: 1fr;
+}
+
+.roll > div {
+  overflow: clip;
+  min-height: 0;
 }
 
 .group-head {
@@ -226,14 +254,24 @@ textarea {
   margin-left: auto;
   font-size: 0.85rem;
   color: var(--faint);
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.group-count.shown {
+  opacity: 1;
 }
 
 .task {
   display: flex;
   flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
   gap: 0.15rem;
   padding: var(--row-padding);
-  background: var(--ground);
 }
 
 .main {
@@ -270,13 +308,29 @@ textarea {
   line-height: 1.35;
   flex: 1;
   min-width: 0;
-  padding: 0.3rem 0;
+  padding: 0.65rem 0;
+  margin: -0.35rem 0;
   color: var(--text);
 }
 
-.task.done > .main > .text {
+.task.done > .swipeable .main > .text {
   color: var(--dim);
   text-decoration: line-through;
+}
+
+.hint {
+  font-size: var(--meta);
+  color: var(--dim);
+  margin-left: 0.6rem;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.part-count {
+  flex: none;
+  font-size: var(--meta);
+  color: var(--dim);
+  padding-left: 0.4rem;
 }
 
 .fold {
@@ -291,7 +345,7 @@ textarea {
 }
 
 .chevron {
-  transition: transform 0.2s ease;
+  transition: transform 0.45s ease;
 }
 
 .chevron.open {
@@ -325,8 +379,8 @@ textarea {
   gap: 3px;
   color: var(--dim);
   font-size: var(--meta);
-  padding: 0.5rem 0.4rem;
-  margin: -0.5rem -0.4rem;
+  padding: 0.7rem 0.5rem;
+  margin: -0.65rem -0.5rem;
 }
 
 .comment-mark.unseen {
@@ -334,13 +388,13 @@ textarea {
 }
 
 .unfolded {
-  padding-left: var(--indent);
+  padding-left: calc(var(--indent) + 0.25rem);
   display: flex;
   flex-direction: column;
 }
 
 .note {
-  padding: 0.35rem 0 0.1rem;
+  padding: 0.35rem 0.25rem 0.1rem;
   font-size: 0.9rem;
   line-height: 1.4;
   color: var(--dim);
@@ -348,50 +402,9 @@ textarea {
 }
 
 .parts {
-  padding: 0.5rem 0 0.2rem;
+  padding: 0.3rem 0 0.2rem;
   display: flex;
   flex-direction: column;
-}
-
-.part {
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
-  padding: 0.3rem 0;
-  font-size: var(--body);
-  color: var(--text);
-  min-height: 2.4rem;
-}
-
-.part .tick span {
-  width: var(--tick-small);
-  height: var(--tick-small);
-}
-
-.part-text {
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 0.6rem;
-}
-
-.part.done .part-name {
-  color: var(--dim);
-  text-decoration: line-through;
-}
-
-.part-hint {
-  font-size: var(--meta);
-  color: var(--dim);
-}
-
-.part-note {
-  flex-basis: 100%;
-  font-size: var(--meta);
-  line-height: 1.4;
-  color: var(--dim);
-  white-space: pre-wrap;
 }
 
 .swipeable {
@@ -422,13 +435,13 @@ textarea {
 .reveal.right {
   left: 0;
   justify-content: flex-start;
-  background: var(--accent);
+  background: var(--swipe-accent);
 }
 
 .reveal.left {
   right: 0;
   justify-content: flex-end;
-  background: var(--warn);
+  background: var(--swipe-warn);
 }
 
 .swiped {
@@ -500,6 +513,7 @@ textarea {
 
 .overlay:has(.composer) {
   background: none;
+  overflow: visible;
 }
 
 .composer {
@@ -583,6 +597,32 @@ textarea {
   gap: 0.4rem;
 }
 
+.row.focused,
+.group-head.focused {
+  outline: 1.5px solid var(--faint);
+  outline-offset: -1px;
+  border-radius: 0.5rem;
+}
+
+.shortcuts {
+  gap: 0;
+}
+
+.shortcut {
+  display: flex;
+  gap: 1rem;
+  padding: 0.3rem 0.25rem;
+  font-size: var(--body);
+}
+
+.shortcut-keys {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--dim);
+  min-width: 7rem;
+  white-space: pre;
+}
+
 .confirm-question {
   font-size: var(--title);
   padding: 0.4rem 0.25rem;
@@ -632,6 +672,36 @@ textarea {
   gap: 0.2rem;
 }
 
+.card.agent {
+  background: var(--chip-bg);
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.thread::-webkit-scrollbar {
+  display: none;
+}
+
+.bubble {
+  max-width: 88%;
+  flex: none;
+}
+
+.bubble.user {
+  align-self: flex-start;
+}
+
+.bubble.agent {
+  align-self: flex-end;
+}
+
 .card-body {
   font-size: var(--body);
   line-height: 1.4;
@@ -647,7 +717,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.3rem 0 0.4rem;
+  padding: 0.3rem 0.25rem 0.5rem;
 }
 
 .comment-list .swipeable {
@@ -676,11 +746,20 @@ textarea {
   min-height: 0;
   overflow-y: auto;
   padding-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor {
   font-size: var(--title);
   line-height: 1.5;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor .cm-editor {
+  flex: 1;
 }
 
 .editor .cm-editor {
@@ -707,17 +786,29 @@ textarea {
   border-left-color: var(--accent);
 }
 
-.editor .cm-strong {
+.editor .cm-strong,
+.entry-body .strong {
   font-weight: 700;
+  color: var(--accent);
 }
 
-.editor .cm-em {
+.editor .cm-em,
+.entry-body .em {
   font-style: italic;
+  color: var(--accent);
 }
 
-.editor .cm-code {
+.editor .cm-code,
+.entry-body .code {
   font-family: var(--mono);
   font-size: 0.9em;
+}
+
+.editor .cm-fenced {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: var(--raised);
+  padding: 0 0.5rem;
 }
 
 .editor .cm-heading {
@@ -786,9 +877,8 @@ textarea {
   padding-left: calc(var(--indent) + 2.05rem);
 }
 
-.task .main:has(.handle) + .meta + .unfolded,
-.task .main:has(.handle) + .unfolded {
-  padding-left: calc(var(--indent) + 2.05rem);
+.task:has(> .swipeable .handle) > .roll > div > .unfolded {
+  padding-left: calc(var(--indent) + 2.3rem);
 }
 
 .select-bar .round:first-child {
@@ -801,6 +891,11 @@ textarea {
 .select-bar .round:last-child {
   width: var(--round-big);
   height: var(--round-big);
+  margin-right: calc((var(--round) - var(--round-big)) / 2);
+}
+
+.select-bar .round:last-child svg {
+  margin-left: 0.2rem;
 }
 
 .runner {
@@ -951,8 +1046,8 @@ textarea {
 .ring-inside .text {
   color: var(--dim);
   font-size: var(--meta);
-  padding: 0.5rem;
-  min-height: 2.4rem;
+  padding: 0.5rem 1rem;
+  min-height: 2.75rem;
 }
 
 .ring-inside .text.active {
@@ -1035,8 +1130,8 @@ textarea {
 .runner-comments > .text {
   font-size: var(--meta);
   color: var(--faint);
-  padding: 0.5rem;
-  min-height: 2.4rem;
+  padding: 0.5rem 1rem;
+  min-height: 2.75rem;
 }
 
 .runner-comments > .text.active {
@@ -1052,6 +1147,11 @@ textarea {
   width: 100%;
   flex: none;
   padding-top: 2rem;
+}
+
+.runner-comments .thread {
+  max-height: none;
+  overflow: visible;
 }
 
 .nav {
@@ -1082,7 +1182,7 @@ textarea {
   font-size: var(--meta);
   color: var(--faint);
   padding: 0.5rem 0;
-  min-height: 2.4rem;
+  min-height: 2.75rem;
 }
 
 .filters .text.active {
@@ -1164,6 +1264,3 @@ textarea {
   height: var(--tick);
 }
 
-.part .handle {
-  margin-right: -0.3rem;
-}

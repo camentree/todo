@@ -31,6 +31,12 @@ function decorate(view: EditorView): DecorationSet {
       enter(node) {
         const tone = toneByNode[node.name];
         if (tone) ranges.push(Decoration.mark({ class: tone }).range(node.from, node.to));
+        if (node.name === "FencedCode") {
+          for (let line = doc.lineAt(node.from); line.from <= node.to; line = doc.line(line.number + 1)) {
+            ranges.push(Decoration.line({ class: "cm-fenced" }).range(line.from));
+            if (line.number === doc.lines) break;
+          }
+        }
         if (!markerNodes.has(node.name)) return;
         if (doc.lineAt(node.from).number === caretLine) {
           ranges.push(Decoration.mark({ class: "cm-marker" }).range(node.from, node.to));
@@ -57,7 +63,7 @@ const livePreview = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations },
 );
 
-export function Editor({ value, onChange, autoFocus }: { value: string; onChange: (value: string) => void; autoFocus: boolean }) {
+export function Editor({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const host = useRef<HTMLDivElement>(null);
   const latestChange = useRef(onChange);
   latestChange.current = onChange;
@@ -80,7 +86,6 @@ export function Editor({ value, onChange, autoFocus }: { value: string; onChange
         ],
       }),
     });
-    if (autoFocus) view.focus();
     return () => view.destroy();
   }, []);
 

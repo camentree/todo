@@ -334,10 +334,10 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
           {task && state.phase !== "rest" && (
             <div ref={commentBox} className={commentsOpen ? "runner-comments open" : "runner-comments"}>
               {commentsOpen ? (
-                <CommentList comments={[...comments].reverse()} onAdd={() => setCommenting(true)} onDelete={setDeleting} />
+                <CommentList comments={comments} scrollTo={null} onAdd={() => setCommenting(true)} onDelete={setDeleting} />
               ) : newest ? (
                 <>
-                  <Card body={newest.body} when={formatWhen({ at: newest.writtenAt, today: store.today })} />
+                  <Card body={newest.body} author={newest.author} when={formatWhen({ at: newest.writtenAt, today: store.today })} />
                   <TextButton active={false} onSelect={() => setCommentsOpen(true)}>
                     {comments.length > 1 ? `▾ ${comments.length - 1} more` : "▾ add a comment"}
                   </TextButton>
@@ -373,14 +373,14 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
           initial=""
           onCancel={() => setCommenting(false)}
           onSave={(body) => {
-            store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body: body.trim(), author: "camen", writtenAt: nowStamp(), seenAt: nowStamp() });
+            store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body: body.trim(), author: "user", writtenAt: nowStamp(), seenAt: nowStamp() });
             setCommenting(false);
           }}
         />
       )}
       {writing && task && (
         <EditorScreen
-          heading="Entry"
+          heading="Journal"
           subheading={task.name}
           initial=""
           onCancel={() => setWriting(false)}
@@ -394,7 +394,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
       )}
       {deleting && (
         <Confirm
-          question="Delete this comment?"
+          question="delete this comment?"
           choices={[{ label: "delete", onChoose: () => { store.deleteComment(deleting.id); setDeleting(null); } }]}
           onCancel={() => setDeleting(null)}
         />

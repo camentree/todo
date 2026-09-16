@@ -115,10 +115,10 @@ describe("placing rows", () => {
   });
 
   it("says since when for overdue rows and the day for coming ones", () => {
-    expect(whenHint({ task: overdue, today })).toBe("since sep 12");
+    expect(whenHint({ task: overdue, today })).toBe("since saturday");
     expect(whenHint({ task: task("y", { date: "2026-09-14" }), today })).toBe("since yesterday");
-    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("fri 5:00pm");
-    expect(whenHint({ task: later, today })).toBe("sep 22");
-    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3:00pm");
+    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("friday 5pm");
+    expect(whenHint({ task: later, today })).toBe("september 22");
+    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3pm");
   });
 });

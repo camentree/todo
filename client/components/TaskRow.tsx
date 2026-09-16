@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PointerEvent } from "react";
 
-import type { Comment, Task, TaskPart } from "@shared/model.ts";
-import { commentsFor, isDone, kindHint, partDone, partHint, partToggled, toggled, whenHint } from "@shared/tasks.ts";
+import type { Comment, Task } from "@shared/model.ts";
+import { partAsTask } from "@shared/move.ts";
+import { isDone, kindHint, partCount, partToggled, whenHint } from "@shared/tasks.ts";
 
 import { nowStamp, useStore } from "../data/store.tsx";
 import type { PressHandlers } from "../interaction/longPress.ts";
@@ -11,13 +12,12 @@ import { CircleTick } from "./CircleTick.tsx";
 import { CommentList } from "./CommentList.tsx";
 import { CommentMark } from "./CommentMark.tsx";
 import { ChevronGlyph } from "./Glyphs.tsx";
-import { remember, remembered } from "./Foldable.tsx";
+import { Roll, useFolds } from "./Foldable.tsx";
 import { Handle } from "./Handle.tsx";
 import { Meta } from "./Meta.tsx";
 import { SquareTick } from "./SquareTick.tsx";
+import { Swipeable } from "./Swipeable.tsx";
 import { TextButton } from "./TextButton.tsx";
-
-export type Unfolded = "parts" | "comments" | null;
 
 export interface Select {
   on: boolean;
@@ -26,109 +26,141 @@ export interface Select {
   onPartHandle: (event: PointerEvent<HTMLButtonElement>, index: number) => void;
 }
 
-function PartRow({ part, onToggle, onHandle }: { part: TaskPart; onToggle: (() => void) | null; onHandle: ((event: PointerEvent<HTMLButtonElement>) => void) | null }) {
-  const done = partDone(part);
-  return (
-    <div className={done ? "part done" : "part"}>
-      {onHandle && <Handle onPointerDown={onHandle} />}
-      <CircleTick done={done} onToggle={onToggle ?? (() => null)} press={null} />
-      <div className="part-text">
-        <span className="part-name">{part.name}</span>
-        {partHint(part) && <span className="part-hint">{partHint(part)}</span>}
-        {part.note && <div className="part-note">{part.note}</div>}
-      </div>
-    </div>
-  );
+export function partsKey(id: string): string {
+  return "task:" + id + ":parts";
+}
+
+export function commentsKey(id: string): string {
+  return "task:" + id + ":comments";
 }
 
 export function TaskRow({
   task,
+  comments,
   chip,
   select,
   press,
+  focused,
+  onTick,
   onTitle,
+  onToday,
+  onDelete,
+  onDeletePart,
   onAddComment,
   onDeleteComment,
   fixedOpen,
   unfoldParts,
 }: {
   task: Task;
+  comments: Comment[];
   chip: string | null;
   select: Select | null;
   press: PressHandlers | null;
+  focused: string | null;
+  onTick: () => void;
   onTitle: () => void;
+  onToday: (() => void) | null;
+  onDelete: (() => void) | null;
+  onDeletePart: ((index: number) => void) | null;
   onAddComment: () => void;
   onDeleteComment: (comment: Comment) => void;
   fixedOpen: boolean;
   unfoldParts: boolean;
 }) {
   const store = useStore();
-  const [remembered_, setUnfolded] = useState<Unfolded>(() => (fixedOpen ? "parts" : remembered({ key: "task:" + task.id, fallback: null })));
-  const unfolded: Unfolded = unfoldParts ? "parts" : remembered_;
+  const folds = useFolds();
+  const [firstUnseen, setFirstUnseen] = useState<string | null>(null);
+  const partsOpen = fixedOpen || unfoldParts || folds.isOpen({ key: partsKey(task.id), fallback: false });
+  const commentsOpen = comments.length > 0 && folds.isOpen({ key: commentsKey(task.id), fallback: false });
   const done = isDone({ task, entries: store.journal });
-  const comments = commentsFor({ task, comments: store.comments });
   const unseen = comments.some((comment) => comment.seenAt === null);
   const foldable = task.parts.length > 0 || task.note !== "";
   const now = nowStamp();
 
-  const unfold = (next: Unfolded) => {
-    const value = unfolded === next ? null : next;
-    setUnfolded(value);
-    remember({ key: "task:" + task.id, value });
-    if (value !== "comments" || !unseen) return;
+  useEffect(() => {
+    if (!commentsOpen) return;
+    const ordered = [...comments].sort((a, b) => a.writtenAt.localeCompare(b.writtenAt));
+    setFirstUnseen(ordered.find((comment) => comment.seenAt === null)?.id ?? null);
+    if (!unseen) return;
     for (const comment of comments) if (comment.seenAt === null) store.putComment({ ...comment, seenAt: now });
     if (task.date === null) store.putTask({ ...task, date: store.today });
-  };
+  }, [commentsOpen]);
 
-  const hints = [kindHint(task), whenHint({ task, today: store.today })].filter(Boolean);
+  const when = whenHint({ task, today: store.today });
+  const hint = kindHint(task);
+  const count = partCount(task);
 
   return (
-    <div className={done ? "task done" : "task"} data-task={task.id}>
-      <div className="main">
-        {select ? (
-          <>
-            <Handle onPointerDown={select.onHandle} />
-            <SquareTick on={select.on} onToggle={select.onToggle} />
-          </>
-        ) : (
-          <CircleTick done={done} onToggle={() => store.putTask(toggled({ task, entries: store.journal, now }))} press={press} />
-        )}
-        <TextButton active={false} onSelect={onTitle}>
-          {task.name}
-        </TextButton>
-        {foldable && !fixedOpen && (
-          <button className="fold" aria-label={unfolded === "parts" ? "fold" : "unfold"} onClick={() => unfold("parts")}>
-            <ChevronGlyph open={unfolded === "parts"} />
-          </button>
-        )}
-      </div>
-      {(hints.length > 0 || chip || comments.length > 0) && (
-        <Meta>
-          {hints.map((hint) => (
-            <span key={hint}>{hint}</span>
-          ))}
-          {chip && <Chip>{chip}</Chip>}
-          {comments.length > 0 && <CommentMark count={comments.length} unseen={unseen} onSelect={() => unfold("comments")} />}
-        </Meta>
-      )}
-      {unfolded === "parts" && (
-        <div className="unfolded">
-          {task.note && <div className="note">{task.note}</div>}
-          {task.parts.length > 0 && (
-            <div className="parts">
-              {task.parts.map((part, index) => (
-                <div key={index} data-part={task.id + ":" + index}>
-                  <PartRow part={part} onToggle={fixedOpen || select ? null : () => store.putTask(partToggled({ task, index, now }))} onHandle={select ? (event) => select.onPartHandle(event, index) : null} />
-                </div>
-              ))}
-            </div>
+    <div className={done ? "task done" : "task"}>
+      <Swipeable onRight={select ? null : onToday} onLeft={select ? null : onDelete}>
+        <div className={focused === task.id ? "row focused" : "row"} data-focus={task.id}>
+          <div className="main">
+            {select ? (
+              <>
+                <Handle onPointerDown={select.onHandle} />
+                <SquareTick on={select.on} onToggle={select.onToggle} />
+              </>
+            ) : (
+              <CircleTick done={done} onToggle={onTick} press={press} />
+            )}
+            <TextButton active={false} onSelect={onTitle} press={press}>
+              {task.name}
+              {hint && <span className="hint">{hint}</span>}
+            </TextButton>
+            {count && <span className="part-count">{count}</span>}
+            {foldable && !fixedOpen && (
+              <button className="fold" aria-label={partsOpen ? "fold" : "unfold"} onClick={() => folds.set({ key: partsKey(task.id), open: !partsOpen })}>
+                <ChevronGlyph open={partsOpen} />
+              </button>
+            )}
+          </div>
+          {(when || chip || comments.length > 0) && (
+            <Meta>
+              {chip && <Chip>{chip}</Chip>}
+              {when && <span>{when}</span>}
+              {comments.length > 0 && <CommentMark count={comments.length} unseen={unseen} onSelect={() => folds.set({ key: commentsKey(task.id), open: !commentsOpen })} />}
+            </Meta>
           )}
         </div>
+      </Swipeable>
+      {comments.length > 0 && (
+        <Roll open={commentsOpen}>
+          <div className="unfolded">
+            <CommentList comments={comments} scrollTo={firstUnseen} onAdd={onAddComment} onDelete={onDeleteComment} />
+          </div>
+        </Roll>
       )}
-      {unfolded === "comments" && (
-        <div className="unfolded">
-          <CommentList comments={comments} onAdd={onAddComment} onDelete={onDeleteComment} />
-        </div>
+      {foldable && (
+        <Roll open={partsOpen}>
+          <div className="unfolded">
+            {task.note && <div className="note">{task.note}</div>}
+            {task.parts.length > 0 && (
+              <div className="parts">
+                {task.parts.map((part, index) => (
+                  <div key={index} data-part={task.id + ":" + index}>
+                    <TaskRow
+                      task={{ ...partAsTask({ part, host: task, id: task.id + ":" + index, created: task.created }), date: null }}
+                      comments={[]}
+                      chip={null}
+                      select={select ? { ...select, onHandle: (event) => select.onPartHandle(event, index), onPartHandle: () => null } : null}
+                      press={press}
+                      focused={focused}
+                      onTick={() => (fixedOpen ? null : store.putTask(partToggled({ task, index, now })))}
+                      onTitle={onTitle}
+                      onToday={null}
+                      onDelete={onDeletePart ? () => onDeletePart(index) : null}
+                      onDeletePart={null}
+                      onAddComment={() => null}
+                      onDeleteComment={() => null}
+                      fixedOpen={fixedOpen}
+                      unfoldParts={false}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Roll>
       )}
     </div>
   );

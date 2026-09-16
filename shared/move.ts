@@ -1,5 +1,5 @@
 import { shiftDate } from "./format.ts";
-import type { Task, TaskPart } from "./model.ts";
+import type { Definition, Task, TaskPart } from "./model.ts";
 
 export type Container = "today" | "week" | "backlog";
 
@@ -38,6 +38,11 @@ export function changedOnly({ before, after }: { before: Task[]; after: Task[] }
     const previous = before.find((each) => each.id === task.id);
     return !previous || previous.sort !== task.sort || previous.group !== task.group || previous.date !== task.date;
   });
+}
+
+export function regrouped({ moving, definitions, group }: { moving: Task[]; definitions: Definition[]; group: string }): Definition[] {
+  const ids = new Set(moving.map((task) => task.definitionId).filter((id): id is string => id !== null));
+  return definitions.filter((definition) => ids.has(definition.id) && definition.group !== group).map((definition) => ({ ...definition, group }));
 }
 
 export function taskAsParts(task: Task): TaskPart[] {
