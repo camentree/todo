@@ -1,4 +1,4 @@
-import { everyLabel, parseTask, serializeTask } from "@shared/grammar.ts";
+import { everyLabel, parseTask, serializeTask, tokenSpans } from "@shared/grammar.ts";
 import type { Task } from "@shared/model.ts";
 
 const today = "2026-09-15";
@@ -48,6 +48,55 @@ describe("parseTask", () => {
     expect(parseTask({ text: "\nsomething", today })).toBeNull();
     expect(parseTask({ text: "/exercise", today })).toBeNull();
   });
+
+  it("keeps a word that only looks like a token in the title", () => {
+    expect(parseTask({ text: "Read #chapter 3 of the manual", today })?.name).toBe("Read #chapter 3 of the manual");
+  });
+});
+
+describe("tokenSpans", () => {
+  function marked(text: string) {
+    return tokenSpans({ text, today }).map((span) => [span.kind, text.slice(span.from, span.to)]);
+  }
+
+  it("marks every attribute on the task line and nothing else", () => {
+    expect(marked("Morning stretch /exercise #every mo,we,fr #rest 30s tomorrow 3pm = done")).toEqual([
+      ["attribute", "/exercise"],
+      ["attribute", "#every"],
+      ["attribute", "mo,we,fr"],
+      ["attribute", "#rest"],
+      ["attribute", "30s"],
+      ["attribute", "tomorrow"],
+      ["attribute", "3pm"],
+      ["attribute", "="],
+      ["attribute", "done"],
+    ]);
+  });
+
+  it("marks both words of a month and day, an iso date and a 24 hour time", () => {
+    expect(marked("Dinner sept 20 19:30")).toEqual([
+      ["attribute", "sept"],
+      ["attribute", "20"],
+      ["attribute", "19:30"],
+    ]);
+    expect(marked("Flight 2026-10-02 09:15")).toEqual([
+      ["attribute", "2026-10-02"],
+      ["attribute", "09:15"],
+    ]);
+  });
+
+  it("marks the dash and the attributes of a part, and leaves a note bare", () => {
+    expect(marked("Hangboard\n\n  keep the elbows soft\n\n- Hang #timer 30s ×3")).toEqual([
+      ["bullet", "-"],
+      ["attribute", "#timer"],
+      ["attribute", "30s"],
+      ["attribute", "×3"],
+    ]);
+  });
+
+  it("marks nothing in a word that is not a token", () => {
+    expect(marked("Read #chapter 3 of the manual")).toEqual([]);
+  });
 });
 
 const task: Task = {
@@ -77,7 +126,7 @@ const task: Task = {
 describe("serializeTask", () => {
   it("round-trips a task with progress", () => {
     const text = serializeTask({ task, every: null, today });
-    expect(text).toBe("Morning stretch /exercise #rest 30s today 15:00\n  Keep hips level.\n- neck rolls #timer 30s = done\n- cat cow #count 10 = 4\n  breathe out\n- plank #timer 45s");
+    expect(text).toBe("Morning stretch /exercise #rest 30s today 15:00\n\n  Keep hips level.\n\n- neck rolls #timer 30s = done\n- cat cow #count 10 = 4\n  breathe out\n- plank #timer 45s");
     const parsed = parseTask({ text, today });
     expect(parsed).toMatchObject({ name: "Morning stretch", group: "exercise", rest: 30, date: today, time: "15:00", note: "Keep hips level." });
     expect(parsed?.parts.map((part) => [part.done, part.current])).toEqual([[true, null], [null, 4], [null, null]]);

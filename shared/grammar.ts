@@ -21,8 +21,15 @@ export interface ParsedTask extends ParsedPart {
   parts: ParsedPart[];
 }
 
+export interface TokenSpan {
+  from: number;
+  to: number;
+  kind: "attribute" | "bullet";
+}
+
 interface Line {
   words: string[];
+  spans: TokenSpan[];
   group: string | null;
   kind: Kind | null;
   target: number | null;
@@ -33,6 +40,13 @@ interface Line {
   time: string | null;
   repeat: number;
   currentRaw: string | null;
+}
+
+interface DocumentLine {
+  kind: "task" | "part" | "note" | "blank";
+  text: string;
+  from: number;
+  bullet: number | null;
 }
 
 const dayList = /^(mo|tu|we|th|fr|sa|su)(,(mo|tu|we|th|fr|sa|su))*$/;
@@ -67,62 +81,95 @@ function comingWeekday({ today, weekday }: { today: string; weekday: number }): 
   return shiftDate({ key: today, days: offset });
 }
 
-function parseLine({ text, today }: { text: string; today: string }): Line {
-  const tokens = text.trim().split(/\s+/).filter(Boolean);
-  const line: Line = { words: [], group: null, kind: null, target: null, timer: null, rest: null, every: null, date: null, time: null, repeat: 1, currentRaw: null };
+function parseLine({ text, today, from }: { text: string; today: string; from: number }): Line {
+  const tokens: string[] = [];
+  const starts: number[] = [];
+  for (const match of text.matchAll(/\S+/g)) {
+    tokens.push(match[0]);
+    starts.push(from + match.index);
+  }
+  const attributes = new Set<number>();
+  const line: Line = { words: [], spans: [], group: null, kind: null, target: null, timer: null, rest: null, every: null, date: null, time: null, repeat: 1, currentRaw: null };
   for (let index = 0; index < tokens.length; index += 1) {
+    const opening = index;
     const token = tokens[index] ?? "";
     const next = tokens[index + 1];
     const lower = token.toLowerCase();
     if (token.startsWith("=")) {
       const pieces: string[] = [];
       if (token.length > 1) pieces.push(token.slice(1));
-      while (tokens[index + 1] !== undefined && !isTag(tokens[index + 1] ?? "")) pieces.push(tokens[++index] ?? "");
+      attributes.add(index);
+      while (tokens[index + 1] !== undefined && !isTag(tokens[index + 1] ?? "")) {
+        pieces.push(tokens[++index] ?? "");
+        attributes.add(index);
+      }
       line.currentRaw = pieces.join(" ");
       continue;
     }
     if (token.startsWith("/") && token.length > 1) {
       line.group = token.slice(1).toLowerCase();
+      attributes.add(index);
       continue;
     }
     if (token.startsWith("#")) {
       const key = lower.slice(1);
       if (key === "timer") {
         line.kind = "timer";
-        if (next && !isTag(next) && parseDuration(next) !== null) line.timer = parseDuration(tokens[++index] ?? "") ?? 0;
+        if (next && !isTag(next) && parseDuration(next) !== null) {
+          line.timer = parseDuration(tokens[++index] ?? "") ?? 0;
+          attributes.add(index);
+        }
       } else if (key === "count") {
         line.kind = "count";
-        if (next && /^\d+$/.test(next)) line.target = Number(tokens[++index]);
+        if (next && /^\d+$/.test(next)) {
+          line.target = Number(tokens[++index]);
+          attributes.add(index);
+        }
       } else if (key === "text") {
         line.kind = "text";
       } else if (key === "rest") {
-        if (next && !isTag(next) && parseDuration(next) !== null) line.rest = parseDuration(tokens[++index] ?? "") ?? 0;
+        if (next && !isTag(next) && parseDuration(next) !== null) {
+          line.rest = parseDuration(tokens[++index] ?? "") ?? 0;
+          attributes.add(index);
+        }
       } else if (key === "every") {
         const pieces: string[] = [];
-        while (tokens[index + 1] !== undefined && (interval.test(tokens[index + 1] ?? "") || dayList.test(tokens[index + 1] ?? ""))) pieces.push(tokens[++index] ?? "");
+        while (tokens[index + 1] !== undefined && (interval.test(tokens[index + 1] ?? "") || dayList.test(tokens[index + 1] ?? ""))) {
+          pieces.push(tokens[++index] ?? "");
+          attributes.add(index);
+        }
         line.every = pieces.join(" ") || "1d";
+      } else {
+        line.words.push(token);
+        continue;
       }
+      attributes.add(opening);
       continue;
     }
     const repeat = /^[×x](\d+)$/i.exec(token);
     if (repeat) {
       line.repeat = Math.max(1, Number(repeat[1]));
+      attributes.add(index);
       continue;
     }
     if (lower === "today") {
       line.date = today;
+      attributes.add(index);
       continue;
     }
     if (lower === "tomorrow") {
       line.date = shiftDate({ key: today, days: 1 });
+      attributes.add(index);
       continue;
     }
     if (weekdayNames[lower] !== undefined) {
       line.date = comingWeekday({ today, weekday: weekdayNames[lower] ?? 0 });
+      attributes.add(index);
       continue;
     }
     if (/^\d{4}-\d{2}-\d{2}$/.test(token)) {
       line.date = token;
+      attributes.add(index);
       continue;
     }
     if (monthNames[lower] !== undefined && next && /^\d{1,2}$/.test(next)) {
@@ -132,17 +179,46 @@ function parseLine({ text, today }: { text: string; today: string }): Line {
       let candidate = dateKey(new Date(year, month - 1, day));
       if (candidate < today) candidate = dateKey(new Date(year + 1, month - 1, day));
       line.date = candidate;
+      attributes.add(index);
       index += 1;
+      attributes.add(index);
       continue;
     }
     const time = parseTime(lower);
     if (time) {
       line.time = time;
+      attributes.add(index);
       continue;
     }
     line.words.push(token);
   }
+  for (const [index, token] of tokens.entries()) {
+    if (attributes.has(index)) line.spans.push({ from: starts[index] ?? 0, to: (starts[index] ?? 0) + token.length, kind: "attribute" });
+  }
   return line;
+}
+
+function documentLines(text: string): DocumentLine[] {
+  const lines: DocumentLine[] = [];
+  let at = 0;
+  text.split("\n").forEach((line, index) => {
+    const marker = /^\s*- /.exec(line);
+    if (marker) lines.push({ kind: "part", text: line.slice(marker[0].length), from: at + marker[0].length, bullet: at + marker[0].length - 2 });
+    else if (!line.trim()) lines.push({ kind: "blank", text: "", from: at, bullet: null });
+    else if (index === 0) lines.push({ kind: "task", text: line, from: at, bullet: null });
+    else lines.push({ kind: "note", text: line.trim(), from: at, bullet: null });
+    at += line.length + 1;
+  });
+  return lines;
+}
+
+export function tokenSpans({ text, today }: { text: string; today: string }): TokenSpan[] {
+  const spans: TokenSpan[] = [];
+  for (const line of documentLines(text)) {
+    if (line.bullet !== null) spans.push({ from: line.bullet, to: line.bullet + 1, kind: "bullet" });
+    if (line.kind === "task" || line.kind === "part") spans.push(...parseLine({ text: line.text, today, from: line.from }).spans);
+  }
+  return spans;
 }
 
 function partFrom({ line, notes }: { line: Line; notes: string[] }): ParsedPart {
@@ -167,20 +243,20 @@ function partFrom({ line, notes }: { line: Line; notes: string[] }): ParsedPart 
 }
 
 export function parseTask({ text, today }: { text: string; today: string }): ParsedTask | null {
-  const lines = text.replace(/\r/g, "").split("\n");
+  const lines = documentLines(text);
   const first = lines[0];
-  if (!first || !first.trim() || /^- /.test(first)) return null;
-  const rootLine = parseLine({ text: first, today });
+  if (!first || first.kind !== "task") return null;
+  const rootLine = parseLine({ text: first.text, today, from: first.from });
   if (rootLine.words.length === 0) return null;
   const rootNotes: string[] = [];
   const partLines: { line: Line; notes: string[] }[] = [];
   let current: { line: Line; notes: string[] } | null = null;
   for (const line of lines.slice(1)) {
-    if (/^\s*- /.test(line)) {
-      current = { line: parseLine({ text: line.replace(/^\s*- /, ""), today }), notes: [] };
+    if (line.kind === "part") {
+      current = { line: parseLine({ text: line.text, today, from: line.from }), notes: [] };
       partLines.push(current);
-    } else if (line.trim()) {
-      (current ? current.notes : rootNotes).push(line.trim());
+    } else if (line.kind === "note") {
+      (current ? current.notes : rootNotes).push(line.text);
     }
   }
   const parts = partLines.flatMap(({ line, notes }) => {
@@ -227,7 +303,8 @@ export function serializeTask({ task, every, today }: { task: Task; every: strin
   if (task.time) text += " " + task.time;
   if (task.parts.length === 0) text += valueTokens(task);
   else if (task.doneAt) text += " = done";
-  text += noteLines(task.note);
+  if (task.note) text += "\n" + noteLines(task.note);
+  if (task.note && task.parts.length > 0) text += "\n";
   for (const part of task.parts) text += "\n- " + part.name + kindTokens(part) + valueTokens(part) + noteLines(part.note);
   return text;
 }

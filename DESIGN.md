@@ -106,15 +106,27 @@ the text changed; cmd+enter saves and leaves.
 **Composer**: one text field, one grammar, used for adding and editing.
 - Opens as a single line above the keyboard. Enter adds. Typing a newline (or
   the `more` button) grows it into the block editor with the live preview.
+  The preview is its own section on the ground colour and the text field is a
+  raised sheet under it, with no line between them; nothing shows a scrollbar
+  while you edit.
 - Grammar: first line is the task; `- ` lines are parts; indented lines are
   notes. Tokens: `/group`, `#every 2d|1w|mo,we,fr`, `#timer 30s`, `#count 10`,
   `#rest 60s`, `#text`, `×3` on a part to repeat it as three parts with the
   rest between. Dates for one-offs: `tomorrow`, `fri`, `sep 20`,
   `2026-09-20`, `3pm` or `15:00`; the round-trip writes `15:00`. No `#every`
   and no date means backlog. `=` sets the current value.
-- Tap a title to edit; the same text round-trips with progress kept.
+- Every token the grammar knows is in the accent colour as you type, and the
+  `- ` of a part is faint. Anything it does not know, a `#word` included, is
+  title text in the text colour, never an error. The highlighter reads the
+  spans from the parser, so the colours cannot say one thing and the preview
+  another.
+- Tap a title to edit; the same text round-trips with progress kept, a blank
+  line standing between the title, the note and the parts.
 - What is added ends up visible: the section and the group it lands in unfold,
   the row scrolls slowly into view, and its parts start unfolded.
+- Escape leaves the composer, asking whether to save when the text changed
+  since it opened; cmd+enter saves and leaves. Enter keeps its own meaning: it
+  adds from the single line and makes a new line in the block.
 - Delete lives at the bottom of the composer, with the "today / every day"
   distinction for scheduled things.
 

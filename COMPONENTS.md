@@ -69,7 +69,8 @@ padding, card radius. Values are the ones on the canvas frames.
 
 ## Local composites
 
-- **Tasks**: Composer (one-line field that grows; preview is TaskRows),
+- **Tasks**: Composer (a CodeMirror field that grows and colours the token
+  spans `shared/grammar.ts` hands it; preview is TaskRows),
   SelectBar (small × and big play), the drag (Handle plus the accent DropLine
   that follows the finger).
 - **Runner**: QueueHorizontal and QueueVertical (TextButtons, current in
