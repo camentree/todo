@@ -8,7 +8,7 @@ import { Decoration, EditorView, ViewPlugin, keymap } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 
-const markerNodes = new Set(["HeaderMark", "EmphasisMark", "CodeMark", "QuoteMark"]);
+const markerNodes = new Set(["EmphasisMark", "CodeMark", "QuoteMark"]);
 const toneByNode: Record<string, string> = {
   StrongEmphasis: "cm-strong",
   Emphasis: "cm-em",
@@ -18,6 +18,7 @@ const toneByNode: Record<string, string> = {
   ATXHeading3: "cm-heading",
   Blockquote: "cm-quote",
   ListMark: "cm-bullet",
+  HeaderMark: "cm-marker",
 };
 
 function decorate(view: EditorView): DecorationSet {

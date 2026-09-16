@@ -789,20 +789,17 @@ textarea.editor {
   border-left-color: var(--accent);
 }
 
-.editor .cm-strong,
-.entry-body .strong {
+.editor .cm-strong {
   font-weight: 700;
   color: var(--accent);
 }
 
-.editor .cm-em,
-.entry-body .em {
+.editor .cm-em {
   font-style: italic;
   color: var(--accent);
 }
 
-.editor .cm-code,
-.entry-body .code {
+.editor .cm-code {
   font-family: var(--mono);
   font-size: 0.9em;
 }

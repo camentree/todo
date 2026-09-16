@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 import { formatWhen } from "@shared/format.ts";
-import { tagsInUse } from "@shared/journal.ts";
-import { inlineSegments } from "@shared/markdown.ts";
+import { entryFrom, entryText, tagsInUse } from "@shared/journal.ts";
+import { stripMarkers } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
 import type { JournalName } from "../data/store.tsx";
@@ -14,15 +14,13 @@ import { TextButton } from "./TextButton.tsx";
 
 const headings: Record<JournalName, string> = { journal: "Journal", notebook: "Notebook" };
 
-export function splitTags(text: string): { tags: string[]; body: string } {
-  const [first = "", ...rest] = text.split("\n");
-  const words = first.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0 || !words.every((word) => /^#\S+$/.test(word))) return { tags: [], body: text };
-  return { tags: words.map((word) => word.slice(1).toLowerCase()), body: rest.join("\n").replace(/^\n+/, "") };
+export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
+  const at = nowStamp().slice(0, 16);
+  return { id: identifier(), at, title: at.replace("T", " - "), tags: tag ? [tag] : [], task: null, body: "" };
 }
 
-export function withTagLine(entry: JournalEntry): string {
-  return entry.tags.length ? entry.tags.map((tag) => "#" + tag).join(" ") + "\n\n" + entry.body : entry.body;
+function when({ entry, today }: { entry: JournalEntry; today: string }): string {
+  return formatWhen({ at: entry.at, today });
 }
 
 function Filters({ tags, active, onSelect }: { tags: string[]; active: string | null; onSelect: (tag: string | null) => void }) {
@@ -45,21 +43,15 @@ function EntryRow({ entry, today, onOpen }: { entry: JournalEntry; today: string
   return (
     <button className="entry" onClick={onOpen}>
       <div className="entry-head">
-        <span>{formatWhen({ at: entry.at, today })}</span>
+        <span>{when({ entry, today })}</span>
         {meta && <span className="entry-tag">{meta}</span>}
       </div>
       <div className="entry-body">
         {entry.body
           .split("\n")
           .filter((line) => line.trim() && !line.startsWith("```"))
-          .map((line, lineIndex) => (
-            <div key={lineIndex}>
-              {inlineSegments(line).map((segment, index) => (
-                <span key={index} className={segment.tone}>
-                  {segment.text}
-                </span>
-              ))}
-            </div>
+          .map((line, index) => (
+            <div key={index}>{stripMarkers(line)}</div>
           ))}
       </div>
     </button>
@@ -69,25 +61,9 @@ function EntryRow({ entry, today, onOpen }: { entry: JournalEntry; today: string
 export function Entries({ name }: { name: JournalName }) {
   const store = useStore();
   const [filter, setFilter] = useState<string | null>(null);
-  const [editing, setEditing] = useState<JournalEntry | "new" | null>(null);
+  const [editing, setEditing] = useState<JournalEntry | null>(null);
   const entries = store[name];
   const shown = entries.filter((entry) => filter === null || entry.tags.includes(filter)).sort((a, b) => b.at.localeCompare(a.at));
-
-  const save = (text: string) => {
-    const { tags, body } = splitTags(text);
-    const previous = editing === "new" || editing === null ? null : editing;
-    store.putEntry({
-      name,
-      entry: {
-        id: previous?.id ?? identifier(),
-        at: previous?.at ?? nowStamp().slice(0, 16),
-        tags: tags.length || previous === null ? (tags.length ? tags : filter ? [filter] : []) : previous.tags,
-        task: previous?.task ?? null,
-        body: body.trim(),
-      },
-    });
-    setEditing(null);
-  };
 
   return (
     <>
@@ -98,17 +74,21 @@ export function Entries({ name }: { name: JournalName }) {
         ))}
       </div>
       <div className="floating">
-        <RoundButton label="add" onSelect={() => setEditing("new")}>
+        <RoundButton label="add" onSelect={() => setEditing(blankEntry({ tag: filter }))}>
           <PlusGlyph />
         </RoundButton>
       </div>
       {editing && (
         <EditorScreen
           heading={headings[name]}
-          subheading={editing === "new" ? (filter ? filter : "") : [formatWhen({ at: editing.at, today: store.today }), editing.tags.join(", "), editing.task ?? ""].filter(Boolean).join(" · ")}
-          initial={editing === "new" ? "" : withTagLine(editing)}
+          subheading={[when({ entry: editing, today: store.today }), editing.tags.join(", "), editing.task ?? ""].filter(Boolean).join(" · ")}
+          markdown
+          initial={entryText(editing)}
           onCancel={() => setEditing(null)}
-          onSave={save}
+          onSave={(text) => {
+            store.putEntry({ name, entry: entryFrom({ entry: editing, text }) });
+            setEditing(null);
+          }}
         />
       )}
     </>

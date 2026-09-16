@@ -201,22 +201,62 @@ const comments: Comment[] = [
   { id: identifier("cmt"), definitionId: null, taskName: "Plan the trip to Portland", body: "Flights are cheapest the second week of October.", author: "user", writtenAt: stamp(-4, "20:10:00"), seenAt: stamp(-4, "20:10:00") },
 ];
 
+function entry({ prefix, at, title, tags, task = null, body }: { prefix: string; at: string; title?: string; tags: string[]; task?: string | null; body: string }): JournalEntry {
+  return { id: identifier(prefix), at, title: title ?? at.replace("T", " - "), tags, task, body };
+}
+
 const journal: JournalEntry[] = [
-  { id: identifier("jnl"), at: stamp(-14, "08:15"), tags: ["personal"], task: null, body: "Quiet morning. Coffee on the step. The neighbour's cat came over and sat on the warm stone." },
-  { id: identifier("jnl"), at: stamp(-12, "21:40"), tags: ["therapy"], task: null, body: "Talked about the thing from Tuesday. It is smaller when I say it out loud, more like a fact than a weather system.\n\nHomework: notice when I am bracing." },
-  { id: identifier("jnl"), at: stamp(-9, "19:30"), tags: ["exercise", "climbing"], task: null, body: "Hangboard felt heavy. Kept the 60s rest and it was fine by the third set." },
-  { id: identifier("jnl"), at: stamp(-7, "07:42"), tags: ["personal"], task: "Journal", body: "Slept badly. Sat for twelve minutes anyway. The room was quiet by the end and I noticed I did not want it to end." },
-  { id: identifier("jnl"), at: stamp(-5, "18:05"), tags: ["climbing"], task: null, body: "Sent the blue V4 on the overhang. Heel hook first, then trust the left hand." },
-  { id: identifier("jnl"), at: stamp(-3, "21:10"), tags: ["therapy", "personal"], task: null, body: "Walked before dinner. Fewer tabs open in my head." },
-  { id: identifier("jnl"), at: stamp(-1, "07:40"), tags: ["personal"], task: "Journal", body: "Rain. Wrote three lines and that was enough.\n\n- call the pharmacy\n- water is running low, eight glasses is a lot" },
+  entry({ prefix: "jnl", at: stamp(-14, "08:15"), tags: ["personal"], body: "Quiet morning. Coffee on the step. The neighbour's cat came over and sat on the warm stone." }),
+  entry({
+    prefix: "jnl",
+    at: stamp(-12, "21:40"),
+    title: "after the session",
+    tags: ["therapy"],
+    body: "Talked about the thing from Tuesday. It is smaller when I say it out loud, more like a fact than a weather system.\n\n### homework\n\nNotice when I am bracing.",
+  }),
+  entry({ prefix: "jnl", at: stamp(-9, "19:30"), tags: ["exercise", "climbing"], body: "Hangboard felt heavy. Kept the 60s rest and it was fine by the third set." }),
+  entry({
+    prefix: "jnl",
+    at: stamp(-7, "07:42"),
+    title: "slept badly",
+    tags: ["personal"],
+    task: "Journal",
+    body: "Slept badly. Sat for twelve minutes anyway. The room was quiet by the end and I noticed I did not want it to end.",
+  }),
+  entry({ prefix: "jnl", at: stamp(-5, "18:05"), title: "blue v4", tags: ["climbing"], body: "Sent the blue V4 on the overhang. Heel hook first, then trust the left hand." }),
+  entry({ prefix: "jnl", at: stamp(-3, "21:10"), tags: ["therapy", "personal"], body: "Walked before dinner. Fewer tabs open in my head." }),
+  entry({
+    prefix: "jnl",
+    at: stamp(-1, "07:40"),
+    tags: ["personal"],
+    task: "Journal",
+    body: "Rain. Wrote three lines and that was enough.\n\n- call the pharmacy\n- water is running low, eight glasses is a lot",
+  }),
 ];
 
 const notebook: JournalEntry[] = [
-  { id: identifier("nte"), at: stamp(-20, "15:15"), tags: ["books"], task: null, body: "Sam recommended The Overstory. Library has it, hold placed." },
-  { id: identifier("nte"), at: stamp(-11, "20:40"), tags: ["recipes"], task: null, body: "**Dal**: 1 cup red lentils, 3 cups water, turmeric, salt. Temper cumin, garlic, chilli in ghee at the end. 25 minutes." },
-  { id: identifier("nte"), at: stamp(-6, "11:02"), tags: ["programming"], task: null, body: "Parallax read-only role is `parallax_reader`. The todo schema is granted at migration time, so a new table needs a grant in the same migration." },
-  { id: identifier("nte"), at: stamp(-2, "18:20"), tags: ["house"], task: null, body: "Water filter is the 3-pack, model on the inside of the fridge door. Change it the first of every month." },
-  { id: identifier("nte"), at: stamp(0, "09:30"), tags: ["garden"], task: null, body: "Rosemary wants the sunny bed by the fence. Move it before the frost." },
+  entry({ prefix: "nte", at: stamp(-20, "15:15"), title: "the overstory", tags: ["books"], body: "Sam recommended The Overstory. Library has it, hold placed." }),
+  entry({
+    prefix: "nte",
+    at: stamp(-11, "20:40"),
+    title: "dal",
+    tags: ["recipes"],
+    body: "**Dal**: 1 cup red lentils, 3 cups water, turmeric, salt. 25 minutes.\n\n### tempering\n\nCumin, garlic and chilli in ghee at the end, poured over.",
+  }),
+  entry({
+    prefix: "nte",
+    at: stamp(-6, "11:02"),
+    tags: ["programming"],
+    body: "Parallax read-only role is `parallax_reader`. The todo schema is granted at migration time, so a new table needs a grant in the same migration.",
+  }),
+  entry({
+    prefix: "nte",
+    at: stamp(-2, "18:20"),
+    title: "water filter",
+    tags: ["house"],
+    body: "The filter is the 3-pack, model on the inside of the fridge door. Change it the first of every month.",
+  }),
+  entry({ prefix: "nte", at: stamp(0, "09:30"), title: "rosemary", tags: ["garden"], body: "The rosemary wants the sunny bed by the fence. Move it before the frost." }),
 ];
 
 function seeded(seed: number): () => number {

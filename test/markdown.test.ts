@@ -1,19 +1,4 @@
-import { firstLine, inlineSegments, preview, stripMarkers } from "@shared/markdown.ts";
-
-describe("inlineSegments", () => {
-  it("splits a line into toned pieces without the markers", () => {
-    expect(inlineSegments("- sat for **twelve** minutes, _softly_")).toEqual([
-      { text: "sat for ", tone: "plain" },
-      { text: "twelve", tone: "strong" },
-      { text: " minutes, ", tone: "plain" },
-      { text: "softly", tone: "em" },
-    ]);
-    expect(inlineSegments("`code` only")).toEqual([
-      { text: "code", tone: "code" },
-      { text: " only", tone: "plain" },
-    ]);
-  });
-});
+import { firstLine, preview, stripMarkers } from "@shared/markdown.ts";
 
 describe("stripMarkers", () => {
   it("removes line and inline markers", () => {

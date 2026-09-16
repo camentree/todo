@@ -40,19 +40,22 @@ follows the tab. Runner, composer and comment editor are full-screen overlays.
 - Finished rows stay struck through until the day rolls over.
 
 **Journal**: a view over the one `journal.md` Parallax already splits on H2.
-Each H2 is an entry: a timestamp heading, a metadata block under it holding
-tags, then the body. Entries newest first: timestamp and tag in the meta
-style, first three lines of body. Filters are plain words above the list,
-the active one in text colour. CodeMirror markdown with markers hidden off
-the caret line; a new entry writes a new H2 with the timestamp and a tag
-line. An entry may name a task; a task named Journal auto-completes when an
-entry exists for the day.
+Each H2 is an entry: its section title, a metadata block under it holding the
+timestamp and the tags, then the body, which may carry its own deeper
+subheadings. A new entry is titled `YYYY-MM-DD - HH:MM` in 24-hour time until
+it is renamed. Entries newest first: timestamp and tag in the meta style,
+first three lines of body as plain text. Filters are plain words above the
+list, the active one in text colour. CodeMirror markdown with markers hidden
+off the caret line, except heading marks, which stay visible so the level
+reads; the `## title` line sits at the top and editing it renames the
+section. An entry may name a task; a task named Journal auto-completes when
+an entry exists for the day.
 
 **Notebook**: the same screen over `notebook.md`. Journal is introspection,
 Notebook is things. The editor's heading is Journal or Notebook, so the
-entry's meta line does not repeat it. Bold and italic render in a colour of
-their own as well as their weight; fenced code blocks render in mono on the
-raised colour. The editor opens in read mode with no caret; tapping puts
+entry's meta line does not repeat it. In the editor bold and italic render in
+a colour of their own as well as their weight and fenced code blocks render
+in mono on the raised colour; the list is plain text throughout. The editor opens in read mode with no caret; tapping puts
 the caret where you tapped, snapped to the end of the nearest word when you
 tap past the end of a line. There is never more than one caret.
 
