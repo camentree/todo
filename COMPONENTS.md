@@ -20,9 +20,11 @@ padding, card radius. Values are the ones on the canvas frames.
 - **CircleTick**: the completion circle; empty or done; a small size for parts.
 - **SquareTick**: the select box; on or off; the same slot as CircleTick.
 - **Handle**: the three-line drag grip.
-- **Foldable**: owns the chevron (closed › open ⌄), the open state, and
-  remembering it per key. Used by Group, This week, Backlog, a task's note and
-  parts, and the comments unfold.
+- **Foldable**: owns the chevron (closed › open ⌄) and the open state. Used by
+  Group, This week and Backlog. The same file holds FoldsProvider, which
+  remembers every fold by key so keyboard shortcuts can drive them, and Roll,
+  the grid that rolls content open and closed slowly; TaskRow's thread and
+  parts use Roll directly.
 - **Chip**: mono attribute pill.
 - **Meta**: the dim line under a title; holds the kind hint, date or time,
   CommentMark, Chips.
@@ -33,7 +35,8 @@ padding, card radius. Values are the ones on the canvas frames.
   items in both runner queues, the filter words, the group labels, and every
   plain action (done, cancel, save, more, add a comment). The parent sets
   size and colour.
-- **Card**: raised block with a body and a faint date. The only card in the app.
+- **Card**: block with a body and a faint author and date; raised for the
+  user, tinted accent for the agent. The only card in the app.
 - **Swipeable**: wraps a row or a Card; right reveals today on accent, left
   reveals delete on red; one threshold everywhere; vertical drift cancels.
 - **Editor**: CodeMirror markdown with markers hidden off the caret line.
@@ -45,14 +48,17 @@ padding, card radius. Values are the ones on the canvas frames.
 ## Shared composites
 
 - **TopBar**: three TextButtons and the date line.
-- **TaskRow**: CircleTick or (Handle + SquareTick), title, Foldable chevron,
-  Meta. Unfolds the note, the parts, or the CommentList. PartRow (small tick,
-  name) and the note line live in this file.
+- **TaskRow**: Swipeable around (CircleTick or Handle + SquareTick, title with
+  its kind hint, part count, chevron, Meta), then the CommentList and then the
+  note and parts, each in its own Roll. A part is a TaskRow of its own, built
+  from the part with its host's callbacks; the note line lives in this file.
 - **Group**: label as TextButton plus count, Foldable, rows; a SquareTick in
   select mode. This week and Backlog are Groups.
-- **CommentList**: Cards newest first plus the Field that opens EditorScreen.
-  The Field (an outlined placeholder that only opens the editor) lives here.
-  Same component on Today and in the runner.
+- **CommentList**: the thread, oldest at the top and newest at the bottom,
+  user on the left and agent on the right, in a scroll box that opens at the
+  first unseen card or the bottom, plus the Field pinned under it that opens
+  EditorScreen. The Field (an outlined placeholder that only opens the
+  editor) lives here. Same component on Today and in the runner.
 - **EditorScreen**: heading, dim line, Editor, cancel and save. Used for a
   comment, a journal entry, and a note.
 - **Entries**: the Journal and Notebook screen, given its source file. Filters
@@ -82,6 +88,9 @@ ErrorSprite. Nothing else talks to the API.
 
 - **useLongPress**: one duration, one slop. Hold a tick, hold a group label,
   pause over a folded task while dragging.
+- **useShortcuts**: the desktop key bindings, in `interaction/shortcuts.tsx`
+  with the list they come from and the ShortcutsSheet that shows it. Today
+  owns the focus ring and what each action does.
 
 ## Custom
 

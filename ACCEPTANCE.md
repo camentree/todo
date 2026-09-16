@@ -288,3 +288,35 @@ Select mode
   both once; no duplicate rows appear on Today, in This week, or after a
   reload; their definitions now carry the new group and tomorrow's instances
   appear there.
+
+Casing
+- Every word the app writes is lowercase: hints, meta lines, the since text,
+  This week and Backlog rows' text, and action words such as done, cancel,
+  save, more, add a comment; only group labels (uppercase) and the three tab
+  names (Title Case) differ, and task titles and journal text keep what was
+  typed.
+
+Colour
+- Every colour token matches main's stylesheet verbatim in both themes, and
+  the page ground, the raised surfaces and the text read the same as main's
+  app side by side; nothing paints a background over the ground in a
+  different colour.
+
+Touch
+- Every interactive element on every screen can be hit with a thumb without
+  landing on a neighbour; nothing interactive sits under the floating button
+  or the home indicator; the composer and the editor sit fully above the
+  keyboard.
+
+Keyboard
+- On a desktop keyboard, and never while typing in a field: Escape closes
+  whatever is open (composer, editor, runner, select mode, an open thread)
+  and otherwise blurs; j / k and ctrl-n / ctrl-p move a focus ring down and
+  up the list including parts and across groups; h / l fold and unfold the
+  focused task's parts, and l unfolds a group when its label is focused;
+  Space toggles the focused row's selection, entering select mode on first
+  use; Enter completes it; i edits it; d deletes it with the same confirm as
+  the swipe; t marks it today or takes today off it; c opens its thread; n
+  opens the composer; ? shows a sheet listing these.
+- The focus ring is a faint outline on the row, appears only after a key has
+  been pressed, and never shifts the layout.

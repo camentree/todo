@@ -212,3 +212,7 @@ faint; the date sits under it in the meta size. Round buttons are 3.25rem:
 (comments) are raised with a 0.7rem radius, the only cards in the app. The
 ring is 250px, 3px, raised track with an accent arc. Red only for the delete
 swipe. Phone first; desktop only widens the column. Light must survive sun.
+Everything the app writes is lowercase (`since saturday`, `wednesday,
+september 16`, `3pm`, `done`, `add a comment`); the two exceptions are group
+labels, which stay UPPERCASE, and the three tab names, which stay Title Case;
+task titles and journal text are whatever was typed.

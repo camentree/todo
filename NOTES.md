@@ -203,3 +203,138 @@ Judgment calls in this slice
 
 - Wake lock and the theme-color meta cannot be observed in the simulator; the code is there.
 - Chrome's extension tab was hidden for part of the drag checks, which stalls animation frames; that is why the auto-scroll runs on an interval rather than requestAnimationFrame.
+
+## Round 2
+
+Driven the same way as before: iPhone simulator through AXe taps, Chrome at
+1000 to 1400px, curl and the API. One thing found on the way: `client/data/`
+was never committed, because `.gitignore` said `data/`; it is now `/data/`
+and the two files are in.
+
+### Judgment calls
+
+- **Fold state** is one FoldsProvider keyed by string (`group:habits`,
+  `week`, `task:<id>:parts`, `task:<id>:comments`), remembered in
+  localStorage, so a row's thread and parts are independent and the keyboard
+  can drive any fold. The old three-way state is gone.
+- **Roll**: folding is a CSS grid going from `0fr` to `1fr` over 0.45s; the
+  content stays mounted and is `inert` while closed, so a folded Backlog is
+  still in the DOM but cannot be tapped or focused. `overflow: clip` rather
+  than `hidden`, so no scroll container is created.
+- **Kind hint**: `30 min`, `8 ×`, `3 / 8`; text tasks show their value once
+  written and nothing before. The model has no amounts or "times", so `500 ml`
+  and `2 times` have no source and are not shown.
+- **Part count** at the far right is `4`, or `1 / 4` while partly done.
+- **Dates**: within six days either way the weekday name, otherwise the full
+  month and day; `today` and `yesterday` keep their words. Times are `3pm`
+  and `2:30pm` everywhere, including the composer's round-trip.
+- **Casing**: everything the app writes is lowercase except group labels and
+  the tab names. The editor headings for a comment, an entry and a note are
+  `Comment`, `Journal` and `Notebook`, treated as screen names like the tabs.
+  The runner heading is the task name, the group name as typed, or
+  `selection`.
+- **Parts as TaskRows**: a part row is a TaskRow built with `partAsTask`
+  (date cleared so it never says since when), keyed `hostId:index`. Its tick
+  toggles the part, its title opens the host's editor, its swipe left deletes
+  the part after a confirm, its hold enters select mode with the host
+  selected, and in select mode its square mirrors and toggles the host. A part
+  with a note gets its own chevron.
+- **Thread**: authors are `user` and `agent` (the seed writes those; the app
+  writes `user`). A card from any other author is drawn as the agent. The
+  thread box is 18rem tall at most and opens scrolled to the first unseen
+  card, or the bottom; the runner's thread is the same component in the
+  runner's own scroll box.
+- **Seen marking** happens in an effect when the thread opens, whether by
+  tap or by the `c` key, and dates a Backlog task today as before.
+- **Regrouping habits**: dropping definition instances into another group
+  also writes the definition with the new group (`regrouped` in move.ts, one
+  write per definition however many instances moved); the server then
+  re-creates future instances there.
+- **Colours**: every token is now main's verbatim, including
+  `--swipe-warn` and `--swipe-accent` for the two reveals and `--hover` and
+  `--tag`, which nothing uses yet. Main's base font size is 17px against this
+  build's 16px; left alone, since the canvas sizes are in rem at 16px, but it
+  is the likeliest reason the reviewer sees a difference.
+- **Keyboard**: bindings, the list and the help sheet are
+  `client/interaction/shortcuts.tsx`; Today owns the focus and the actions.
+  Focus order is the DOM order of `[data-focus]` elements not inside a closed
+  Roll, so it includes group labels, parts and the This week and Backlog
+  rows. `t` only acts on one-offs. Escape in the composer's textarea is the
+  composer's own; Escape inside CodeMirror does nothing, as asked
+  ("ignored while typing in a field").
+- **Composer under the keyboard**: the strip Safari keeps for its collapsed
+  address pill sits between the visual viewport and the keyboard; the composer
+  overlay no longer clips its scrim, so that strip is dimmed like the rest.
+- **AXe swipes** do not reach pointer events in this simulator's Safari, on
+  this build or on the committed one (checked on a detached worktree of the
+  previous commit). Swipes were driven in Chrome with touch pointer events;
+  the reveal, the threshold, the confirm and the spring back all hold there.
+
+### Round 2 checklist
+
+Motion and stillness
+- [x] Tab switches move nothing sideways: `scrollbar-gutter: stable` on html; Chrome at 1000px with a scrolling Today and a short Notebook, column left edge unchanged.
+- [x] Folds roll over 0.45s: simulator screenshot mid-fold of Exercise showed the rows part way.
+- [x] Chevrons turn and stay visible on group labels and rows: screenshots open and closed.
+- [x] The comment mark, tick and title stay put: getBoundingClientRect sampled for 700ms across a fold in Chrome, one position.
+- [x] Nothing else moves: the count on a group label fades instead of appearing.
+
+Rows
+- [x] Kind hint after the title in dim: `10 min`, `8 ×`, `20 min` in the simulator.
+- [x] Part count left of the chevron, no "N parts" in the meta line: Morning stretch shows `4`.
+- [x] Meta order chip, date, time, mark: This week rows show `habits thursday`; Morning stretch shows `7:30am  2`.
+- [x] No abbreviated weekday anywhere: `since sunday`, `thursday`, `september 6`; unit tests updated.
+- [x] Groups 1.3rem apart, rows 0.15rem: screenshot.
+- [x] Hold on the title enters select mode: simulator hold on "Morning stretch".
+- [x] Parts are TaskRows: same tick, hint, handle and square in select mode, swipe and confirm in Chrome.
+- [x] This week title opens the editor in place; tick sets today's date and completes: simulator (editor), code path `toggled` plus `date: today`.
+
+Under a row
+- [x] Thread directly under the meta line, note and parts under it, both open at once: simulator screenshots a5 and a2.
+- [x] Swipe moves only the row: Chrome, translateX(-64px) on `.swiped` with `.unfolded` left unchanged.
+
+Comments
+- [x] Oldest at the top, user left raised, agent right tinted, author and date in faint: simulator and Chrome runner screenshot.
+- [x] "add a comment" pinned under the thread box.
+- [x] Opens scrolled to the first unseen or the bottom: `scrollTop` set on mount to the card's offset or `scrollHeight`.
+
+Journal and Notebook
+- [x] Notebook everywhere: tab, heading, App key.
+- [x] Editor heading Journal or Notebook; the meta line under it is date, tags and task only.
+- [x] Bold and italic in accent in the editor and in the preview (`inlineSegments`, unit-tested).
+- [x] Fenced blocks mono on raised in the editor (`cm-fenced` line decoration); the preview drops the fence lines.
+- [x] New entry opens with no caret; a tap puts one caret; tapping past a line's end lands at its end (CodeMirror's posAtCoords): simulator.
+- [x] Type a character, delete it, one caret: simulator, counted accent pixels in two screenshots (one caret, blinking).
+
+Select mode
+- [x] Play centred on the +'s line, glyph 36px with rounded corners: negative right margin of half the size difference; screenshot.
+- [x] Two habits dragged into Exercise: both moved once, definitions in `exercise`, seven future instances there, no duplicate after reload: Chrome plus /api/definitions and /api/tasks.
+
+Casing
+- [x] All app text lowercase but labels and tabs: screenshots of Today, Journal, the editor, the confirm sheet and the help sheet.
+
+Colour
+- [x] Tokens verbatim from main in both themes: diffed by eye against main's `:root` blocks. Side by side against a running main was not possible (main's server is not running on this machine); the tokens are identical, so the remaining difference can only be the base font size noted above.
+
+Touch
+- [x] Every button at least 40px in both directions at 430px: measured every visible button in Chrome at that width after the padding changes (tabs, titles, marks, filters, runner words). Real taps in the simulator on tab words, filter words, ticks, chevrons, the mark, the +, a title, cancel, and the editor.
+- [x] Nothing under the floating button: 8rem bottom padding; the last row scrolls clear.
+- [x] Composer and editor above the keyboard: simulator with the real keyboard.
+
+Keyboard
+- [x] j/k, l/h, Enter, Space, c, ?, Escape driven in Chrome with real keys and with dispatched events; ring is an outline with no layout change.
+
+### Earlier slices re-checked
+
+- [x] Rows, ticks, group folding and persistence: simulator, reload kept Exercise folded.
+- [x] Composer round-trip: `Journal /habits #every 1d` opened from a This week title; times now serialize as `3pm`, grammar tests updated.
+- [x] Swipes: Chrome only, see above.
+- [x] Select mode and drag: Chrome (bundle drag between groups), simulator (hold, squares, play button).
+- [x] Runner: queue, ring, thread with the new cards, add a comment editor: Chrome.
+- [x] Journal and Notebook: filters, list, editor: simulator.
+- [x] `npm test`: 42 tests green.
+
+### What does not hold
+
+- Swipes could not be driven by real touch in the simulator (tooling), on this build or the previous one.
+- The side-by-side colour check against main's running app was not possible; tokens are verbatim.
