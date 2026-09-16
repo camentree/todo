@@ -42,6 +42,10 @@ export function tagCounts(entries: JournalEntry[]): { tag: string; count: number
   return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([tag, count]) => ({ tag, count }));
 }
 
+export function autoTitle(at: string): string {
+  return at.replace("T", " - ");
+}
+
 export function entryText(entry: JournalEntry): string {
   const tagLine = entry.tags.map((tag) => "#" + tag).join(" ");
   const lines = entry.tags.length ? [tagLine, `## ${entry.title}`, entry.body] : [`## ${entry.title}`, entry.body];

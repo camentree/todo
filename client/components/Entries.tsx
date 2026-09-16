@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { formatWhen } from "@shared/format.ts";
-import { entryFrom, entryText, tagCounts } from "@shared/journal.ts";
+import { autoTitle, entryFrom, entryText, tagCounts } from "@shared/journal.ts";
 import { stripMarkers, wordCount } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
@@ -16,7 +16,7 @@ const headings: Record<JournalName, string> = { journal: "Journal", notebook: "N
 
 export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
   const at = nowStamp().slice(0, 16);
-  return { id: identifier(), at, title: at.replace("T", " - "), tags: tag ? [tag] : [], task: null, body: "" };
+  return { id: identifier(), at, title: autoTitle(at), tags: tag ? [tag] : [], task: null, body: "" };
 }
 
 function when({ entry, today }: { entry: JournalEntry; today: string }): string {
@@ -43,7 +43,7 @@ function EntryRow({ entry, today, filter, onOpen }: { entry: JournalEntry; today
   const words = wordCount(entry.body);
   return (
     <button className="entry" onClick={onOpen}>
-      <div className="entry-title">{entry.title}</div>
+      {entry.title !== autoTitle(entry.at) && <div className="entry-title">{entry.title}</div>}
       <div className="entry-head">
         <span>{when({ entry, today })}</span>
         {tags.length > 0 && <span className="entry-tag">{tags.join(", ")}</span>}

@@ -1,4 +1,4 @@
-import { entryFrom, entryText, parseMarkdown, serializeMarkdown, tagCounts } from "@shared/journal.ts";
+import { autoTitle, entryFrom, entryText, parseMarkdown, serializeMarkdown, tagCounts } from "@shared/journal.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
 const entries: JournalEntry[] = [
@@ -28,6 +28,14 @@ describe("journal markdown", () => {
       { tag: "personal", count: 2 },
       { tag: "therapy", count: 1 },
     ]);
+  });
+});
+
+describe("autoTitle", () => {
+  it("is the timestamp in 24-hour time, and matches an untouched title", () => {
+    expect(autoTitle("2026-09-13T08:15")).toBe("2026-09-13 - 08:15");
+    expect(entries[0]!.title).toBe(autoTitle(entries[0]!.at));
+    expect(entries[1]!.title).not.toBe(autoTitle(entries[1]!.at));
   });
 });
 

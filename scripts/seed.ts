@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { isDue } from "../shared/schedule.ts";
-import { serializeMarkdown } from "../shared/journal.ts";
+import { autoTitle, serializeMarkdown } from "../shared/journal.ts";
 import type { Comment, Definition, JournalEntry, Part, Task } from "../shared/model.ts";
 
 const directory = process.argv[2] ?? process.env.DATA_DIR ?? "data/dev";
@@ -202,7 +202,7 @@ const comments: Comment[] = [
 ];
 
 function entry({ prefix, at, title, tags, task = null, body }: { prefix: string; at: string; title?: string; tags: string[]; task?: string | null; body: string }): JournalEntry {
-  return { id: identifier(prefix), at, title: title ?? at.replace("T", " - "), tags, task, body };
+  return { id: identifier(prefix), at, title: title ?? autoTitle(at), tags, task, body };
 }
 
 const journal: JournalEntry[] = [
