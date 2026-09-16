@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Editor } from "./Editor.tsx";
 import { CrossGlyph } from "./Glyphs.tsx";
@@ -9,17 +9,33 @@ import { TextButton } from "./TextButton.tsx";
 export function EditorScreen({
   heading,
   subheading,
+  markdown,
   initial,
   onCancel,
   onSave,
 }: {
   heading: string;
   subheading: string;
+  markdown?: boolean;
   initial: string;
   onCancel: () => void;
   onSave: (text: string) => void;
 }) {
   const [text, setText] = useState(initial);
+  const save = () => text.trim() && onSave(text);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" && !(event.key === "Enter" && event.metaKey)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Enter") save();
+      else onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [text]);
+
   return (
     <Overlay>
       <div className="page">
@@ -31,7 +47,11 @@ export function EditorScreen({
         </div>
         <div className="dateline">{subheading}</div>
         <div className="editor-host">
-          <Editor value={text} onChange={setText} />
+          {markdown ? (
+            <Editor value={text} onChange={setText} />
+          ) : (
+            <textarea className="editor" autoFocus value={text} onChange={(event) => setText(event.target.value)} />
+          )}
         </div>
         <div className="actions">
           <div />
@@ -39,7 +59,7 @@ export function EditorScreen({
             <TextButton active={false} onSelect={onCancel}>
               cancel
             </TextButton>
-            <TextButton active={text.trim() !== ""} onSelect={() => text.trim() && onSave(text)}>
+            <TextButton active={text.trim() !== ""} onSelect={save}>
               save
             </TextButton>
           </div>

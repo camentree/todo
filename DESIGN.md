@@ -96,12 +96,14 @@ follow a habit across days. Agents post them too, through the HTTP API.
 - Authors are `user` (Camen) and `agent`. A thread reads like messages:
   oldest at the top, newest at the bottom, the user's on the left in the
   raised colour, the agent's on the right in a tinted accent, each with its
-  author and date in faint. The `Add a comment` field is pinned under the
+  date in faint; the side it sits on already says who wrote it. The
+  `Add a comment` field is pinned under the
   thread. A thread opens scrolled to the first unseen comment, or to the
   bottom when all are seen; scrolling up reveals older ones. Cards swipe
   left to delete. The same thread component on Today and in the runner.
-- The field opens the comment editor: full screen, heading `Comment`, the
-  task and part under it, the markdown editor, cancel and save.
+- The field opens the comment editor: full screen, heading `comment`, the
+  task and part under it, a plain text field, cancel and save. Escape
+  cancels, cmd+enter saves.
 - An unseen comment from the agent shows the row mark in the accent colour
   and pulls the task onto Today in its group. Opening the thread marks them
   seen.

@@ -368,7 +368,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
       </div>
       {commenting && task && (
         <EditorScreen
-          heading="Comment"
+          heading="comment"
           subheading={scope}
           initial=""
           onCancel={() => setCommenting(false)}

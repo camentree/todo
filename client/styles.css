@@ -758,11 +758,14 @@ textarea {
   flex-direction: column;
 }
 
-.editor .cm-editor {
-  flex: 1;
+textarea.editor {
+  display: block;
+  width: 100%;
+  caret-color: var(--accent);
 }
 
 .editor .cm-editor {
+  flex: 1;
   outline: none;
 }
 
