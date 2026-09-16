@@ -3,12 +3,10 @@ import { useEffect, useRef } from "react";
 import { formatWhen } from "@shared/format.ts";
 import type { Comment } from "@shared/model.ts";
 
-import { useStore } from "../data/store.tsx";
 import { Card } from "./Card.tsx";
 import { Swipeable } from "./Swipeable.tsx";
 
 export function CommentList({ comments, scrollTo, onAdd, onDelete }: { comments: Comment[]; scrollTo: string | null; onAdd: () => void; onDelete: (comment: Comment) => void }) {
-  const store = useStore();
   const thread = useRef<HTMLDivElement>(null);
   const ordered = [...comments].sort((a, b) => a.writtenAt.localeCompare(b.writtenAt));
 
@@ -25,7 +23,7 @@ export function CommentList({ comments, scrollTo, onAdd, onDelete }: { comments:
         {ordered.map((comment) => (
           <div key={comment.id} className={comment.author === "user" ? "bubble user" : "bubble agent"} data-comment={comment.id}>
             <Swipeable onRight={null} onLeft={() => onDelete(comment)}>
-              <Card body={comment.body} author={comment.author} when={formatWhen({ at: comment.writtenAt, today: store.today })} />
+              <Card body={comment.body} author={comment.author} when={formatWhen(comment.writtenAt)} />
             </Swipeable>
           </div>
         ))}

@@ -54,21 +54,32 @@ composer and comment editor are full-screen overlays.
 - Finished rows stay struck through until the day rolls over.
 
 **Journal**: a view over the one `journal.md` Parallax already splits on H2.
-Each H2 is an entry: a timestamp heading, a metadata block under it holding
-tags, then the body. Entries newest first: timestamp and tag in the meta
-style, first three lines of body. Filters are plain words above the list,
-the active one in text colour. CodeMirror markdown with markers hidden off
-the caret line; a new entry writes a new H2 with the timestamp and a tag
-line. An entry may name a task; a task named Journal auto-completes when an
-entry exists for the day.
+Each H2 is an entry: its section title, a metadata block under it holding the
+timestamp and the tags, then the body, which may carry its own deeper
+subheadings. A new entry is titled `YYYY-MM-DD - HH:MM` in 24-hour time until
+it is renamed. Entries newest first: the title on its own line in text
+colour, shown only once it has been renamed so the moment is never printed
+twice, then timestamp, the tags and the word count in the meta style, then
+the first three lines of body as plain text. Filters
+are plain words above the list, every tag in use in alphabetical order after
+`all`, each with its count in dim, the active one in text colour; the
+filtered tag is not repeated on its entries, and an entry's task name is kept
+in the data but never shown. CodeMirror markdown with markers hidden
+off the caret line, except heading marks, which stay visible so the level
+reads; the `## title` line sits at the top and editing it renames the
+section. An entry may name a task; a task named Journal auto-completes when
+an entry exists for the day.
 
 **Notebook**: the same screen over `notebook.md`. Journal is introspection,
 Notebook is things. The editor's heading is Journal or Notebook, so the
-entry's meta line does not repeat it. Bold and italic render in a colour of
-their own as well as their weight; fenced code blocks render in mono on the
-raised colour. The editor opens in read mode with no caret; tapping puts
-the caret where you tapped, snapped to the end of the nearest word when you
-tap past the end of a line. There is never more than one caret.
+entry's meta line does not repeat it. In the editor bold and italic render in
+a colour of their own as well as their weight and fenced code blocks render
+in mono on the raised colour; the list is plain text throughout. The editor
+opens in read mode with no caret; tapping puts the caret where you tapped,
+snapped to the end of the nearest word when you tap past the end of a line.
+CodeMirror draws the caret itself and the browser's own is hidden, so there
+is never more than one. Escape leaves the editor, asking whether to save when
+the text changed; cmd+enter saves and leaves.
 
 **Runner**
 - Top: the scope name (task or group) as the heading, a round `×` button.
@@ -112,12 +123,14 @@ follow a habit across days. Agents post them too, through the HTTP API.
 - Authors are `user` (Camen) and `agent`. A thread reads like messages:
   oldest at the top, newest at the bottom, the user's on the left in the
   raised colour, the agent's on the right in a tinted accent, each with its
-  author and date in faint. The `Add a comment` field is pinned under the
+  date in faint; the side it sits on already says who wrote it. The
+  `Add a comment` field is pinned under the
   thread. A thread opens scrolled to the first unseen comment, or to the
   bottom when all are seen; scrolling up reveals older ones. Cards swipe
   left to delete. The same thread component on Today and in the runner.
-- The field opens the comment editor: full screen, heading `Comment`, the
-  task and part under it, the markdown editor, cancel and save.
+- The field opens the comment editor: full screen, heading `comment`, the
+  task and part under it, a plain text field, cancel and save. Escape
+  cancels, cmd+enter saves.
 - An unseen comment from the agent makes the row's comment glyph active, so
   it shows in the accent colour, and pulls the task onto Today in its group.
   Opening the thread marks them seen.

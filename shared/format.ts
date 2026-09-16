@@ -59,7 +59,7 @@ export function longDate(key: string): string {
   return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }).toLowerCase();
 }
 
-export function formatWhen({ at }: { at: string; today: string }): string {
+export function formatWhen(at: string): string {
   const day = shortDate(at.slice(0, 10));
   return at.length >= 16 ? day + ", " + at.slice(11, 16) : day;
 }

@@ -2,9 +2,7 @@ export function Card({ body, author, when }: { body: string; author: string; whe
   return (
     <div className={author === "user" ? "card user" : "card agent"}>
       <span className="card-body">{body}</span>
-      <span className="card-when">
-        {author} · {when}
-      </span>
+      <span className="card-when">{when}</span>
     </div>
   );
 }

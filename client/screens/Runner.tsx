@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent, ReactNode } from "react";
 
 import { formatClock, formatWhen } from "@shared/format.ts";
-import type { Comment, Task, TaskPart } from "@shared/model.ts";
+import { entryFrom, entryText } from "@shared/journal.ts";
+import type { Comment, JournalEntry, Task, TaskPart } from "@shared/model.ts";
 import { advance, afterFinish, currentItem, goBack, jumpTo, startRunner, stepOf } from "@shared/runner.ts";
 import type { QueueItem, RunnerState } from "@shared/runner.ts";
 import { commentsFor, isDone, partDone } from "@shared/tasks.ts";
@@ -11,7 +12,7 @@ import { Card } from "../components/Card.tsx";
 import { CommentList } from "../components/CommentList.tsx";
 import { Confirm } from "../components/Confirm.tsx";
 import { EditorScreen } from "../components/EditorScreen.tsx";
-import { splitTags } from "../components/Entries.tsx";
+import { blankEntry } from "../components/Entries.tsx";
 import { ArrowGlyph, CrossGlyph, TickGlyph } from "../components/Glyphs.tsx";
 import { Overlay } from "../components/Overlay.tsx";
 import { RoundButton } from "../components/RoundButton.tsx";
@@ -109,7 +110,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   const [elapsed, setElapsed] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commenting, setCommenting] = useState(false);
-  const [writing, setWriting] = useState(false);
+  const [writing, setWriting] = useState<JournalEntry | null>(null);
   const [deleting, setDeleting] = useState<Comment | null>(null);
   const latest = useRef({ state, tasks: tasksInOrder, elapsed });
   latest.current = { state, tasks: tasksInOrder, elapsed };
@@ -263,7 +264,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
         <>
           <div className="ring-part">{part.name}</div>
           {journalTask && !partIsDone ? (
-            <TextButton active onSelect={() => setWriting(true)}>
+            <TextButton active onSelect={() => setWriting(blankEntry({ tag: null }))}>
               write
             </TextButton>
           ) : (
@@ -337,7 +338,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
                 <CommentList comments={comments} scrollTo={null} onAdd={() => setCommenting(true)} onDelete={setDeleting} />
               ) : newest ? (
                 <>
-                  <Card body={newest.body} author={newest.author} when={formatWhen({ at: newest.writtenAt, today: store.today })} />
+                  <Card body={newest.body} author={newest.author} when={formatWhen(newest.writtenAt)} />
                   <TextButton active={false} onSelect={() => setCommentsOpen(true)}>
                     {comments.length > 1 ? `▾ ${comments.length - 1} more` : "▾ add a comment"}
                   </TextButton>
@@ -368,7 +369,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
       </div>
       {commenting && task && (
         <EditorScreen
-          heading="Comment"
+          heading="comment"
           subheading={scope}
           initial=""
           onCancel={() => setCommenting(false)}
@@ -382,12 +383,12 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
         <EditorScreen
           heading="Journal"
           subheading={task.name}
-          initial=""
-          onCancel={() => setWriting(false)}
+          markdown
+          initial={entryText(writing)}
+          onCancel={() => setWriting(null)}
           onSave={(text) => {
-            const { tags, body } = splitTags(text);
-            store.putEntry({ name: "journal", entry: { id: identifier(), at: nowStamp().slice(0, 16), tags, task: task.name, body: body.trim() } });
-            setWriting(false);
+            store.putEntry({ name: "journal", entry: { ...entryFrom({ entry: writing, text }), task: task.name } });
+            setWriting(null);
             move(afterFinish({ state, tasks: tasksInOrder }));
           }}
         />

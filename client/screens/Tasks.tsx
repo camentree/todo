@@ -576,7 +576,7 @@ export function Tasks() {
       {draft && <Composer draft={draft} onChange={setDraft} onCommit={reveal} onClose={() => setDraft(null)} onDelete={() => draft.editing && askDelete(draft.editing)} />}
       {commenting && (
         <EditorScreen
-          heading="Comment"
+          heading="comment"
           subheading={commenting.name}
           initial=""
           onCancel={() => setCommenting(null)}
