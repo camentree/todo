@@ -3,8 +3,34 @@ import type { ReactNode } from "react";
 
 const keyboardHeight = 120;
 
+let overlaysOpen = 0;
+let scrolledTo = 0;
+
+function holdTheList(): void {
+  overlaysOpen += 1;
+  if (overlaysOpen > 1) return;
+  scrolledTo = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.width = "100%";
+  document.body.style.top = `-${scrolledTo}px`;
+}
+
+function releaseTheList(): void {
+  overlaysOpen -= 1;
+  if (overlaysOpen > 0) return;
+  document.body.style.position = "";
+  document.body.style.width = "";
+  document.body.style.top = "";
+  window.scrollTo(0, scrolledTo);
+}
+
 export function Overlay({ children }: { children: ReactNode }) {
   const host = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    holdTheList();
+    return releaseTheList;
+  }, []);
 
   useEffect(() => {
     const viewport = window.visualViewport;

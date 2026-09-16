@@ -189,7 +189,10 @@ swipes as its own row. Nothing else swipes.
 chevrons turn, threads and notes slide into view. Nothing pops in, and
 nothing that should stay still ever shifts: no layout jump when a scrollbar
 appears, no glyph that nudges when its neighbour changes. Desktop reserves
-the scrollbar gutter so screens never shift sideways.
+the scrollbar gutter so screens never shift sideways. While an overlay is up
+the screen behind it is held: the overlay opens at its own top however far
+that screen was scrolled, wheel and touch move only the overlay, and closing
+puts the screen back exactly where it was.
 
 **Settings**: none on screen. Theme follows the system, `autoStartTimers`
 stays a localStorage flag until it needs more.
