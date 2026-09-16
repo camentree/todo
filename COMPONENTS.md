@@ -55,7 +55,7 @@ padding, card radius. Values are the ones on the canvas frames.
   Same component on Today and in the runner.
 - **EditorScreen**: heading, dim line, Editor, cancel and save. Used for a
   comment, a journal entry, and a note.
-- **Entries**: the Journal and Notes screen, given its source file. Filters
+- **Entries**: the Journal and Notebook screen, given its source file. Filters
   (a row of TextButtons) and EntryRow live in this file.
 
 ## Local composites

@@ -9,25 +9,32 @@ Structure page is earlier thinking, right on behaviour, wrong on skin).
 
 ## Screens
 
-Three tabs in the top bar, Today, Journal, Notes, plus a floating `+` that
+Three tabs in the top bar, Today, Journal, Notebook, plus a floating `+` that
 follows the tab. Runner, composer and comment editor are full-screen overlays.
 
 **Today**
 - Groups in fixed order (habits, exercise, personal, then any `/name`), each
-  a label with a fold. No buttons on headers.
-- Row: tick circle on the left, title, `›` at the far right when the task has
-  parts or a note. Under the title a meta line: kind hint (`30 min`, `3
-  parts`), date or time, comment mark with count, mono chip for a group-level
-  attribute. Tap the title to edit, tap the tick to complete, tap `›` to
-  unfold: the note first (dim text), then the parts (small rows with their
-  own ticks), with air between title, note and parts so it never crowds;
-  fold state is remembered per task. Tap the comment mark to unfold the
-  comments under the task; tap again to fold. Parts and comments never show
-  together.
+  a label with a fold chevron that stays visible in both states and turns
+  smoothly between them. No buttons on headers. Generous space between
+  groups.
+- Row: tick circle on the left, then the title with its kind hint in dim
+  right after it on the same line (`30 min`, `2 times`, `8 ×`, `500 ml`,
+  `3 / 8`), and at the far right, only when the task has parts, the part
+  count in dim and then the fold chevron. Under the title a meta line in this
+  order: mono chip for a group-level attribute first, then date (full weekday
+  name, never abbreviated) and time, then the comment mark with count.
+- Under the row, in this order when shown: the comments (opened by the
+  comment mark), then the note and the parts (opened by the chevron). Both can
+  be open at once. Everything that opens rolls into view slowly; nothing pops.
+- Tap the title to edit, tap the tick to complete. Hold anywhere on the row,
+  tick or title, to enter select mode.
+- A part is a TaskRow: same look, same tick, same swipes, same hold, indented
+  under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
-  shows `since sep 12` in muted text, never red.
-- **This week**: definitions due in the next six days and one-offs dated within
-  the week. Tap brings it forward to today.
+  shows `since Saturday` in muted text, never red.
+- **This week**: definitions due in the next six days, each once at its
+  earliest coming instance, and one-offs dated within the week. Tap the title
+  to edit, as anywhere; tick to bring it forward to today and complete it.
 - **Backlog**: collapsed by default. Every undated, unfinished one-off, grouped
   the same way. Tick works in place.
 - Finished rows stay struck through until the day rolls over.
@@ -41,8 +48,13 @@ the caret line; a new entry writes a new H2 with the timestamp and a tag
 line. An entry may name a task; a task named Journal auto-completes when an
 entry exists for the day.
 
-**Notes**: the same screen over `notebook.md`. Journal is introspection,
-Notes is things.
+**Notebook**: the same screen over `notebook.md`. Journal is introspection,
+Notebook is things. The editor's heading is Journal or Notebook, so the
+entry's meta line does not repeat it. Bold and italic render in a colour of
+their own as well as their weight; fenced code blocks render in mono on the
+raised colour. The editor opens in read mode with no caret; tapping puts
+the caret where you tapped, snapped to the end of the nearest word when you
+tap past the end of a line. There is never more than one caret.
 
 **Runner**
 - Top: the scope name (task or group) as the heading, a round `×` button.
@@ -81,15 +93,21 @@ Notes is things.
 
 **Comments**: notes for next time, attached by definition id or name so they
 follow a habit across days. Agents post them too, through the HTTP API.
-- One card component everywhere: body, then date in faint. Swipe left to
-  delete. One `Add a comment` field everywhere, opening the comment editor:
-  full screen, heading `Comment`, the task and part under it, the journal's
-  markdown editor, cancel and save.
-- An unseen comment from anyone else shows the row mark in the accent colour
-  and pulls the task onto Today in its group. Unfolding marks them seen.
+- Authors are `user` (Camen) and `agent`. A thread reads like messages:
+  oldest at the top, newest at the bottom, the user's on the left in the
+  raised colour, the agent's on the right in a tinted accent, each with its
+  author and date in faint. The `Add a comment` field is pinned under the
+  thread. A thread opens scrolled to the first unseen comment, or to the
+  bottom when all are seen; scrolling up reveals older ones. Cards swipe
+  left to delete. The same thread component on Today and in the runner.
+- The field opens the comment editor: full screen, heading `Comment`, the
+  task and part under it, the markdown editor, cancel and save.
+- An unseen comment from the agent shows the row mark in the accent colour
+  and pulls the task onto Today in its group. Opening the thread marks them
+  seen.
 
-**Select mode**: hold a tick, or hold a group title to start with the whole
-group. Nothing changes at the top. Every row becomes: drag handle, square
+**Select mode**: hold anywhere on a row, or hold a group title to start with
+the whole group. Nothing changes at the top. Every row becomes: drag handle, square
 select, title, with the squares exactly where the ticks were. Group headers
 get a square in line with the task squares, left of the title. Bottom right:
 a small raised `×` cancels, and play, larger and round in the accent, runs
@@ -102,7 +120,15 @@ the selection in order. Nothing else appears.
 - No move button, no delete button, no picker.
 
 **Swipes**: right on a backlog row is today; left on any row or comment is
-delete with confirm. Nothing else swipes.
+delete with confirm. Only the row itself moves: tick, title, hint and meta
+line; whatever is open under it (comments, note, parts) stays put. A part
+swipes as its own row. Nothing else swipes.
+
+**Motion**: any intentional movement is slow: folds roll open and closed,
+chevrons turn, threads and notes slide into view. Nothing pops in, and
+nothing that should stay still ever shifts: no layout jump when a scrollbar
+appears, no glyph that nudges when its neighbour changes. Desktop reserves
+the scrollbar gutter so screens never shift sideways.
 
 **Settings**: none on screen. Theme follows the system, `autoStartTimers`
 stays a localStorage flag until it needs more.
@@ -113,7 +139,7 @@ stays a localStorage flag until it needs more.
    tick, the two swipes.
 2. Select mode with play, and the runner with timers and counts.
 3. Comments: mark, unfold, cards, editor, unseen pulls onto Today.
-4. Journal and Notes.
+4. Journal and Notebook.
 5. Drag in select mode.
 
 Each slice is usable alone and later slices add nothing to earlier screens

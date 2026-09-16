@@ -13,7 +13,7 @@ Look
 - Text renders in Seravek; the fallback face is never visible after load.
 - Dark and light match the canvas frames; the theme follows the device and
   switching the device theme switches the app without a reload.
-- The top bar is the three words Today, Journal, Notes with the active one in
+- The top bar is the three words Today, Journal, Notebook with the active one in
   text colour and the others faint, and the date under them in the meta style.
 - A task row is a circle tick on the left, the title, and a dim meta line under
   the title; rows are separated by whitespace only, no rules, no cards.
@@ -185,12 +185,12 @@ Runner
 - A comment on a habit is attached to its definition and shows on tomorrow's
   instance too.
 
-## Slice 4: Journal and Notes
+## Slice 4: Journal and Notebook
 
-- Journal and Notes are the second and third words in the top bar; tapping
+- Journal and Notebook are the second and third words in the top bar; tapping
   switches; the + follows the tab.
 - Journal lists the entries of journal.md newest first; each shows the
-  timestamp and tag in meta style and the first few lines of body; Notes does
+  timestamp and tag in meta style and the first few lines of body; Notebook does
   the same for notebook.md.
 - A row of tag words sits above the list, "all" first, one per tag in use; the
   active word is in text colour; tapping one filters the list.
@@ -220,3 +220,71 @@ Runner
   row titled with the count, and they land together in order.
 - Dragging a part out to the left edge makes it a top-level task.
 - Nothing moves until the handle is used; dragging elsewhere on the row scrolls.
+
+## Round 2: review of the first build
+
+Motion and stillness
+- Switching between Journal and Notebook, or between two filters, or between
+  any two screens, moves nothing sideways, whether or not the content is tall
+  enough to scroll, on desktop and on the phone.
+- Folding or unfolding a group, a task's parts, or a thread rolls the content
+  open or closed slowly enough to follow with the eye; it never pops.
+- The fold chevron on a group label and on a task turns smoothly between its
+  two positions and is visible in both.
+- The comment mark, the tick, the title and the hint do not shift or shake
+  when anything under the row opens or closes.
+- Nothing on any screen makes a small movement that was not asked for.
+
+Rows
+- A task with a duration, count, reps or amount shows it in dim right after
+  the title on the same line, in the form `30 min`, `2 times`, `8 ×`,
+  `500 ml`, or `3 / 8` when partly done.
+- A task with parts shows the part count in dim immediately left of its fold
+  chevron at the far right; no "N parts" appears in the meta line.
+- The meta line lists the mono chip first when there is one, then the date as
+  a full weekday name or full date, then the time, then the comment mark.
+- Dates never show a weekday abbreviation anywhere.
+- Groups have visibly more space between them than rows have between each
+  other.
+- Holding anywhere on a row, tick or title, enters select mode with that row
+  selected; a tap on the title still edits and a tap on the tick still ticks.
+- A part row looks and behaves exactly like a task row: same tick, same
+  title, same hint, swipes left to delete, holds to select, indented under
+  its parent.
+- Tapping the title of a row under This week opens the editor and the row
+  stays where it is; ticking it brings it onto Today completed.
+
+Under a row
+- Opening the thread shows it directly under the row's meta line; opening the
+  chevron shows the note and then the parts under whatever is already open;
+  both can be open at once and each closes on its own.
+- A swipe on a task moves only the tick, title, hint and meta line; anything
+  open under it stays still and stays open.
+
+Comments
+- A thread reads oldest at the top and newest at the bottom, the user's
+  comments on the left in the raised colour and the agent's on the right in
+  a tinted accent, each with author and date in faint.
+- The "Add a comment" field stays pinned under the thread.
+- A thread opens scrolled to the first unseen comment when there is one,
+  otherwise to the bottom; scrolling up reveals older ones.
+
+Journal and Notebook
+- The third word in the top bar reads Notebook everywhere it is named.
+- The editor's heading reads Journal or Notebook, and the entry's meta line
+  does not repeat that word.
+- Bold and italic text render in a distinct colour as well as their weight or
+  slant, in the editor and in the list preview.
+- A fenced code block renders in mono on the raised colour in the editor.
+- A new entry opens with no caret; tapping in the text places one caret where
+  tapped, and tapping past the end of a line places it at the end of that
+  line's last word.
+- Typing a character and deleting it leaves exactly one caret.
+
+Select mode
+- The play button sits centred on the same vertical line as the + it
+  replaces; its glyph is larger and its corners rounded.
+- Selecting two habit instances and dragging them into another group moves
+  both once; no duplicate rows appear on Today, in This week, or after a
+  reload; their definitions now carry the new group and tomorrow's instances
+  appear there.
