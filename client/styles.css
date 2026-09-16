@@ -23,7 +23,6 @@
   color-scheme: light;
   --ground: #f5f8f6;
   --raised: #ebefec;
-  --hover: #eef2ef;
   --text: #1b2120;
   --dim: #68726f;
   --faint: #9da6a3;
@@ -53,7 +52,6 @@
   --tick-small: 1rem;
   --round-small: 2.4rem;
   --round: 3.25rem;
-  --round-big: 4rem;
   --ring: 250px;
   --gutter: 1.15rem;
   --row-padding: 0.42rem 0.25rem;
@@ -69,7 +67,6 @@
     color-scheme: dark;
     --ground: #1c1a1e;
     --raised: #26242a;
-    --hover: #262428;
     --text: #ddd8d3;
     --dim: #857f7a;
     --faint: #605b58;
@@ -361,8 +358,8 @@ textarea {
   gap: 4px;
   color: var(--dim);
   font-size: var(--meta);
-  padding: 0.75rem 0.3rem;
-  margin: -0.65rem 0;
+  padding: 0.85rem 0.3rem;
+  margin: -0.75rem 0;
 }
 
 .mark.on {
@@ -910,14 +907,8 @@ textarea {
   color: var(--dim);
 }
 
-.select-bar .round:last-child {
-  width: var(--round-big);
-  height: var(--round-big);
-  margin-right: calc((var(--round) - var(--round-big)) / 2);
-}
-
 .select-bar .round:last-child svg {
-  margin-left: 0.2rem;
+  margin-left: -0.1rem;
 }
 
 .runner {
@@ -1284,5 +1275,37 @@ textarea {
   margin: 0;
   width: var(--tick);
   height: var(--tick);
+}
+
+@media (hover: hover) {
+  .tabs .text:not(.active):hover,
+  .filters .text:not(.active):hover,
+  .queue .text:not(.active):hover,
+  .runner-comments > .text:not(.active):hover,
+  .entry:hover .entry-tag,
+  .group-head .text:hover .chevron,
+  .fold:hover,
+  .handle:hover,
+  .field:hover {
+    color: var(--dim);
+  }
+
+  .group-head .text:hover,
+  .group-head .text:hover .group-count,
+  .actions .text:not(.active):hover,
+  .confirm-choices .text:not(.active):hover,
+  .ring-inside .text:not(.active):hover,
+  .entry:hover .entry-head,
+  .mark:not(.on):hover,
+  .main > .text:hover .when,
+  .main > .text:hover .hint,
+  .task.done > .swipeable .main > .text:hover {
+    color: var(--text);
+  }
+
+  .tick:hover span,
+  .square:hover span {
+    border-color: var(--dim);
+  }
 }
 

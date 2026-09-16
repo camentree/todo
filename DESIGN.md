@@ -225,7 +225,11 @@ then the meta line at 0.86rem in dim. Group labels 0.76rem, 600, uppercase,
 0.06em, dim. Chips are mono, 0.65rem, accent on a translucent accent ground.
 Top bar is the three words at 1.6rem bold, active in text colour, others
 faint; the date sits under it in the meta size. Round buttons are 3.25rem:
-`+` and done in the accent, arrows and `×` in raised; play is 4rem. Cards
+`+`, done and play in the accent, arrows and `×` in raised; every round
+button is the same size, and play's triangle sits a little left of centre so
+it looks centred. On a pointer that hovers, everything clickable answers by
+colour alone: dim goes to text, faint to dim, a tick's border to dim; nothing
+moves and nothing gains a background. The phone sees none of it. Cards
 (comments) are raised with a 0.7rem radius, the only cards in the app. The
 ring is 250px, 3px, raised track with an accent arc. Red only for the delete
 swipe. Phone first; desktop only widens the column. Light must survive sun.

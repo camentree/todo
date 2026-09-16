@@ -12,7 +12,7 @@ One stylesheet. `:root` holds the light palette, dark is the same names
 redefined. Colour: ground, raised, text, dim, faint, accent, hairline,
 chip-bg, chip-text, warn. Type: Seravek 400/500/700 from the three woff2
 files in `client/public`; heading, section, title, body, meta, label, chip,
-big number. Sizes: tick, round button (small, normal, big), ring, gutter, row
+big number. Sizes: tick, round button (small, normal), ring, gutter, row
 padding, card radius. Values are the ones on the canvas frames.
 
 ## Primitives
@@ -30,8 +30,8 @@ padding, card radius. Values are the ones on the canvas frames.
 - **Meta**: the dim line under a title; holds the overdue date and the Chip.
 - **Mark**: count plus a glyph; dim, or accent when active. The comment mark
   and the parts mark are both one of these.
-- **RoundButton**: circle with a glyph; accent or raised; sizes small, normal,
-  big. Used for +, done, previous, next, ×, play.
+- **RoundButton**: circle with a glyph; accent or raised; sizes small and
+  normal. Used for +, done, previous, next, ×, play.
 - **TextButton**: text, `active`, `onSelect`. The words in the top bar, the
   items in both runner queues, the filter words, the group labels, and every
   plain action (done, cancel, save, more, add a comment). The parent sets
