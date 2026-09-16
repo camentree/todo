@@ -481,6 +481,10 @@ textarea {
   padding-bottom: 0;
 }
 
+.overlay .page > .actions {
+  padding: 0.6rem 0 var(--bottom);
+}
+
 .scrim {
   position: fixed;
   inset: 0;
@@ -506,7 +510,7 @@ textarea {
   align-self: center;
   background: var(--ground);
   border-top: 1px solid var(--hairline);
-  padding: 0.4rem var(--gutter) calc(0.4rem + env(safe-area-inset-bottom));
+  padding: 0.4rem var(--gutter) var(--bottom);
   display: flex;
   flex-direction: column;
   max-height: 100%;
@@ -947,6 +951,13 @@ textarea {
   color: var(--dim);
   font-size: var(--meta);
   padding: 0.5rem;
+  min-height: 2.4rem;
+}
+
+.ring-inside .text.active {
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .slide {
@@ -1057,4 +1068,51 @@ textarea {
 
 .nav .round:only-child {
   margin: 0 auto;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.3rem 0 0.2rem;
+}
+
+.filters .text {
+  font-size: var(--meta);
+  color: var(--faint);
+  padding: 0.5rem 0;
+  min-height: 2.4rem;
+}
+
+.filters .text.active {
+  color: var(--text);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  padding: 1.2rem 0.25rem 0.2rem;
+  width: 100%;
+}
+
+.entry-head {
+  display: flex;
+  gap: 0.5rem;
+  font-size: var(--meta);
+  color: var(--dim);
+}
+
+.entry-tag {
+  color: var(--faint);
+}
+
+.entry-body {
+  font-size: var(--title);
+  line-height: 1.45;
+  padding: 0.25rem 0 0.2rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  white-space: pre-wrap;
 }

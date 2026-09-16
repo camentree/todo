@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Entries } from "./components/Entries.tsx";
 import { ErrorSprite } from "./components/ErrorSprite.tsx";
 import { TopBar } from "./components/TopBar.tsx";
 import type { Tab } from "./components/TopBar.tsx";
@@ -14,6 +15,8 @@ export function App() {
       <div className="page">
         <TopBar tab={tab} today={store.today} onTab={setTab} />
         {tab === "today" && <Today />}
+        {tab === "journal" && <Entries key="journal" name="journal" />}
+        {tab === "notes" && <Entries key="notebook" name="notebook" />}
       </div>
       <ErrorSprite />
     </>

@@ -5,12 +5,13 @@ import { formatClock, formatWhen } from "@shared/format.ts";
 import type { Comment, Task, TaskPart } from "@shared/model.ts";
 import { advance, afterFinish, currentItem, goBack, jumpTo, startRunner, stepOf } from "@shared/runner.ts";
 import type { QueueItem, RunnerState } from "@shared/runner.ts";
-import { commentsFor, partDone } from "@shared/tasks.ts";
+import { commentsFor, isDone, partDone } from "@shared/tasks.ts";
 
 import { Card } from "../components/Card.tsx";
 import { CommentList } from "../components/CommentList.tsx";
 import { Confirm } from "../components/Confirm.tsx";
 import { EditorScreen } from "../components/EditorScreen.tsx";
+import { splitTags } from "../components/Entries.tsx";
 import { ArrowGlyph, CrossGlyph, TickGlyph } from "../components/Glyphs.tsx";
 import { Overlay } from "../components/Overlay.tsx";
 import { RoundButton } from "../components/RoundButton.tsx";
@@ -108,6 +109,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   const [elapsed, setElapsed] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commenting, setCommenting] = useState(false);
+  const [writing, setWriting] = useState(false);
   const [deleting, setDeleting] = useState<Comment | null>(null);
   const latest = useRef({ state, tasks: tasksInOrder, elapsed });
   latest.current = { state, tasks: tasksInOrder, elapsed };
@@ -127,7 +129,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   const step = item ? stepOf({ item, tasks: tasksInOrder }) : null;
   const task = step?.task ?? null;
   const part = step?.part ?? null;
-  const partIsDone = part ? partDone(part) : false;
+  const partIsDone = part && task ? (part === task ? isDone({ task, entries: store.journal }) : partDone(part)) : false;
   const uniqueTaskIds = [...new Set(state.queue.map((each) => each.taskId))];
   const groupRun = uniqueTaskIds.length > 1;
 
@@ -252,6 +254,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
         ),
       };
     }
+    const journalTask = part === task && task.kind === "boolean" && task.name.toLowerCase() === "journal";
     return {
       fraction: partIsDone ? 1 : 0,
       onTap: null,
@@ -259,7 +262,13 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
       inside: (
         <>
           <div className="ring-part">{part.name}</div>
-          <Slide done={partIsDone} onComplete={finish} />
+          {journalTask && !partIsDone ? (
+            <TextButton active onSelect={() => setWriting(true)}>
+              write
+            </TextButton>
+          ) : (
+            <Slide done={partIsDone} onComplete={finish} />
+          )}
         </>
       ),
     };
@@ -366,6 +375,20 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
           onSave={(body) => {
             store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body: body.trim(), author: "camen", writtenAt: nowStamp(), seenAt: nowStamp() });
             setCommenting(false);
+          }}
+        />
+      )}
+      {writing && task && (
+        <EditorScreen
+          heading="Entry"
+          subheading={task.name}
+          initial=""
+          onCancel={() => setWriting(false)}
+          onSave={(text) => {
+            const { tags, body } = splitTags(text);
+            store.putEntry({ name: "journal", entry: { id: identifier(), at: nowStamp().slice(0, 16), tags, task: task.name, body: body.trim() } });
+            setWriting(false);
+            move(afterFinish({ state, tasks: tasksInOrder }));
           }}
         />
       )}

@@ -161,3 +161,19 @@ Judgment calls in this slice
 - Reading unseen comments on a Backlog task also dates the task today, so it stays where the unseen mark pulled it instead of dropping back into Backlog the moment the mark goes dim.
 - Today unfolds newest first (TodayComments frame); the runner lists oldest to newest with the newest beside the field (RunnerComments frame). Same CommentList, different order given.
 - A card's swipe stops at the card; the row underneath never sees it.
+
+## Slice 4: Journal and Notes
+
+- [x] Journal and Notes are the second and third words; tapping switches; each screen owns its + so it follows the tab: simulator.
+- [x] Journal lists journal.md newest first with timestamp and tag in the meta style and the first three content lines; Notes does the same for notebook.md: simulator against the Journal and Notes frames.
+- [x] Tag words above the list, "all" first, one per tag in use (by use count), active in text colour, tapping filters: Chrome (therapy showed 2 of 7).
+- [x] + opens the editor with heading Entry / Note; save appended a new H2 with the timestamp and a tags line to journal.md (verified in the file) and it appeared at the top.
+- [x] Markers hidden off the caret line: `# Sat with it` showed as a bold line while the caret was below it.
+- [x] Tapping an entry opens it prefilled (tags as a leading `#tag` line); saving updated that entry only (file still 8 entries, line changed in place).
+- [x] An entry written from the Journal task in the runner carries `task: Journal` in its metadata (file checked).
+- [x] The Journal task is complete on a day with an entry: the row struck through once an entry existed, and the runner showed it done.
+
+Judgment calls in this slice
+- Tags for a new entry: a leading line of `#words` in the text becomes the tag list; otherwise the active filter word is the tag; otherwise none. Editing shows the tags as that leading line so they can be changed in place.
+- Writing from a task: the runner shows "write" inside the ring for a boolean task named Journal, opening the Entry editor with the task name; nothing else in the design creates an entry from a task.
+- Entry previews strip markdown markers and skip blank lines, so three lines means three lines of text.
