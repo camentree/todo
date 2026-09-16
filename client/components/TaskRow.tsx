@@ -30,9 +30,11 @@ function PartRow({ part, onToggle }: { part: TaskPart; onToggle: (() => void) | 
   return (
     <div className={done ? "part done" : "part"}>
       <CircleTick done={done} onToggle={onToggle ?? (() => null)} press={null} />
-      <span className="part-name">{part.name}</span>
-      {partHint(part) && <span className="part-hint">{partHint(part)}</span>}
-      {part.note && <span className="part-note">{part.note}</span>}
+      <div className="part-text">
+        <span className="part-name">{part.name}</span>
+        {partHint(part) && <span className="part-hint">{partHint(part)}</span>}
+        {part.note && <div className="part-note">{part.note}</div>}
+      </div>
     </div>
   );
 }

@@ -111,3 +111,36 @@ Data
 - [x] With `_fail` on, the tick showed then reverted and the sprite said "writes are failing on purpose"; tap dismissed; reload unchanged.
 - [x] With the server stopped the sprite says "could not reach Parallax".
 - [x] A one-off POSTed by curl appeared in Backlog on the next load.
+
+## Slice 2: select mode, play, runner
+
+Select mode
+- [x] Holding a tick enters select mode with that row on; a tap ticks instead; the hold cancels after 8px of movement (longPress slop): simulator hold on Yoga.
+- [x] Holding a group label selects the whole group: simulator hold on Exercise.
+- [x] Rows show handle, square where the tick was, title; group heads show a square in line with the squares; top bar unchanged: simulator screenshot against the SelectFinal frame.
+- [x] Square toggles a row; group square toggles all and shows on only when all are on: Chrome.
+- [x] Bottom right: small raised × and big accent play, nothing else: screenshot.
+- [x] × restores ticks; play opens the runner with rows in list order.
+- [x] Selection is dropped on leaving select mode and on closing the runner.
+
+Runner
+- [x] Full-screen overlay; heading is the task name for one task, the group name for several; raised × returns to Today with progress kept (Physio showed `1 / 4 parts` after).
+- [x] Queue across one line, current accent, others faint, scrolls the current into view (`scrollIntoView`), fades at the right edge (mask).
+- [x] Group run: parts column indented, current accent, 6.2rem tall, scrolls, fades at the bottom: Hangboard in the simulator.
+- [x] Ring 250px with a 3px raised track; long part names wrap inside (cat-cow with slow breathing).
+- [x] Timer counts down, ring empties, tap starts/pauses/resumes, at zero the part is done: Hang 1 in the simulator.
+- [x] Count shows number and `of N`, ring fills, tap adds one, hold takes one away, reaching the target marks done: Chrome (JS pointer hold).
+- [x] Boolean: slide-to-complete; a drag to 85% completes, less springs back: Chrome drag.
+- [x] Rest between parts with the next part's name and skip, auto-advances at zero; no rest means straight on.
+- [x] Between tasks the last part's screen stays as it ended until done or next.
+- [x] Bottom row previous / done / next never moves (flex: none, content above scrolls in its own box).
+- [x] Done marks and advances; next advances without marking; previous goes back one.
+- [x] After the last item a screen says done; the only control is the accent tick, which returns to Today.
+- [x] Wake lock requested while the runner is open (navigator.wakeLock; not observable in the simulator).
+- [x] Progress shows on Today's rows on return.
+
+Judgment calls in this slice
+- A single task without parts hides the queue line (it would only repeat the heading).
+- Timer progress is kept in the runner and written to the API on pause, finish and close, not every second.
+- The runner label for a selection across groups is "Selection".
+- Chrome's screenshot frame is 1.05× the CSS pixel grid on this machine, which cost an hour chasing a "broken" skip button that was fine.

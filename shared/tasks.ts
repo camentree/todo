@@ -89,7 +89,11 @@ export function isBacklog({ task, today, entries, comments }: { task: Task; toda
 }
 
 export function kindHint(task: Task): string {
-  if (task.parts.length) return task.parts.length + (task.parts.length === 1 ? " part" : " parts");
+  if (task.parts.length) {
+    const done = task.parts.filter(partDone).length;
+    const total = task.parts.length;
+    return (done > 0 && done < total ? done + " / " + total : total) + (total === 1 ? " part" : " parts");
+  }
   if (task.kind === "timer") return formatDuration(task.timer);
   if (task.kind === "count") return task.current > 0 && task.current < task.target ? task.current + " / " + task.target : task.target + " ×";
   if (task.kind === "text") return task.value || "text";
