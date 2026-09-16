@@ -216,7 +216,7 @@ textarea {
   color: var(--text);
 }
 
-.section > .group > .group-head .chevron {
+.section > .group > .group-head .fold {
   display: none;
 }
 
@@ -238,11 +238,10 @@ textarea {
 .group-head {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.4rem;
   padding: 0.35rem 0.25rem 0.1rem;
   color: var(--dim);
   border-radius: 0.5rem;
-  transition: background 0.45s ease;
 }
 
 .group-head .text {
@@ -251,11 +250,12 @@ textarea {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--dim);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
   padding: 0.6rem 0;
   min-height: 2.75rem;
+}
+
+.group-head .fold {
+  margin: 0 -0.5rem;
 }
 
 .group-head .chevron {
@@ -320,7 +320,6 @@ textarea {
 .main > .text {
   font-size: var(--title);
   line-height: 1.35;
-  flex: 1;
   min-width: 0;
   padding: 0.65rem 0;
   margin: -0.35rem 0;
@@ -332,25 +331,17 @@ textarea {
   text-decoration: line-through;
 }
 
-.hint {
-  font-size: var(--meta);
-  color: var(--dim);
-  margin-left: 0.6rem;
-  text-decoration: none;
-  display: inline-block;
-}
-
+.hint,
 .when {
   font-size: var(--meta);
   color: var(--dim);
-  margin-right: 0.5rem;
-  text-decoration: none;
-  display: inline-block;
+  flex: none;
 }
 
 .marks {
   flex: none;
   width: 6.4rem;
+  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1349,12 +1340,16 @@ textarea.editor {
   .actions .text:not(.active):hover,
   .confirm-choices .text:not(.active):hover,
   .ring-inside .text:not(.active):hover,
+  .group-head .text:hover,
   .mark:not(.on):hover {
     color: var(--text);
   }
 
+  .section > .group > .group-head .text:hover {
+    color: var(--dim);
+  }
+
   .row:has(> .main > .text:hover),
-  .group-head:has(> .text:hover),
   .entry:hover {
     background: var(--raised);
   }

@@ -117,11 +117,11 @@ export function TaskRow({
             ) : (
               <CircleTick done={done} onToggle={onTick} press={press} />
             )}
+            {when && <span className="when">{when}</span>}
             <TextButton active={false} onSelect={select ? () => select.onToggle(task.id) : onTitle} press={press}>
-              {when && <span className="when">{when}</span>}
               {task.name}
-              {hint && <span className="hint">{hint}</span>}
             </TextButton>
+            {hint && <span className="hint">{hint}</span>}
             <div className="marks">
               {comments.length > 0 && (
                 <Mark label="comments" count={String(comments.length)} active={commentsActive} onSelect={() => setActive({ key: commentsKey(task.id), active: !commentsActive })}>

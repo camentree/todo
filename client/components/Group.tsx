@@ -33,11 +33,13 @@ export function Group({
           <div className={focused ? "group-head focused" : "group-head"} data-focus={"group:" + storageKey}>
             {select && <span className="handle-space" />}
             {select && <SquareTick on={select.on} onToggle={select.onToggle} />}
-            <TextButton active={false} onSelect={fold.toggle} press={press}>
+            <button className="fold" aria-label={fold.open ? "fold" : "unfold"} onClick={fold.toggle}>
               {fold.chevron}
+            </button>
+            <TextButton active={false} onSelect={fold.toggle} press={press}>
               {label}
-              <span className={fold.open ? "group-count" : "group-count shown"}>{count}</span>
             </TextButton>
+            <span className={fold.open ? "group-count" : "group-count shown"}>{count}</span>
           </div>
         )}
       >
