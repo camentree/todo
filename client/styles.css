@@ -1279,14 +1279,11 @@ textarea {
   color: var(--text);
 }
 
-.filter-count {
-  color: var(--dim);
-}
-
 .entry {
   display: flex;
   flex-direction: column;
-  padding: 1.2rem 0.25rem 0.2rem;
+  padding: 0.7rem 0.25rem;
+  margin-bottom: 0.35rem;
   width: 100%;
   border-radius: 0.5rem;
   transition: background 0.45s ease;
@@ -1294,27 +1291,42 @@ textarea {
 
 .entry-title {
   font-size: var(--title);
-  font-weight: 500;
-  padding-bottom: 0.1rem;
+  line-height: 1.35;
+  color: var(--text);
 }
 
 .entry-head {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
   font-size: var(--meta);
   color: var(--text);
+}
+
+.entry-head > span + span::before {
+  content: "·";
+  padding-right: 0.4rem;
+  color: var(--faint);
+}
+
+.entry-words {
+  color: var(--dim);
 }
 
 .entry-body {
   font-size: var(--title);
   line-height: 1.45;
   color: var(--dim);
-  padding: 0.25rem 0 0.2rem;
+  margin-top: 0.45rem;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  white-space: pre-wrap;
+}
+
+.entry-body code {
+  font-family: var(--mono);
+  font-size: 0.9em;
 }
 
 .lifting {

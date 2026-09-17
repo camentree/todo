@@ -62,6 +62,10 @@ export function entryTitle(entry: JournalEntry): string {
   return entry.metadata.displayTitle ?? entry.sectionTitle;
 }
 
+export function readableTitle(entry: JournalEntry): string {
+  return entry.metadata.displayTitle ?? entry.sectionTitle.replace("T", " ").slice(0, 16);
+}
+
 export function entryText(entry: JournalEntry): string {
   const tags = entryTags(entry);
   const tagLine = tags.map((tag) => "#" + tag).join(" ");

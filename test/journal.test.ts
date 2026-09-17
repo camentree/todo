@@ -1,4 +1,4 @@
-import { entryFrom, entryTags, entryText, entryTitle, parseMarkdown, serializeMarkdown, tagCounts } from "@shared/journal.ts";
+import { entryFrom, entryTags, entryText, entryTitle, parseMarkdown, readableTitle, serializeMarkdown, tagCounts } from "@shared/journal.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
 const entries: JournalEntry[] = [
@@ -56,6 +56,11 @@ describe("the title an entry shows", () => {
   it("is the display title when there is one, else the section title", () => {
     expect(entryTitle(entries[0]!)).toBe("2026-09-13T08:15:00");
     expect(entryTitle(entries[1]!)).toBe("after the session");
+  });
+
+  it("drops the T and the seconds when a list row reads a timestamp", () => {
+    expect(readableTitle(entries[0]!)).toBe("2026-09-13 08:15");
+    expect(readableTitle(entries[1]!)).toBe("after the session");
   });
 });
 
