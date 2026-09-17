@@ -378,7 +378,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
           initial={entryText(writing)}
           onCancel={() => setWriting(null)}
           onSave={(text) => {
-            store.putEntry({ name: "journal", entry: { ...entryFrom({ entry: writing, text }), task: task.name } });
+            store.putEntry({ name: "journal", entry: entryFrom({ entry: writing, text }) });
             setWriting(null);
             move(afterFinish({ state, tasks: tasksInOrder }));
           }}

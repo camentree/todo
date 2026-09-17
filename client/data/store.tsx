@@ -27,7 +27,7 @@ export interface Store extends Memory {
   putComment: (comment: Comment) => void;
   deleteComment: (id: string) => void;
   putEntry: (write: { name: JournalName; entry: JournalEntry }) => void;
-  deleteEntry: (write: { name: JournalName; id: string }) => void;
+  deleteEntry: (write: { name: JournalName; at: string }) => void;
 }
 
 const StoreContext = createContext<Store | null>(null);
@@ -176,19 +176,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
     },
     putEntry: ({ name, entry }) => {
-      const previous = latest.current?.[name].find((each) => each.id === entry.id);
+      const previous = latest.current?.[name].find((each) => each.at === entry.at);
+      const others = (current: Memory) => current[name].filter((each) => each.at !== entry.at);
       write({
-        apply: (current) => ({ ...current, [name]: replaced({ list: current[name], item: entry }) }),
-        undo: (current) => ({ ...current, [name]: restored({ list: current[name], id: entry.id, previous }) }),
-        request: () => (previous ? put({ path: `/api/journal/${name}/${entry.id}`, body: entry }) : post({ path: `/api/journal/${name}`, body: entry })),
+        apply: (current) => ({ ...current, [name]: [...others(current), entry] }),
+        undo: (current) => ({ ...current, [name]: previous ? [...others(current), previous] : others(current) }),
+        request: () =>
+          previous ? put({ path: `/api/journal/${name}/${encodeURIComponent(entry.at)}`, body: entry }) : post({ path: `/api/journal/${name}`, body: entry }),
       });
     },
-    deleteEntry: ({ name, id }) => {
-      const previous = latest.current?.[name].find((each) => each.id === id);
+    deleteEntry: ({ name, at }) => {
+      const previous = latest.current?.[name].find((each) => each.at === at);
+      const others = (current: Memory) => current[name].filter((each) => each.at !== at);
       write({
-        apply: (current) => ({ ...current, [name]: without({ list: current[name], id }) }),
-        undo: (current) => ({ ...current, [name]: restored({ list: current[name], id, previous }) }),
-        request: () => remove(`/api/journal/${name}/${id}`),
+        apply: (current) => ({ ...current, [name]: others(current) }),
+        undo: (current) => ({ ...current, [name]: previous ? [...others(current), previous] : others(current) }),
+        request: () => remove(`/api/journal/${name}/${encodeURIComponent(at)}`),
       });
     },
   };

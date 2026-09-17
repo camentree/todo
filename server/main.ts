@@ -56,16 +56,16 @@ app.get("/api/journal/:name", (context) => context.json(store.entries(context.re
 app.post("/api/journal/:name", async (context) =>
   context.json(store.putEntry({ name: context.req.param("name"), entry: await context.req.json() }), 201),
 );
-app.put("/api/journal/:name/:id", async (context) =>
+app.put("/api/journal/:name/:at", async (context) =>
   context.json(
     store.putEntry({
       name: context.req.param("name"),
-      entry: { ...(await context.req.json()), id: context.req.param("id") },
+      entry: { ...(await context.req.json()), at: context.req.param("at") },
     }),
   ),
 );
-app.delete("/api/journal/:name/:id", (context) => {
-  store.deleteEntry({ name: context.req.param("name"), id: context.req.param("id") });
+app.delete("/api/journal/:name/:at", (context) => {
+  store.deleteEntry({ name: context.req.param("name"), at: context.req.param("at") });
   return context.body(null, 204);
 });
 

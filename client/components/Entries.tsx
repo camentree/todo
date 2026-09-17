@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 import { formatEntryWhen } from "@shared/format.ts";
-import { entryFrom, entryText, entryTitle, sectionTitleFrom, tagCounts } from "@shared/journal.ts";
+import { entryFrom, entryTags, entryText, entryTitle, tagCounts } from "@shared/journal.ts";
 import { stripMarkers, wordCount } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/model.ts";
 
 import type { JournalName } from "../data/store.tsx";
-import { identifier, nowStamp, useStore } from "../data/store.tsx";
+import { nowStamp, useStore } from "../data/store.tsx";
 import { EditorScreen } from "./EditorScreen.tsx";
 import { PlusGlyph } from "./Glyphs.tsx";
 import { RoundButton } from "./RoundButton.tsx";
@@ -16,7 +16,7 @@ const headings: Record<JournalName, string> = { journal: "Journal", notebook: "N
 
 export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
   const at = nowStamp();
-  return { id: identifier(), at, sectionTitle: sectionTitleFrom(at), displayTitle: null, tags: tag ? [tag] : [], task: null, body: "" };
+  return { sectionTitle: at, at, body: "", metadata: tag ? { tag } : {} };
 }
 
 function Filters({ counts, active, onSelect }: { counts: { tag: string; count: number }[]; active: string | null; onSelect: (tag: string | null) => void }) {
@@ -35,7 +35,7 @@ function Filters({ counts, active, onSelect }: { counts: { tag: string; count: n
 }
 
 function EntryRow({ entry, filter, onOpen }: { entry: JournalEntry; filter: string | null; onOpen: () => void }) {
-  const tags = entry.tags.filter((tag) => tag !== filter);
+  const tags = entryTags(entry).filter((tag) => tag !== filter);
   const words = wordCount(entry.body);
   return (
     <button className="entry" onClick={onOpen}>
@@ -64,14 +64,14 @@ export function Entries({ name }: { name: JournalName }) {
   const [filter, setFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<JournalEntry | null>(null);
   const entries = store[name];
-  const shown = entries.filter((entry) => filter === null || entry.tags.includes(filter)).sort((a, b) => b.at.localeCompare(a.at));
+  const shown = entries.filter((entry) => filter === null || entryTags(entry).includes(filter)).sort((a, b) => b.at.localeCompare(a.at));
 
   return (
     <>
       <Filters counts={tagCounts(entries)} active={filter} onSelect={setFilter} />
       <div className="list">
         {shown.map((entry) => (
-          <EntryRow key={entry.id} entry={entry} filter={filter} onOpen={() => setEditing(entry)} />
+          <EntryRow key={entry.at} entry={entry} filter={filter} onOpen={() => setEditing(entry)} />
         ))}
       </div>
       <div className="floating">
@@ -82,11 +82,11 @@ export function Entries({ name }: { name: JournalName }) {
       {editing && (
         <EditorScreen
           heading={headings[name]}
-          subheading={[formatEntryWhen(editing.at), editing.tags.join(", ")].filter(Boolean).join(" · ")}
+          subheading={[formatEntryWhen(editing.at), entryTags(editing).join(", ")].filter(Boolean).join(" · ")}
           initial={entryText(editing)}
           onCancel={() => setEditing(null)}
           onDelete={() => {
-            store.deleteEntry({ name, id: editing.id });
+            store.deleteEntry({ name, at: editing.at });
             setEditing(null);
           }}
           onSave={(text) => {

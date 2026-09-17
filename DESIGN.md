@@ -73,25 +73,33 @@ written in place, under the thread.
 - Finished rows stay struck through until the day rolls over.
 
 **Journal**: a view over the one `journal.md` Parallax already splits on H2.
-Each H2 is an entry. Its section title is `YYYY-MM-DD HH:MM:SS`, the time
-part optional, and under it come plain `key: value` lines, `id`, `at`, `tag`
-repeated or as a comma list, `display_title` and `task`, then a blank line
-and the body, which may carry its own deeper subheadings. A new entry's
-section title is the moment it was written and it has no `display_title`.
-The title an entry shows, everywhere the app shows one, is `display_title`
+Each H2 is an entry: its section title, the moment it was written as
+`YYYY-MM-DDTHH:MM:SS`, and under it a blank line, plain `key: value` lines,
+`at` and the metadata, `tag` repeated or as a comma list and `author`, then a
+blank line and the body, which may carry its own deeper subheadings. The
+entry has no id; `at` is what identifies it. A new entry has no display
+title, so its H2 is the section title; once it has one the H2 is the display
+title instead, and the title an entry shows anywhere is the display title
 when there is one and the section title otherwise. Entries newest first, and
-every one shows its title: the title on its own line in text colour, then the
-attribute line, the date, the time as `9:05 pm`, the tags and the word count,
-in the meta size and also in text colour, then the first three lines of body
-in dim. Filters are plain words above the list, every tag in use in
-alphabetical order after `all`; `all` shows no count, every other filter
-carries its own in dim, and the active one is in text colour. The filtered
-tag is not repeated on its entries, and an entry's task name is kept in the
-data but never shown. CodeMirror markdown with markers hidden off the caret line,
-except heading marks, which stay visible so the level reads; the `## title`
-line sits at the top, and editing it writes `display_title` and leaves the
-section title alone. An entry may name a task; a task named Journal
-auto-completes when an entry exists for the day.
+every one shows its title: the title on its own line at the task-title size
+and weight in text colour, a raw timestamp reading `2026-09-15 07:40` with
+the seconds dropped for the eye only, then the attribute line, the date, the
+time as `9:05 pm`, the tags as a comma list and last the word count, parts
+separated by a middle dot in the meta size, the word count in dim and the
+rest in text colour, then at most three lines of body in dim, ending in an
+ellipsis, with its markdown rendered: bullets and numbers and heading marks
+kept, bold and italic in their weight and style but the same dim colour,
+inline code in mono. No metadata line ever appears in the preview. Filters
+are plain words above the list, every tag in use in alphabetical order after
+`all`; each carries its count in parentheses in its own colour, `all`
+included, and the active one is in text colour. The filtered tag is not
+repeated on its entries. Rows carry the same padding, radius and slow
+background fade as a task row. CodeMirror markdown with markers hidden off
+the caret line, except heading marks, which stay visible so the level reads;
+the `## title` line sits at the top, and editing it writes the display title
+and leaves the section title alone, while typing it back to the section
+title clears it. A task named Journal auto-completes when an entry exists
+for the day.
 
 **Notebook**: the same screen over `notebook.md`. Journal is introspection,
 Notebook is things. The editor's heading is Journal or Notebook, so the

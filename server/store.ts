@@ -114,16 +114,15 @@ export class Store {
   }
 
   putEntry({ name, entry }: { name: string; entry: JournalEntry }): JournalEntry {
-    const stored = { ...entry, id: entry.id ?? identifier() };
-    const entries = this.entries(name).filter((each) => each.id !== stored.id);
-    entries.push(stored);
+    const entries = this.entries(name).filter((each) => each.at !== entry.at);
+    entries.push(entry);
     entries.sort((a, b) => a.at.localeCompare(b.at));
     this.writeMarkdown({ name, entries });
-    return stored;
+    return entry;
   }
 
-  deleteEntry({ name, id }: { name: string; id: string }): void {
-    this.writeMarkdown({ name, entries: this.entries(name).filter((each) => each.id !== id) });
+  deleteEntry({ name, at }: { name: string; at: string }): void {
+    this.writeMarkdown({ name, entries: this.entries(name).filter((each) => each.at !== at) });
   }
 
   private readMarkdown(name: string): string {
