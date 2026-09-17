@@ -269,6 +269,14 @@ export function Tasks() {
   const dragRef = useRef<Drag | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const followPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse") return;
+    const hovered = (event.target as HTMLElement).closest<HTMLElement>("[data-focus]");
+    if (!hovered || hovered.closest(".roll:not(.open)")) return;
+    const id = hovered.dataset.focus ?? null;
+    if (id !== focused) setFocused(id);
+  };
+
   useEffect(() => {
     const blur = () => setFocused(null);
     window.addEventListener("pointerdown", blur);
@@ -612,7 +620,7 @@ export function Tasks() {
 
   return (
     <>
-      <div className="list" ref={listRef}>
+      <div className="list" ref={listRef} onPointerOver={followPointer}>
         <div className="section">
           <Group storageKey="today" label="Today" count={onToday.length} defaultOpen select={groupSelect(onToday)} press={groupPress(onToday)} focused={focused === "group:today"}>
             {todayGroups.map(({ group, tasks }) => (

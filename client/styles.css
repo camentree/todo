@@ -678,6 +678,10 @@ textarea {
 }
 
 .group-head.focused .text {
+  color: var(--text);
+}
+
+.section > .group > .group-head.focused .text {
   color: var(--dim);
 }
 
@@ -954,7 +958,7 @@ textarea {
 }
 
 .handle-space {
-  width: var(--tick);
+  width: calc(var(--tick) + 0.35rem);
   flex: none;
 }
 
