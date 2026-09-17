@@ -65,8 +65,8 @@ describe("the title an entry shows", () => {
 });
 
 describe("editor text", () => {
-  it("writes the tag line, the title and the body", () => {
-    expect(entryText(entries[1]!)).toBe("#therapy #personal\n\n## after the session\n\nTalked about the thing.\n\n### homework\n\n- one\n- two");
+  it("writes the title, the tag line and the body", () => {
+    expect(entryText(entries[1]!)).toBe("## after the session\n\n#therapy #personal\n\nTalked about the thing.\n\n### homework\n\n- one\n- two");
   });
 
   it("leaves a line to write on when the body is empty", () => {
@@ -79,7 +79,7 @@ describe("editor text", () => {
   });
 
   it("writes a display title and leaves the section title alone", () => {
-    expect(entryFrom({ entry: entries[0]!, text: "#climbing\n\n## blue v4\n\nHeel hook first.\n" })).toEqual({
+    expect(entryFrom({ entry: entries[0]!, text: "## blue v4\n\n#climbing\n\nHeel hook first.\n" })).toEqual({
       ...entries[0]!,
       body: "Heel hook first.",
       metadata: { displayTitle: "blue v4", tag: "climbing" },

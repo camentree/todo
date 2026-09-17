@@ -12,19 +12,16 @@ export function EditorScreen({
   subheading,
   initial,
   onCancel,
-  onDelete,
   onSave,
 }: {
   heading: string;
   subheading: string;
   initial: string;
   onCancel: () => void;
-  onDelete?: () => void;
   onSave: (text: string) => void;
 }) {
   const [text, setText] = useState(initial);
   const [leaving, setLeaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const save = () => text.trim() && onSave(text);
 
   useEffect(() => {
@@ -55,13 +52,6 @@ export function EditorScreen({
           <Editor value={text} onChange={setText} />
         </div>
         <div className="actions">
-          <div className="actions-left">
-            {onDelete && (
-              <TextButton active={false} warn onSelect={() => setDeleting(true)}>
-                delete
-              </TextButton>
-            )}
-          </div>
           <div className="actions-right">
             <TextButton active={false} onSelect={onCancel}>
               cancel
@@ -81,9 +71,6 @@ export function EditorScreen({
           ]}
           onCancel={() => setLeaving(false)}
         />
-      )}
-      {deleting && onDelete && (
-        <Confirm question="delete this entry?" choices={[{ label: "delete", onChoose: onDelete }]} onCancel={() => setDeleting(false)} />
       )}
     </Overlay>
   );

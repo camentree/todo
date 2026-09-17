@@ -48,6 +48,7 @@ export interface Task {
   current: number;
   value: string;
   doneAt: string | null;
+  skippedAt: string | null;
   note: string;
   parts: TaskPart[];
   sort: number;

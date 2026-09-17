@@ -18,6 +18,7 @@ function task(id: string, overrides: Partial<Task>): Task {
     current: 0,
     value: "",
     doneAt: null,
+    skippedAt: null,
     note: "",
     parts: [],
     sort: 0,

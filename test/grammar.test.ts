@@ -113,6 +113,7 @@ const task: Task = {
   current: 0,
   value: "",
   doneAt: null,
+  skippedAt: null,
   note: "Keep hips level.",
   parts: [
     { name: "neck rolls", kind: "timer", target: 0, timer: 30, note: "", current: 30, value: "", doneAt: "2026-09-15T07:31:00" },

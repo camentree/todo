@@ -31,7 +31,6 @@ export function Group({
         defaultOpen={defaultOpen}
         trigger={(fold) => (
           <div className={focused ? "group-head focused" : "group-head"} data-focus={"group:" + storageKey}>
-            {select && <span className="handle-space" />}
             {select && <SquareTick on={select.on} onToggle={select.onToggle} />}
             <button className="fold" aria-label={fold.open ? "fold" : "unfold"} onClick={fold.toggle}>
               {fold.chevron}

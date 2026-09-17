@@ -9,15 +9,16 @@ export interface PressHandlers {
 }
 
 let fired = false;
+let timer: number | null = null;
+let startX = 0;
+let startY = 0;
+
+function cancel(): void {
+  if (timer !== null) window.clearTimeout(timer);
+  timer = null;
+}
 
 export function longPress(onLong: () => void): PressHandlers {
-  let timer: number | null = null;
-  let startX = 0;
-  let startY = 0;
-  const cancel = () => {
-    if (timer !== null) window.clearTimeout(timer);
-    timer = null;
-  };
   return {
     onPointerDown: (event) => {
       if (event.button !== 0) return;

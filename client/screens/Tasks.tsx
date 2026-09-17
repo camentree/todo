@@ -9,11 +9,11 @@ import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 
 import { definitionFromParsed, dueToday, taskFromParsed } from "@shared/composer.ts";
 import { formatDuration } from "@shared/format.ts";
-import { everyLabel, parseTask, serializeTask, tokenSpans } from "@shared/grammar.ts";
+import { parseTask, serializeTask, tokenSpans } from "@shared/grammar.ts";
 import type { Comment, Definition, Task } from "@shared/model.ts";
 import { changedOnly, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
 import type { Container, Target } from "@shared/move.ts";
-import { byPosition, commentsFor, grouped, groupLabel, isBacklog, isOnToday, partToggled, toggled } from "@shared/tasks.ts";
+import { byPosition, commentsFor, grouped, groupLabel, isBacklog, isOnToday, isSkipped, partToggled, skipToggled, toggled } from "@shared/tasks.ts";
 
 import { Confirm } from "../components/Confirm.tsx";
 import type { Choice } from "../components/Confirm.tsx";
@@ -27,7 +27,7 @@ import type { Swipe } from "../components/Swipeable.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { useFolds } from "../components/Foldable.tsx";
-import { commentsKey, openKey, partsKey } from "../components/TaskRow.tsx";
+import { closeTask, partsKey, showing, toggleComments, toggleParts } from "../components/TaskRow.tsx";
 import { longPress } from "../interaction/longPress.ts";
 import { useRoute } from "../interaction/route.ts";
 import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
@@ -63,11 +63,13 @@ const scrollEdge = 120;
 const scrollStep = 10;
 
 const mode = new Compartment();
+const touchKeyboard = window.matchMedia("(pointer: coarse)").matches;
+const sheetSlides = () => window.matchMedia("(min-width: 700px)").matches;
 
 function modeExtensions(block: boolean): Extension {
   return [
     placeholder(block ? "Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s" : "add a task"),
-    EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: block ? "enter" : "done" }),
+    EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: block || touchKeyboard ? "enter" : "done" }),
   ];
 }
 
@@ -97,6 +99,8 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
   const field = useRef<EditorView | null>(null);
   const opened = useRef(draft.text);
   const [leaving, setLeaving] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const close = () => (sheetSlides() ? setClosing(true) : onClose());
   const parsed = parseTask({ text: draft.text, today: store.today });
   const definition = draft.editing?.definitionId ? (store.definitions.find((each) => each.id === draft.editing?.definitionId) ?? null) : null;
 
@@ -115,7 +119,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     } else {
       onCommit(taskFromParsed({ parsed, existing, id: existing?.id ?? identifier(), today: store.today, now, definition: null }));
     }
-    onClose();
+    close();
   };
 
   const onText = (text: string) => onChange({ ...draft, text, block: draft.block || text.includes("\n") });
@@ -135,7 +139,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
             {
               key: "Enter",
               run: () => {
-                if (latest.current.block) return false;
+                if (latest.current.block || touchKeyboard) return false;
                 latest.current.commit();
                 return true;
               },
@@ -172,42 +176,39 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
       if (event.key === "Enter") commit();
       else if (leaving) setLeaving(false);
       else if (parsed && draft.text !== opened.current) setLeaving(true);
-      else onClose();
+      else close();
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [draft.text, leaving]);
 
   const preview = parsed ? taskFromParsed({ parsed, existing: draft.editing, id: "preview", today: store.today, now: nowStamp(), definition: null }) : null;
-  const metaline = parsed ? [parsed.every ? everyLabel(parsed.every) : "", preview?.group ?? "", parsed.rest ? "rest " + formatDuration(parsed.rest) : ""].filter(Boolean).join(" · ") : "";
 
   return (
     <Overlay>
-      <div className="scrim" onClick={onClose} />
-      <div className="composer">
+      <div className="scrim" onClick={close} />
+      <div className={closing ? "composer closing" : "composer"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
         {draft.block && (
           <div className="preview">
-            {preview ? (
-              <>
-                <div className="dateline">{metaline}</div>
-                <TaskRow
-                  task={preview}
-                  comments={[]}
-                  chip={null}
-                  select={null}
-                  onHold={null}
-                  focused={null}
-                  onTick={() => null}
-                  onTitle={() => null}
-                  todaySwipe={null}
-                  onDelete={null}
-                  onDeletePart={null}
-                  onAddComment={() => null}
-                  onDeleteComment={() => null}
-                  fixedOpen
-                  unfoldParts={false}
-                />
-              </>
+            {preview && parsed ? (
+              <TaskRow
+                task={preview}
+                comments={[]}
+                chips={[preview.group, parsed.rest ? "rest " + formatDuration(parsed.rest) : ""].filter(Boolean)}
+                every={parsed.every}
+                select={null}
+                onHold={null}
+                focused={null}
+                onTick={() => null}
+                onTitle={() => null}
+                todaySwipe={null}
+                onDelete={null}
+                onDeletePart={null}
+                onAddComment={() => null}
+                onDeleteComment={() => null}
+                fixedOpen
+                unfoldParts={false}
+              />
             ) : (
               <div className="dateline">type a task below to see it here</div>
             )}
@@ -229,7 +230,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
               )}
             </div>
             <div className="actions-right">
-              <TextButton active={false} onSelect={onClose}>
+              <TextButton active={false} onSelect={close}>
                 cancel
               </TextButton>
               <TextButton active={parsed !== null} onSelect={commit}>
@@ -243,7 +244,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
         <Confirm
           question="save this task?"
           choices={[
-            { label: "discard", onChoose: onClose },
+            { label: "discard", onChoose: close },
             { label: "save", onChoose: commit },
           ]}
           onCancel={() => setLeaving(false)}
@@ -260,8 +261,12 @@ export function Tasks() {
   const [asking, setAsking] = useState<Asking | null>(null);
   const [helping, setHelping] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
+  const lastFocused = useRef<string | null>(null);
+  const pointerWas = useRef({ x: 0, y: 0 });
+  if (focused) lastFocused.current = focused;
   const folds = useFolds();
   const [selection, setSelection] = useState<Set<string> | null>(null);
+  const [list, setList] = useState<Container>("today");
   const [selectedRun, setSelectedRun] = useState<{ taskIds: string[]; label: string } | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [openedByDrag, setOpenedByDrag] = useState<Set<string>>(new Set());
@@ -271,6 +276,8 @@ export function Tasks() {
 
   const followPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== "mouse") return;
+    if (event.clientX === pointerWas.current.x && event.clientY === pointerWas.current.y) return;
+    pointerWas.current = { x: event.clientX, y: event.clientY };
     const hovered = (event.target as HTMLElement).closest<HTMLElement>("[data-focus]");
     if (!hovered || hovered.closest(".roll:not(.open)")) return;
     const id = hovered.dataset.focus ?? null;
@@ -329,8 +336,10 @@ export function Tasks() {
   const askDeletePart = ({ task, index }: { task: Task; index: number }) =>
     setAsking({ question: `delete ${task.parts[index]?.name ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutPart({ host: task, index })); setAsking(null); } }] });
 
-  const sendToBacklog = (task: Task): Swipe | null =>
-    task.definitionId ? null : { word: "backlog", onSwipe: () => store.putTask({ ...task, date: null }) };
+  const sendToBacklog = (task: Task): Swipe => {
+    if (task.definitionId) return { word: isSkipped(task) ? "unskip" : "skip", onSwipe: () => store.putTask(skipToggled({ task, now: nowStamp() })) };
+    return { word: "backlog", onSwipe: () => store.putTask({ ...task, date: null }) };
+  };
 
   const bringToToday = (task: Task): Swipe => ({ word: "today", onSwipe: () => store.putTask({ ...task, date: store.today }) });
 
@@ -339,10 +348,9 @@ export function Tasks() {
 
   const reveal = (task: Task) => {
     store.putTask(task);
-    const section = task.date !== null && task.date <= store.today ? "today" : "backlog";
-    folds.set({ key: section, open: true });
-    folds.set({ key: section + ":" + task.group, open: true });
-    folds.set({ key: openKey(task.id), open: true });
+    setList(task.date !== null && task.date <= store.today ? "today" : "backlog");
+    folds.set({ key: "today:" + task.group, open: true });
+    folds.set({ key: partsKey(task.id), open: true });
     setLanded(task.id);
   };
 
@@ -363,7 +371,7 @@ export function Tasks() {
       const allOn = ids.every((id) => next.has(id));
       for (const id of ids) if (allOn) next.delete(id);
       else next.add(id);
-      return next.size === 0 ? null : next;
+      return next;
     });
 
   const groupSelect = (tasks: Task[]) =>
@@ -536,20 +544,21 @@ export function Tasks() {
 
   const holdToSelect = (id: string) => setSelection((current) => new Set(current).add(id));
 
-  const row = ({ task, chip, todaySwipe, onTick }: { task: Task; chip: string | null; todaySwipe: Swipe | null; onTick: () => void }) => (
+  const row = ({ task, chips, todaySwipe, onTick }: { task: Task; chips: string[]; todaySwipe: Swipe | null; onTick: () => void }) => (
     <div key={task.id} className={drag?.ids.includes(task.id) ? "lifting" : undefined} data-task={task.id}>
         <TaskRow
           task={task}
           comments={commentsFor({ task, comments: store.comments })}
-          chip={chip}
+          chips={chips}
+          every={store.definitions.find((definition) => definition.id === task.definitionId)?.every ?? null}
           select={select}
           onHold={holdToSelect}
           focused={focused}
           onTick={onTick}
           onTitle={() => edit(task)}
           todaySwipe={todaySwipe}
-          onDelete={() => askDelete(task)}
-          onDeletePart={(index) => askDeletePart({ task, index })}
+          onDelete={() => (task.definitionId ? askDelete(task) : store.deleteTask(task.id))}
+          onDeletePart={(index) => store.putTask(withoutPart({ host: task, index }))}
           onAddComment={(body) => addComment({ task, body })}
           onDeleteComment={askDeleteComment}
           fixedOpen={false}
@@ -567,7 +576,7 @@ export function Tasks() {
 
   const moveFocus = (step: number) => {
     const order = focusOrder();
-    const position = focused ? order.indexOf(focused) : -1;
+    const position = order.indexOf(focused ?? lastFocused.current ?? "");
     const next = order[Math.max(0, Math.min(order.length - 1, position + step))] ?? null;
     setFocused(next);
     listRef.current?.querySelector<HTMLElement>(`[data-focus="${next}"]`)?.scrollIntoView({ block: "nearest" });
@@ -576,6 +585,7 @@ export function Tasks() {
   const shortcut = (action: ShortcutAction) => {
     const target = focused && !focused.startsWith("group:") ? rowAt(focused) : null;
     if (action === "help") return setHelping(true);
+    if (action === "switch") return setList(list === "today" ? "backlog" : "today");
     if (action === "add") return setDraft({ text: "", block: false, editing: null });
     if (action === "down") return moveFocus(1);
     if (action === "up") return moveFocus(-1);
@@ -585,60 +595,59 @@ export function Tasks() {
       if (draft) return setDraft(null);
       if (running) return close();
       if (selection) return setSelection(null);
-      if (target && folds.isOpen({ key: openKey(target.host.id), fallback: false })) return folds.set({ key: openKey(target.host.id), open: false });
+      if (target && showing({ folds, task: target.host, comments: commentsFor({ task: target.host, comments: store.comments }) }).open) return closeTask({ folds, task: target.host });
       setFocused(null);
       return (document.activeElement as HTMLElement | null)?.blur();
     }
     if (focused?.startsWith("group:")) {
       const key = focused.slice(6);
-      if (action === "fold") folds.set({ key, open: !folds.isOpen({ key, fallback: !key.startsWith("backlog") }) });
+      if (action === "fold") folds.set({ key, open: !folds.isOpen({ key, fallback: true }) });
+      if (action === "select") {
+        const ids = (todayGroups.find((each) => "today:" + each.group === key)?.tasks ?? []).map((task) => task.id);
+        selection ? toggleSelected(ids) : setSelection(new Set(ids));
+      }
       return;
     }
-    if (!target) return;
+    if (!target || !focused) return;
     const { host, index } = target;
-    if (action === "fold") {
-      const key = openKey(focused ?? "");
-      return folds.set({ key, open: !folds.isOpen({ key, fallback: false }) });
-    }
-    if (action === "select") return selection ? toggleSelected([host.id]) : setSelection(new Set([host.id]));
+    if (action === "fold") return toggleParts({ folds, task: host, comments: commentsFor({ task: host, comments: store.comments }) });
+    if (action === "select") return selection ? toggleSelected([focused]) : setSelection(new Set([focused]));
     if (action === "complete") return index === null ? tick(host) : store.putTask(partToggled({ task: host, index, now: nowStamp() }));
     if (action === "edit") return edit(host);
     if (action === "delete") return index === null ? askDelete(host) : askDeletePart({ task: host, index });
     if (action === "today") {
-      if (host.definitionId) return;
+      if (host.definitionId) return store.putTask(skipToggled({ task: host, now: nowStamp() }));
       return store.putTask({ ...host, date: host.date === null ? store.today : null });
     }
-    if (action === "thread" && commentsFor({ task: host, comments: store.comments }).length > 0) {
-      const on = !folds.isOpen({ key: commentsKey(host.id), fallback: false });
-      folds.set({ key: partsKey(host.id), open: false });
-      folds.set({ key: commentsKey(host.id), open: on });
-      folds.set({ key: openKey(host.id), open: on });
-    }
+    if (action === "thread") toggleComments({ folds, task: host, comments: commentsFor({ task: host, comments: store.comments }) });
   };
 
   useShortcuts(shortcut);
 
   return (
     <>
+      <div className="filters">
+        <TextButton active={list === "today"} onSelect={() => setList("today")}>
+          today ({onToday.length})
+        </TextButton>
+        <TextButton active={list === "backlog"} onSelect={() => setList("backlog")}>
+          backlog ({backlog.length})
+        </TextButton>
+      </div>
       <div className="list" ref={listRef} onPointerOver={followPointer}>
-        <div className="section">
-          <Group storageKey="today" label="Today" count={onToday.length} defaultOpen select={groupSelect(onToday)} press={groupPress(onToday)} focused={focused === "group:today"}>
-            {todayGroups.map(({ group, tasks }) => (
-              <div key={group} data-container="today" data-group={group}>
-                <Group storageKey={"today:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:today:" + group}>
-                  {tasks.map((task) => row({ task, chip: null, todaySwipe: sendToBacklog(task), onTick: () => tick(task) }))}
-                </Group>
-              </div>
-            ))}
-          </Group>
-        </div>
-        <div className="section">
-          <Group storageKey="backlog" label="Backlog" count={backlog.length} defaultOpen={false} select={groupSelect(backlog)} press={groupPress(backlog)} focused={focused === "group:backlog"}>
-            <div data-container="backlog" data-group="">
-              {backlog.map((task) => row({ task, chip: task.group === "" ? null : task.group, todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
+        {list === "today" ? (
+          todayGroups.map(({ group, tasks }) => (
+            <div key={group} data-container="today" data-group={group}>
+              <Group storageKey={"today:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:today:" + group}>
+                {tasks.map((task) => row({ task, chips: [], todaySwipe: sendToBacklog(task), onTick: () => tick(task) }))}
+              </Group>
             </div>
-          </Group>
-        </div>
+          ))
+        ) : (
+          <div data-container="backlog" data-group="">
+            {backlog.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
+          </div>
+        )}
       </div>
       {drag && drag.line && <div className="drop-line" style={{ top: drag.line.top, left: drag.line.left, width: drag.line.width }} />}
       {drag && (

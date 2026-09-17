@@ -20,6 +20,7 @@ export class Store {
   constructor(private readonly directory: string) {
     try {
       this.data = { ...empty, ...JSON.parse(readFileSync(join(directory, "parallax.json"), "utf8")) };
+      this.data.tasks = this.data.tasks.map((task) => ({ ...task, skippedAt: task.skippedAt ?? null }));
     } catch {
       this.data = structuredClone(empty);
     }
@@ -158,6 +159,7 @@ function instanceOf({ definition, date }: { definition: Definition; date: string
     current: 0,
     value: "",
     doneAt: null,
+    skippedAt: null,
     note: definition.note,
     parts: definition.parts.map((part) => ({ ...part, current: 0, value: "", doneAt: null })),
     sort: definition.sort,

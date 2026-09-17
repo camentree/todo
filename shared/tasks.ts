@@ -20,6 +20,14 @@ export function isDone({ task, entries }: { task: Task; entries: JournalEntry[] 
   return partDone(task);
 }
 
+export function isSkipped(task: Task): boolean {
+  return task.skippedAt !== null;
+}
+
+export function skipToggled({ task, now }: { task: Task; now: string }): Task {
+  return { ...task, skippedAt: isSkipped(task) ? null : now };
+}
+
 export function toggled({ task, entries, now }: { task: Task; entries: JournalEntry[]; now: string }): Task {
   if (isDone({ task, entries })) {
     return {
@@ -33,6 +41,7 @@ export function toggled({ task, entries, now }: { task: Task; entries: JournalEn
   return {
     ...task,
     doneAt: now,
+    skippedAt: null,
     current: task.kind === "count" ? task.target : task.kind === "timer" ? task.timer : task.current,
     parts: task.parts.map((part) => ({ ...part, doneAt: now, current: part.kind === "count" ? part.target : part.kind === "timer" ? part.timer : part.current })),
   };
@@ -97,8 +106,9 @@ export function kindHint(task: Pick<Task, "kind" | "timer" | "target" | "current
 }
 
 export function partCount(task: Task): string {
-  if (task.parts.length === 0) return "";
-  return String(task.parts.length);
+  const remaining = task.parts.filter((part) => !partDone(part)).length;
+  if (remaining === 0) return "";
+  return String(remaining);
 }
 
 export function whenHint({ task, today }: { task: Task; today: string }): string {

@@ -69,7 +69,7 @@ export function readableTitle(entry: JournalEntry): string {
 export function entryText(entry: JournalEntry): string {
   const tags = entryTags(entry);
   const tagLine = tags.map((tag) => "#" + tag).join(" ");
-  const lines = tags.length ? [tagLine, `## ${entryTitle(entry)}`, entry.body] : [`## ${entryTitle(entry)}`, entry.body];
+  const lines = tags.length ? [`## ${entryTitle(entry)}`, tagLine, entry.body] : [`## ${entryTitle(entry)}`, entry.body];
   return lines.join("\n\n");
 }
 
@@ -77,14 +77,14 @@ export function entryFrom({ entry, text }: { entry: JournalEntry; text: string }
   const lines = text.split("\n");
   const tags: string[] = [];
   let index = 0;
+  const titled = (lines[index] ?? "").startsWith("## ");
+  const heading = titled ? (lines[index] ?? "").slice(3).trim() : "";
+  if (titled) index += 1;
+  while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
   while (isTagLine(lines[index] ?? "")) {
     for (const word of (lines[index] ?? "").trim().split(/\s+/)) tags.push(word.slice(1).toLowerCase());
     index += 1;
   }
-  while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
-  const titled = (lines[index] ?? "").startsWith("## ");
-  const heading = titled ? (lines[index] ?? "").slice(3).trim() : "";
-  if (titled) index += 1;
   const body = lines.slice(index).join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
   const displayTitle = titled ? (heading === entry.sectionTitle ? "" : heading) : (entry.metadata.displayTitle ?? "");
   return {

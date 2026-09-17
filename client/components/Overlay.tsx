@@ -40,7 +40,7 @@ export function Overlay({ children }: { children: ReactNode }) {
     let applied = "";
     const fit = () => {
       frame = 0;
-      const covered = window.innerHeight - viewport.height;
+      const covered = document.documentElement.clientHeight - viewport.height;
       const next = covered > keyboardHeight ? `${Math.round(viewport.offsetTop)}:${Math.round(viewport.height)}` : "";
       if (next === applied) return;
       applied = next;

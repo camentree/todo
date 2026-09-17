@@ -32,8 +32,8 @@ Today
   today the meta line says since when.
 - A one-off dated within the coming week shows under This week, folded by
   default; tapping its row moves it onto Today.
-- Every undated unfinished one-off shows under Backlog, folded by default,
-  grouped the same way as Today.
+- Every undated unfinished one-off shows in the backlog list, reached by the
+  filter word under the dateline, as one flat list naming each row's group.
 - Tapping a tick completes the task: the title strikes through and the row
   dims, and stays where it is; tapping again uncompletes it.
 - A completed habit is absent from Today the next day; a completed one-off is
@@ -213,9 +213,9 @@ Runner
   row; releasing makes the dragged task a part of it; dragging back left
   un-nests it before release.
 - Pausing over a folded task unfolds it so the line can go inside.
-- Dropping into a different group changes the row's group; dropping into a
-  group on Today gives a Backlog row today's date; dropping into Backlog
-  removes the date.
+- Dropping into a different group changes the row's group. A drag stays in
+  the list that is showing; swiping is how a row moves between today and
+  backlog.
 - With several rows selected, dragging any handle drags them all as one lifted
   row titled with the count, and they land together in order.
 - Dragging a part out to the left edge makes it a top-level task.

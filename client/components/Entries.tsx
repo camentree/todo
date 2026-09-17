@@ -109,10 +109,6 @@ export function Entries({ name }: { name: JournalName }) {
           subheading={[formatWhen(editing.at), entryTags(editing).join(", ")].filter(Boolean).join(" · ")}
           initial={entryText(editing)}
           onCancel={close}
-          onDelete={() => {
-            store.deleteEntry({ name, at: editing.at });
-            close();
-          }}
           onSave={(text) => {
             store.putEntry({ name, entry: entryFrom({ entry: editing, text }) });
             close();

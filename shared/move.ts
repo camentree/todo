@@ -62,6 +62,7 @@ export function partAsTask({ part, host, id, created }: { part: TaskPart; host: 
     current: part.current,
     value: part.value,
     doneAt: part.doneAt,
+    skippedAt: null,
     note: part.note,
     parts: [],
     sort: host.sort,

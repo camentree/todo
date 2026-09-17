@@ -36,6 +36,7 @@ export function taskFromParsed({ parsed, existing, id, today, now, definition }:
     timer: parsed.timer,
     rest: parsed.rest,
     ...progressOf({ parsed, previous: existing ?? undefined, now }),
+    skippedAt: existing?.skippedAt ?? null,
     note: parsed.note,
     parts: partsFrom({ parsed: parsed.parts, previous: existing?.parts ?? [], now }),
     sort: existing?.sort ?? 0,

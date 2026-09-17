@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { MouseEvent, PointerEvent, ReactNode } from "react";
 
-export const swipeThreshold = 96;
+const swipeFraction = 0.4;
 const commitDistance = 12;
 
 interface Gesture {
@@ -19,6 +19,7 @@ export interface Swipe {
 
 export function Swipeable({ right, left, children }: { right: Swipe | null; left: Swipe | null; children: ReactNode }) {
   const gesture = useRef<Gesture | null>(null);
+  const element = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
   const [settling, setSettling] = useState(false);
 
@@ -49,9 +50,7 @@ export function Swipeable({ right, left, children }: { right: Swipe | null; left
       event.currentTarget.setPointerCapture(event.pointerId);
     }
     const allowed = dx > 0 ? right !== null : left !== null;
-    const magnitude = Math.abs(dx);
-    const eased = magnitude <= swipeThreshold ? magnitude : swipeThreshold + (magnitude - swipeThreshold) * 0.35;
-    current.offset = allowed ? Math.sign(dx) * eased : 0;
+    current.offset = allowed ? dx : 0;
     setOffset(current.offset);
   };
 
@@ -60,8 +59,9 @@ export function Swipeable({ right, left, children }: { right: Swipe | null; left
     if (!current || current.pointerId !== event.pointerId) return;
     gesture.current = null;
     if (!current.committed) return;
-    if (current.offset >= swipeThreshold && right) right.onSwipe();
-    else if (current.offset <= -swipeThreshold && left) left.onSwipe();
+    const enough = (element.current?.offsetWidth ?? 0) * swipeFraction;
+    if (current.offset >= enough && right) right.onSwipe();
+    else if (current.offset <= -enough && left) left.onSwipe();
     springBack();
   };
 
@@ -70,8 +70,8 @@ export function Swipeable({ right, left, children }: { right: Swipe | null; left
     springBack();
   };
 
-  const onLostPointerCapture = () => {
-    if (gesture.current?.committed) onPointerCancel();
+  const onLostPointerCapture = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget && gesture.current?.committed) onPointerCancel();
   };
 
   const onClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -84,6 +84,7 @@ export function Swipeable({ right, left, children }: { right: Swipe | null; left
   return (
     <div
       className="swipeable"
+      ref={element}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -91,16 +92,8 @@ export function Swipeable({ right, left, children }: { right: Swipe | null; left
       onLostPointerCapture={onLostPointerCapture}
       onClickCapture={onClickCapture}
     >
-      {offset > 0 && right && (
-        <div className={offset >= swipeThreshold ? "reveal right past" : "reveal right"} style={{ width: offset }}>
-          {right.word}
-        </div>
-      )}
-      {offset < 0 && left && (
-        <div className={offset <= -swipeThreshold ? "reveal left past" : "reveal left"} style={{ width: -offset }}>
-          {left.word}
-        </div>
-      )}
+      {offset > 0 && right && <div className="reveal right">{right.word}</div>}
+      {offset < 0 && left && <div className="reveal left">{left.word}</div>}
       <div
         className={settling ? "swiped settling" : "swiped"}
         style={{ transform: `translateX(${offset}px)` }}

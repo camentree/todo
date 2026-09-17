@@ -26,12 +26,12 @@ address nobody recognises simply shows the list. Deep links load: the built
 index answers every one of these paths.
 
 **Tasks**
-- Two sections, Today and Backlog, each a large Title Case heading that folds
-  by tapping the heading itself, with no chevron. Folded, the count of tasks
-  inside sits right after the heading in small dim text. Today holds every
-  group whose tasks are due today or in the past; Backlog holds the rest,
-  future dates included, and a definition shows once at its earliest coming
-  instance. A group appears in both sections when it has tasks in both.
+- Two lists, today and backlog, chosen by a filter row under the dateline in
+  the same shape as the journal's tag filters: `today (8)  backlog (24)`,
+  the active word in text colour, the other dim. One list shows at a time,
+  today by default. Today holds every group whose tasks are due today or in
+  the past; backlog holds the rest, future dates included, and a definition
+  shows once at its earliest coming instance. `[` and `]` flip between them.
 - Groups in fixed order (habits, exercise, personal, then any `/name`, then
   `ungrouped` last), each a label with a fold chevron that stays visible in
   both states and turns smoothly between them. A task with no group is
@@ -76,13 +76,14 @@ index answers every one of these paths.
 - One-offs due today or earlier appear in their group with the habits. Overdue
   ends its line with `yesterday`, `saturday` or `sep 05` in the dim slot,
   never red.
-- **Backlog**: collapsed by default. Everything not due today or past: future
-  one-offs, the next instance of each coming definition, and every undated,
-  unfinished one-off, as one flat list, dated rows first by date then the rest
-  by sort, each row naming its group among its attributes. Dragging inside
-  Backlog only reorders. Tick works in place.
-- Every fold on the screen, the two sections and each group in each section,
-  is remembered by its key in localStorage and comes back on the next visit.
+- **Backlog**: everything not due today or past: future one-offs, the next
+  instance of each coming definition, and every undated, unfinished one-off,
+  as one flat list, dated rows first by date then the rest by sort, each row
+  naming its group among its attributes. Dragging inside backlog only
+  reorders; moving between the lists is a swipe, since only one list is on
+  screen. Tick works in place.
+- Every group fold is remembered by its key in localStorage and comes back on
+  the next visit.
   A store that refuses to be read or written just leaves the defaults.
 - Finished rows stay struck through until the day rolls over.
 

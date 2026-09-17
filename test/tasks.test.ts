@@ -1,5 +1,5 @@
 import type { Task } from "@shared/model.ts";
-import { grouped, isBacklog, isDone, isOnToday, kindHint, partToggled, toggled, whenHint } from "@shared/tasks.ts";
+import { grouped, isBacklog, isDone, isOnToday, isSkipped, kindHint, partCount, partToggled, skipToggled, toggled, whenHint } from "@shared/tasks.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
@@ -19,6 +19,7 @@ function task(id: string, overrides: Partial<Task>): Task {
     current: 0,
     value: "",
     doneAt: null,
+    skippedAt: null,
     note: "",
     parts: [],
     sort: 0,
@@ -66,6 +67,30 @@ describe("toggled", () => {
     expect(isDone({ task: ticked, entries: [] })).toBe(true);
     const unticked = partToggled({ task: ticked, index: 0, now });
     expect(isDone({ task: unticked, entries: [] })).toBe(false);
+  });
+});
+
+describe("skipToggled", () => {
+  it("marks a task skipped and back, and completing it clears the skip", () => {
+    const skipped = skipToggled({ task: task("a", { definitionId: "d1", date: today }), now });
+    expect(isSkipped(skipped)).toBe(true);
+    expect(isDone({ task: skipped, entries: [] })).toBe(false);
+    expect(isSkipped(skipToggled({ task: skipped, now }))).toBe(false);
+    const completed = toggled({ task: skipped, entries: [], now });
+    expect(completed).toMatchObject({ doneAt: now, skippedAt: null });
+  });
+});
+
+describe("partCount", () => {
+  it("counts only the parts still to do", () => {
+    const parts = [
+      { name: "x", kind: "boolean" as const, target: 0, timer: 0, note: "", current: 0, value: "", doneAt: now },
+      { name: "y", kind: "boolean" as const, target: 0, timer: 0, note: "", current: 0, value: "", doneAt: null },
+      { name: "z", kind: "count" as const, target: 5, timer: 0, note: "", current: 2, value: "", doneAt: null },
+    ];
+    expect(partCount(task("a", { parts }))).toBe("2");
+    expect(partCount(task("b", { parts: parts.map((part) => ({ ...part, doneAt: now })) }))).toBe("");
+    expect(partCount(task("c", {}))).toBe("");
   });
 });
 
