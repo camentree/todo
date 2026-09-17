@@ -17,6 +17,7 @@ import { Handle } from "./Handle.tsx";
 import { Meta } from "./Meta.tsx";
 import { SquareTick } from "./SquareTick.tsx";
 import { Swipeable } from "./Swipeable.tsx";
+import type { Swipe } from "./Swipeable.tsx";
 
 export interface Select {
   selected: (id: string) => boolean;
@@ -45,7 +46,7 @@ export function TaskRow({
   focused,
   onTick,
   onTitle,
-  onToday,
+  todaySwipe,
   onDelete,
   onDeletePart,
   onAddComment,
@@ -61,7 +62,7 @@ export function TaskRow({
   focused: string | null;
   onTick: () => void;
   onTitle: () => void;
-  onToday: (() => void) | null;
+  todaySwipe: Swipe | null;
   onDelete: (() => void) | null;
   onDeletePart: ((index: number) => void) | null;
   onAddComment: (body: string) => void;
@@ -126,7 +127,7 @@ export function TaskRow({
 
   return (
     <div className={done ? "task done" : "task"}>
-      <Swipeable onRight={select ? null : onToday} onLeft={select ? null : onDelete}>
+      <Swipeable right={select ? null : todaySwipe} left={select || !onDelete ? null : { word: "delete", onSwipe: onDelete }}>
         <div className={focused === task.id ? "row focused" : "row"} data-focus={task.id} onClick={onRow} {...press}>
           <div className="main">
             {select ? (
@@ -138,8 +139,6 @@ export function TaskRow({
               <CircleTick done={done} onToggle={onTick} />
             )}
             <span className="text">{task.name}</span>
-            {hint && <span className="hint">{hint}</span>}
-            {when && <span className="when">{when}</span>}
             <div className="marks">
               {comments.length > 0 && (
                 <Mark label="comments" count={String(comments.length)} active={commentsShowing} onSelect={onCommentGlyph}>
@@ -159,9 +158,11 @@ export function TaskRow({
               )}
             </div>
           </div>
-          {chip && (
+          {(hint || when || chip) && (
             <Meta>
-              <Chip>{chip}</Chip>
+              {hint && <span className="hint">{hint}</span>}
+              {when && <span className="when">{when}</span>}
+              {chip && <Chip>{chip}</Chip>}
             </Meta>
           )}
         </div>
@@ -190,7 +191,7 @@ export function TaskRow({
                       focused={focused}
                       onTick={() => (fixedOpen ? null : store.putTask(partToggled({ task, index, now })))}
                       onTitle={onTitle}
-                      onToday={null}
+                      todaySwipe={null}
                       onDelete={onDeletePart ? () => onDeletePart(index) : null}
                       onDeletePart={null}
                       onAddComment={() => null}

@@ -36,11 +36,12 @@ function Filters({ counts, active, total, onSelect }: { counts: { tag: string; c
   );
 }
 
-function EntryRow({ entry, filter, onOpen }: { entry: JournalEntry; filter: string | null; onOpen: () => void }) {
+function EntryRow({ entry, filter, onOpen, onDelete }: { entry: JournalEntry; filter: string | null; onOpen: () => void; onDelete: () => void }) {
   const tags = entryTags(entry).filter((tag) => tag !== filter);
   const words = wordCount(entry.body);
   return (
-    <button className="entry" onClick={onOpen}>
+    <Swipeable right={null} left={{ word: "delete", onSwipe: onDelete }}>
+      <button className="entry" onClick={onOpen}>
       <div className="entry-title">{readableTitle(entry)}</div>
       <div className="entry-head">
         <span>{formatEntryWhen(entry.at)}</span>

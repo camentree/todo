@@ -21,7 +21,11 @@ export function placed({ rows, moving, target, today }: { rows: Task[]; moving: 
   const movingIds = new Set(moving.map((task) => task.id));
   const remaining = rows.filter((task) => !movingIds.has(task.id));
   const index = Math.max(0, Math.min(target.index, remaining.length));
-  const arrivals = moving.map((task) => ({ ...task, group: target.group, date: target.container === "today" ? today : null }));
+  const arrivals = moving.map((task) => ({
+    ...task,
+    group: target.container === "today" ? target.group : task.group,
+    date: target.container === "today" ? today : null,
+  }));
   const ordered = [...remaining.slice(0, index), ...arrivals, ...remaining.slice(index)];
   return ordered.map((task, sort) => ({ ...task, sort }));
 }

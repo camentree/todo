@@ -34,13 +34,16 @@ describe("placed", () => {
     expect(after.map((each) => [each.id, each.sort])).toEqual([["c", 0], ["a", 1], ["b", 2]]);
   });
 
-  it("gives a Backlog row today's date when dropped on Today, and no date when dropped into Backlog", () => {
+  it("gives a Backlog row today's date and the group it lands in when dropped on Today", () => {
     const fromBacklog = task("x", { group: "garden" });
     const onToday = placed({ rows, moving: [fromBacklog], target: { kind: "top", container: "today", group: "personal", index: 1 }, today });
     expect(onToday[1]).toMatchObject({ id: "x", group: "personal", date: today, sort: 1 });
-    const intoBacklog = placed({ rows: [], moving: [rows[0]!], target: { kind: "top", container: "backlog", group: "garden", index: 0 }, today });
+  });
+
+  it("keeps the group and clears the date when dropped into Backlog", () => {
+    const intoBacklog = placed({ rows: [], moving: [task("a", { group: "garden" })], target: { kind: "top", container: "backlog", group: "", index: 0 }, today });
     expect(intoBacklog[0]).toMatchObject({ id: "a", group: "garden", date: null });
-    const dated = placed({ rows: [], moving: [task("d", { date: "2026-09-20" })], target: { kind: "top", container: "backlog", group: "", index: 0 }, today });
+    const dated = placed({ rows: [], moving: [task("d", { group: "", date: "2026-09-20" })], target: { kind: "top", container: "backlog", group: "", index: 0 }, today });
     expect(dated[0]).toMatchObject({ id: "d", group: "", date: null });
   });
 

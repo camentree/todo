@@ -13,7 +13,12 @@ interface Gesture {
   offset: number;
 }
 
-export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void) | null; onLeft: (() => void) | null; children: ReactNode }) {
+export interface Swipe {
+  word: string;
+  onSwipe: () => void;
+}
+
+export function Swipeable({ right, left, children }: { right: Swipe | null; left: Swipe | null; children: ReactNode }) {
   const gesture = useRef<Gesture | null>(null);
   const [offset, setOffset] = useState(0);
   const [settling, setSettling] = useState(false);
@@ -49,7 +54,7 @@ export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void)
       springBack();
       return;
     }
-    const allowed = dx > 0 ? onRight !== null : onLeft !== null;
+    const allowed = dx > 0 ? right !== null : left !== null;
     const magnitude = Math.abs(dx);
     const eased = magnitude <= swipeThreshold ? magnitude : swipeThreshold + (magnitude - swipeThreshold) * 0.35;
     current.offset = allowed ? Math.sign(dx) * eased : 0;
@@ -61,8 +66,8 @@ export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void)
     if (!current || current.pointerId !== event.pointerId) return;
     gesture.current = null;
     if (!current.committed) return;
-    if (current.offset >= swipeThreshold && onRight) onRight();
-    else if (current.offset <= -swipeThreshold && onLeft) onLeft();
+    if (current.offset >= swipeThreshold && right) right.onSwipe();
+    else if (current.offset <= -swipeThreshold && left) left.onSwipe();
     springBack();
   };
 
@@ -92,14 +97,14 @@ export function Swipeable({ onRight, onLeft, children }: { onRight: (() => void)
       onLostPointerCapture={onLostPointerCapture}
       onClickCapture={onClickCapture}
     >
-      {offset > 0 && (
+      {offset > 0 && right && (
         <div className={offset >= swipeThreshold ? "reveal right past" : "reveal right"} style={{ width: offset }}>
-          today
+          {right.word}
         </div>
       )}
-      {offset < 0 && (
+      {offset < 0 && left && (
         <div className={offset <= -swipeThreshold ? "reveal left past" : "reveal left"} style={{ width: -offset }}>
-          delete
+          {left.word}
         </div>
       )}
       <div

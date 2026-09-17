@@ -23,6 +23,7 @@ import { Overlay } from "../components/Overlay.tsx";
 import { RoundButton } from "../components/RoundButton.tsx";
 import { TaskRow } from "../components/TaskRow.tsx";
 import type { Select } from "../components/TaskRow.tsx";
+import type { Swipe } from "../components/Swipeable.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { useFolds } from "../components/Foldable.tsx";
@@ -198,7 +199,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
                   focused={null}
                   onTick={() => null}
                   onTitle={() => null}
-                  onToday={null}
+                  todaySwipe={null}
                   onDelete={null}
                   onDeletePart={null}
                   onAddComment={() => null}
@@ -287,7 +288,7 @@ export function Tasks() {
   const onToday = store.tasks.filter((task) => isOnToday({ task, ...placing }));
   const backlog = store.tasks
     .filter((task) => isBacklog({ task, ...placing }))
-    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || byPosition(a, b))
+    .sort((a, b) => (a.date === null ? 1 : 0) - (b.date === null ? 1 : 0) || (a.date ?? "").localeCompare(b.date ?? "") || byPosition(a, b))
     .filter((task, index, all) => task.definitionId === null || all.findIndex((each) => each.definitionId === task.definitionId) === index);
 
   const edit = (task: Task) => {
@@ -320,7 +321,10 @@ export function Tasks() {
   const askDeletePart = ({ task, index }: { task: Task; index: number }) =>
     setAsking({ question: `delete ${task.parts[index]?.name ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutPart({ host: task, index })); setAsking(null); } }] });
 
-  const bringForward = (task: Task) => store.putTask({ ...task, date: store.today });
+  const sendToBacklog = (task: Task): Swipe | null =>
+    task.definitionId ? null : { word: "backlog", onSwipe: () => store.putTask({ ...task, date: null }) };
+
+  const bringToToday = (task: Task): Swipe => ({ word: "today", onSwipe: () => store.putTask({ ...task, date: store.today }) });
 
   const addComment = ({ task, body }: { task: Task; body: string }) =>
     store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp() });
@@ -335,8 +339,7 @@ export function Tasks() {
   };
 
   const todayGroups = grouped(onToday);
-  const backlogGroups = grouped(backlog);
-  const listOrder = [...todayGroups.flatMap((each) => each.tasks), ...backlogGroups.flatMap((each) => each.tasks)];
+  const listOrder = [...todayGroups.flatMap((each) => each.tasks), ...backlog];
 
   const rowAt = (id: string): { host: Task; index: number | null } | null => {
     const whole = store.tasks.find((each) => each.id === id);
@@ -377,10 +380,8 @@ export function Tasks() {
 
   const running = currentRun();
 
-  const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] => {
-    const groups = container === "today" ? todayGroups : backlogGroups;
-    return groups.find((each) => each.group === group)?.tasks ?? [];
-  };
+  const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] =>
+    container === "backlog" ? backlog : (todayGroups.find((each) => each.group === group)?.tasks ?? []);
 
   const resolveTarget = ({ current, x, y }: { current: Drag; x: number; y: number }): { target: Target | null; line: Drag["line"]; hovered: string | null } => {
     const column = listRef.current?.getBoundingClientRect();
@@ -442,7 +443,7 @@ export function Tasks() {
       const rows = rowsOf({ container: target.container, group: target.group });
       const after = placed({ rows, moving, target, today: store.today });
       for (const task of changedOnly({ before: rows, after })) store.putTask(task);
-      for (const definition of regrouped({ moving, definitions: store.definitions, group: target.group })) store.putDefinition(definition);
+      if (target.container === "today") for (const definition of regrouped({ moving, definitions: store.definitions, group: target.group })) store.putDefinition(definition);
       if (source && current.fromPart) store.putTask(withoutPart({ host: source, index: current.fromPart.index }));
       return;
     }
@@ -527,7 +528,7 @@ export function Tasks() {
 
   const holdToSelect = (id: string) => setSelection((current) => new Set(current).add(id));
 
-  const row = ({ task, chip, onToday, onTick }: { task: Task; chip: string | null; onToday: (() => void) | null; onTick: () => void }) => (
+  const row = ({ task, chip, todaySwipe, onTick }: { task: Task; chip: string | null; todaySwipe: Swipe | null; onTick: () => void }) => (
     <div key={task.id} className={drag?.ids.includes(task.id) ? "lifting" : undefined} data-task={task.id}>
         <TaskRow
           task={task}
@@ -538,7 +539,7 @@ export function Tasks() {
           focused={focused}
           onTick={onTick}
           onTitle={() => edit(task)}
-          onToday={onToday}
+          todaySwipe={todaySwipe}
           onDelete={() => askDelete(task)}
           onDeletePart={(index) => askDeletePart({ task, index })}
           onAddComment={(body) => addComment({ task, body })}
@@ -617,7 +618,7 @@ export function Tasks() {
             {todayGroups.map(({ group, tasks }) => (
               <div key={group} data-container="today" data-group={group}>
                 <Group storageKey={"today:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:today:" + group}>
-                  {tasks.map((task) => row({ task, chip: null, onToday: null, onTick: () => tick(task) }))}
+                  {tasks.map((task) => row({ task, chip: null, todaySwipe: sendToBacklog(task), onTick: () => tick(task) }))}
                 </Group>
               </div>
             ))}
@@ -625,13 +626,9 @@ export function Tasks() {
         </div>
         <div className="section">
           <Group storageKey="backlog" label="Backlog" count={backlog.length} defaultOpen={false} select={groupSelect(backlog)} press={groupPress(backlog)} focused={focused === "group:backlog"}>
-            {backlogGroups.map(({ group, tasks }) => (
-              <div key={group} data-container="backlog" data-group={group}>
-                <Group storageKey={"backlog:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen={false} select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:backlog:" + group}>
-                  {tasks.map((task) => row({ task, chip: null, onToday: () => bringForward(task), onTick: () => tick(task) }))}
-                </Group>
-              </div>
-            ))}
+            <div data-container="backlog" data-group="">
+              {backlog.map((task) => row({ task, chip: task.group === "" ? null : task.group, todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
+            </div>
           </Group>
         </div>
       </div>

@@ -64,7 +64,7 @@ export function CommentList({ comments, scrollTo, onAdd, onDelete }: { comments:
       <div className="thread" ref={thread}>
         {ordered.map((comment) => (
           <div key={comment.id} className={comment.author === "user" ? "bubble user" : "bubble agent"} data-comment={comment.id}>
-            <Swipeable onRight={null} onLeft={() => onDelete(comment)}>
+            <Swipeable right={null} left={{ word: "delete", onSwipe: () => onDelete(comment) }}>
               <Card body={comment.body} author={comment.author} when={formatWhen(comment.writtenAt)} />
             </Swipeable>
           </div>

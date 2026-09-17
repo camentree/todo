@@ -41,27 +41,29 @@
 
   --font: "Seravek", -apple-system, system-ui, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --heading: 1.6rem;
-  --section: 1.3rem;
-  --title: 1.02rem;
-  --body: 0.95rem;
-  --meta: 0.86rem;
-  --label: 0.76rem;
-  --chip: 0.65rem;
-  --big: 4.2rem;
+  --heading: 1.74rem;
+  --section: 1.41rem;
+  --title: 1.1rem;
+  --body: 1.03rem;
+  --meta: 0.94rem;
+  --label: 0.83rem;
+  --chip: 0.71rem;
+  --big: 4.56rem;
 
-  --tick: 1.3rem;
-  --tick-small: 1rem;
-  --round-small: 2.4rem;
-  --round: 3.25rem;
+  --tick: 1.41rem;
+  --tick-small: 1.09rem;
+  --round-small: 2.6rem;
+  --round: 3.53rem;
   --ring: 250px;
-  --gutter: 1.15rem;
+  --gutter: 1.25rem;
   --row-padding: 0.42rem 0.25rem;
   --card-radius: 0.7rem;
   --column: 42rem;
   --top: max(2.6rem, calc(env(safe-area-inset-top) + 0.8rem));
   --bottom: max(1.4rem, calc(env(safe-area-inset-bottom) + 0.6rem));
-  --indent: 2.05rem;
+  --indent: calc(var(--tick) + 0.75rem);
+  --glyph: 0.95rem;
+  --touch: 2.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -108,7 +110,7 @@ body {
   background: var(--ground);
   color: var(--text);
   font-family: var(--font);
-  font-size: 16px;
+  font-size: 17px;
   -webkit-font-smoothing: antialiased;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -255,7 +257,7 @@ textarea {
   text-transform: uppercase;
   color: var(--dim);
   padding: 0.6rem 0;
-  min-height: 2.75rem;
+  min-height: var(--touch);
 }
 
 .group-head .fold {
@@ -300,9 +302,9 @@ textarea {
 }
 
 .tick {
-  width: 2.75rem;
-  height: 2.75rem;
-  margin: -0.725rem;
+  width: var(--touch);
+  height: var(--touch);
+  margin: calc((var(--touch) - var(--tick)) / -2);
   flex: none;
   display: flex;
   align-items: center;
@@ -338,8 +340,6 @@ textarea {
 
 .hint,
 .when {
-  font-size: var(--meta);
-  color: var(--dim);
   flex: none;
 }
 
@@ -361,6 +361,12 @@ textarea {
   font-size: var(--meta);
   padding: 0.85rem 0.3rem;
   margin: -0.75rem 0;
+}
+
+.mark svg,
+.fold svg {
+  width: var(--glyph);
+  height: var(--glyph);
 }
 
 .mark.on {
@@ -418,14 +424,14 @@ textarea {
 }
 
 .unfolded {
-  padding-left: var(--indent);
+  padding-inline: var(--indent);
   display: flex;
   flex-direction: column;
 }
 
 .note {
   padding: 0.35rem 0.25rem 0.1rem;
-  font-size: 0.9rem;
+  font-size: var(--body);
   line-height: 1.4;
   color: var(--dim);
   white-space: pre-wrap;
@@ -440,6 +446,10 @@ textarea {
 .swipeable {
   position: relative;
   overflow: hidden;
+  touch-action: pan-y;
+}
+
+.swipeable button:not(.handle) {
   touch-action: pan-y;
 }
 
@@ -629,7 +639,7 @@ textarea {
 
 .actions .text {
   padding: 0.7rem 0.25rem;
-  min-height: 2.75rem;
+  min-height: var(--touch);
   font-size: 1rem;
   font-weight: 500;
   color: var(--dim);
@@ -699,7 +709,7 @@ textarea {
 
 .confirm-choices .text {
   padding: 0.7rem 0.25rem;
-  min-height: 2.75rem;
+  min-height: var(--touch);
   font-size: 1rem;
   font-weight: 500;
   color: var(--dim);
@@ -735,7 +745,7 @@ textarea {
   gap: 0.2rem;
 }
 
-.card.agent {
+.card.user {
   background: var(--chip-bg);
 }
 
@@ -927,9 +937,9 @@ textarea {
 }
 
 .handle {
-  width: 2.75rem;
-  height: 2.75rem;
-  margin: -0.725rem -0.725rem -0.725rem -0.725rem;
+  width: var(--touch);
+  height: var(--touch);
+  margin: calc((var(--touch) - var(--tick)) / -2);
   flex: none;
   display: flex;
   align-items: center;
@@ -945,9 +955,9 @@ textarea {
 }
 
 .square {
-  width: 2.75rem;
-  height: 2.75rem;
-  margin: -0.725rem;
+  width: var(--touch);
+  height: var(--touch);
+  margin: calc((var(--touch) - var(--tick)) / -2);
   flex: none;
   display: flex;
   align-items: center;
@@ -971,11 +981,11 @@ textarea {
 }
 
 .task .main:has(.handle) + .meta {
-  padding-left: calc(var(--indent) + 2.05rem);
+  padding-left: calc(var(--indent) * 2);
 }
 
 .task:has(> .swipeable .handle) > .roll > div > .unfolded {
-  padding-left: calc(var(--indent) + 2.05rem);
+  padding-inline: calc(var(--indent) * 2);
 }
 
 .select-bar .round:first-child {
@@ -1138,7 +1148,7 @@ textarea {
   color: var(--dim);
   font-size: var(--meta);
   padding: 0.5rem 1rem;
-  min-height: 2.75rem;
+  min-height: var(--touch);
 }
 
 .ring-inside .text.active {
@@ -1222,7 +1232,7 @@ textarea {
   font-size: var(--meta);
   color: var(--faint);
   padding: 0.5rem 1rem;
-  min-height: 2.75rem;
+  min-height: var(--touch);
 }
 
 .runner-comments > .text.active {
@@ -1274,7 +1284,7 @@ textarea {
   font-size: var(--meta);
   color: var(--faint);
   padding: 0.5rem 0;
-  min-height: 2.75rem;
+  min-height: var(--touch);
 }
 
 .filters .text.active {
@@ -1375,6 +1385,53 @@ textarea {
   margin: 0;
   width: var(--tick);
   height: var(--tick);
+}
+
+@media (min-width: 700px) {
+  :root {
+    --heading: 1.6rem;
+    --section: 1.3rem;
+    --title: 1.02rem;
+    --body: 0.95rem;
+    --meta: 0.86rem;
+    --label: 0.76rem;
+    --chip: 0.65rem;
+    --big: 4.2rem;
+    --tick: 1.3rem;
+    --tick-small: 1rem;
+    --round-small: 2.4rem;
+    --round: 3.25rem;
+    --gutter: 1.15rem;
+    --glyph: 0.75rem;
+  }
+
+  body {
+    font-size: 16px;
+  }
+
+  .row {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .main,
+  .meta {
+    display: contents;
+  }
+
+  .marks {
+    order: 1;
+  }
+
+  .fold svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .note {
+    font-size: 0.9rem;
+  }
 }
 
 @media (hover: hover) {
