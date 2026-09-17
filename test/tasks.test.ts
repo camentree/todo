@@ -115,12 +115,12 @@ describe("placing rows", () => {
   });
 
   it("closes the line with the date and the time, and drops the date when it is today", () => {
-    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("sept 18, 5:00 pm");
-    expect(whenHint({ task: later, today })).toBe("sept 22");
+    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("friday, 5:00 pm");
+    expect(whenHint({ task: later, today })).toBe("sep 22");
     expect(whenHint({ task: task("t", { date: "2026-09-16", time: "09:00" }), today })).toBe("tomorrow, 9:00 am");
     expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3:00 pm");
-    expect(whenHint({ task: overdue, today })).toBe("sept 12");
-    expect(whenHint({ task: task("y", { date: "2026-09-14", time: "07:10" }), today })).toBe("sept 14, 7:10 am");
+    expect(whenHint({ task: overdue, today })).toBe("saturday");
+    expect(whenHint({ task: task("y", { date: "2026-09-14", time: "07:10" }), today })).toBe("yesterday, 7:10 am");
     expect(whenHint({ task: backlog, today })).toBe("");
   });
 

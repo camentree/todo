@@ -52,11 +52,16 @@ export function daysBetween({ from, to }: { from: string; to: string }): number 
 
 export function shortDate(key: string): string {
   const date = dateFromKey(key);
-  return date.toLocaleDateString("en-GB", { month: "short" }).toLowerCase() + " " + date.getDate();
+  return date.toLocaleDateString("en-US", { month: "short" }).toLowerCase() + " " + String(date.getDate()).padStart(2, "0");
 }
 
-export function comingDate({ key, today }: { key: string; today: string }): string {
-  return key === shiftDate({ key: today, days: 1 }) ? "tomorrow" : shortDate(key);
+export function relativeDate({ key, today }: { key: string; today: string }): string {
+  const days = daysBetween({ from: today, to: key });
+  if (days === -1) return "yesterday";
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (Math.abs(days) < 7) return dateFromKey(key).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  return shortDate(key);
 }
 
 export function timeOfDay(time: string): string {

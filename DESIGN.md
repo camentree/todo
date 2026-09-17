@@ -30,8 +30,9 @@ written in place, under the thread.
 - Row: one line reading tick circle, then `{title} {target} {when}` — the
   title in text colour, the target hint in dim after it (`30 min`, `500 ml`,
   `8`, `3 / 8`; a count is its number alone, there is no `×` anywhere), then
-  the date and the time in dim, `sept 20, 9:00 pm`, `tomorrow, 9:00 pm`, a
-  past `sept 13`, or just `9:00 pm` when the date is today or there is none —
+  the date and the time in dim, `friday, 9:00 pm`, `tomorrow, 9:00 pm`, a
+  past `yesterday`, `saturday` or `sep 05`, or just `9:00 pm` when the date is
+  today or there is none —
   and at the far right a cluster, `{n} comment-glyph {m} parts-glyph ›`, whose
   width is reserved on every row even when it is empty, so every title wraps
   at the same place. Under the title, only the mono chip for a group-level
@@ -60,7 +61,8 @@ written in place, under the thread.
 - A part is a TaskRow: same look, same tick, same swipes, same hold, indented
   under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
-  ends its line with `sept 12` in the dim slot, never red.
+  ends its line with `yesterday`, `saturday` or `sep 05` in the dim slot,
+  never red.
 - **Backlog**: collapsed by default, and every group inside it starts folded
   too. Everything not due today or past: future one-offs, the next instance of
   each coming definition, and every undated, unfinished one-off, grouped the
@@ -310,10 +312,11 @@ Everything the app writes is lowercase (`since sept 12`, `wednesday,
 september 16`, `15:00`, `done`, `add a comment`); the exceptions are group
 labels, which stay UPPERCASE, and the tab names and the two section
 headings, which stay Title Case; task titles and journal text are whatever
-was typed. One format everywhere the app writes a date: short month and day,
-`sept 16`; time in 24 hours, `15:00`; the two together, `sept 16, 15:00`.
-`shared/format.ts` owns it. Three exceptions: the top bar's
-`wednesday, september 16`; the dim slot on a task row, which says `tomorrow`
-for the day after today and writes the clock in 12 hours, `9:00 pm`,
+was typed. One format everywhere the app writes a date: three-letter month
+and two-digit day, `sep 16`; time in 24 hours, `15:00`; the two together,
+`sep 16, 15:00`. `shared/format.ts` owns it. Three exceptions: the top bar's
+`wednesday, september 16`; the dim slot on a task row, which says
+`yesterday`, `today`, `tomorrow`, the weekday name within a week either way,
+and the short date beyond that, and writes the clock in 12 hours, `9:00 pm`,
 `7:30 am`; and an entry's attribute line, which writes the clock the same
-way, `sept 16, 9:05 pm`.
+way, `sep 16, 9:05 pm`.
