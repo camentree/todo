@@ -137,8 +137,10 @@ export function TaskRow({
             ) : (
               <CircleTick done={done} onToggle={onTick} />
             )}
-            <span className="text">{task.name}</span>
-            {hint && <span className="hint">{hint}</span>}
+            <span className="text">
+              {task.name}
+              {hint && <span className="hint">{hint}</span>}
+            </span>
             <div className="marks">
               {comments.length > 0 && (
                 <Mark label="comments" count={String(comments.length)} active={commentsShowing} onSelect={onCommentGlyph}>

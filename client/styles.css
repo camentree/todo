@@ -342,6 +342,11 @@ textarea {
   flex: none;
 }
 
+.text > .hint {
+  margin-left: 0.6rem;
+  white-space: nowrap;
+}
+
 .parts .marks {
   width: auto;
 }
