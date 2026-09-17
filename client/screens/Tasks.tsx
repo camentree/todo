@@ -28,6 +28,7 @@ import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { useFolds } from "../components/Foldable.tsx";
 import { commentsKey, openKey, partsKey } from "../components/TaskRow.tsx";
 import { longPress } from "../interaction/longPress.ts";
+import { useRoute } from "../interaction/route.ts";
 import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
 import type { ShortcutAction } from "../interaction/shortcuts.tsx";
 import { Runner } from "./Runner.tsx";
@@ -253,13 +254,14 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
 
 export function Tasks() {
   const store = useStore();
+  const { route, go, close } = useRoute();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [asking, setAsking] = useState<Asking | null>(null);
   const [helping, setHelping] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const folds = useFolds();
   const [selection, setSelection] = useState<Set<string> | null>(null);
-  const [running, setRunning] = useState<{ taskIds: string[]; label: string } | null>(null);
+  const [selectedRun, setSelectedRun] = useState<{ taskIds: string[]; label: string } | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [openedByDrag, setOpenedByDrag] = useState<Set<string>>(new Set());
   const [landed, setLanded] = useState<string | null>(null);
@@ -358,11 +360,22 @@ export function Tasks() {
 
   const play = () => {
     const chosen = listOrder.filter((task) => selection?.has(task.id) || task.parts.some((_, index) => selection?.has(task.id + ":" + index)));
-    if (chosen.length === 0) return;
+    const first = chosen[0];
+    if (!first) return;
     const groups = new Set(chosen.map((task) => task.group));
-    const label = chosen.length === 1 ? (chosen[0]?.name ?? "") : groups.size === 1 ? (chosen[0]?.group ?? "") : "selection";
-    setRunning({ taskIds: chosen.map((task) => task.id), label });
+    const label = chosen.length === 1 ? first.name : groups.size === 1 ? first.group : "selection";
+    setSelectedRun({ taskIds: chosen.map((task) => task.id), label });
+    go({ tab: "tasks", id: first.id });
   };
+
+  const currentRun = (): { taskIds: string[]; label: string } | null => {
+    if (route.id === null) return null;
+    if (selectedRun?.taskIds[0] === route.id) return selectedRun;
+    const task = store.tasks.find((each) => each.id === route.id);
+    return task ? { taskIds: [task.id], label: task.name } : null;
+  };
+
+  const running = currentRun();
 
   const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] => {
     const groups = container === "today" ? todayGroups : backlogGroups;
@@ -561,7 +574,7 @@ export function Tasks() {
       if (asking) return setAsking(null);
       if (helping) return setHelping(false);
       if (draft) return setDraft(null);
-      if (running) return setRunning(null);
+      if (running) return close();
       if (selection) return setSelection(null);
       if (target && folds.isOpen({ key: openKey(target.host.id), fallback: false })) return folds.set({ key: openKey(target.host.id), open: false });
       setFocused(null);
@@ -657,8 +670,8 @@ export function Tasks() {
           taskIds={running.taskIds}
           label={running.label}
           onClose={() => {
-            setRunning(null);
             setSelection(null);
+            close();
           }}
         />
       )}

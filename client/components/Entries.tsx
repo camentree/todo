@@ -7,6 +7,7 @@ import type { JournalEntry } from "@shared/model.ts";
 
 import type { JournalName } from "../data/store.tsx";
 import { nowStamp, useStore } from "../data/store.tsx";
+import { useRoute } from "../interaction/route.ts";
 import { EditorScreen } from "./EditorScreen.tsx";
 import { PlusGlyph } from "./Glyphs.tsx";
 import { MarkdownPreview } from "./MarkdownPreview.tsx";
@@ -57,21 +58,28 @@ function EntryRow({ entry, filter, onOpen }: { entry: JournalEntry; filter: stri
 
 export function Entries({ name }: { name: JournalName }) {
   const store = useStore();
+  const { route, go, close } = useRoute();
   const [filter, setFilter] = useState<string | null>(null);
-  const [editing, setEditing] = useState<JournalEntry | null>(null);
+  const [drafted, setDrafted] = useState<JournalEntry | null>(null);
   const entries = store[name];
   const shown = entries.filter((entry) => filter === null || entryTags(entry).includes(filter)).sort((a, b) => b.at.localeCompare(a.at));
+  const editing = route.id === null ? null : (entries.find((entry) => entry.at === route.id) ?? (drafted?.at === route.id ? drafted : null));
+
+  const write = (entry: JournalEntry) => {
+    setDrafted(entry);
+    go({ tab: route.tab, id: entry.at });
+  };
 
   return (
     <>
       <Filters counts={tagCounts(entries)} active={filter} total={entries.length} onSelect={setFilter} />
       <div className="list">
         {shown.map((entry) => (
-          <EntryRow key={entry.at} entry={entry} filter={filter} onOpen={() => setEditing(entry)} />
+          <EntryRow key={entry.at} entry={entry} filter={filter} onOpen={() => go({ tab: route.tab, id: entry.at })} />
         ))}
       </div>
       <div className="floating">
-        <RoundButton label="add" onSelect={() => setEditing(blankEntry({ tag: filter }))}>
+        <RoundButton label="add" onSelect={() => write(blankEntry({ tag: filter }))}>
           <PlusGlyph />
         </RoundButton>
       </div>
@@ -80,14 +88,14 @@ export function Entries({ name }: { name: JournalName }) {
           heading={headings[name]}
           subheading={[formatEntryWhen(editing.at), entryTags(editing).join(", ")].filter(Boolean).join(" · ")}
           initial={entryText(editing)}
-          onCancel={() => setEditing(null)}
+          onCancel={close}
           onDelete={() => {
             store.deleteEntry({ name, at: editing.at });
-            setEditing(null);
+            close();
           }}
           onSave={(text) => {
             store.putEntry({ name, entry: entryFrom({ entry: editing, text }) });
-            setEditing(null);
+            close();
           }}
         />
       )}

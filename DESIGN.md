@@ -15,6 +15,16 @@ follows the tab. The date line under the tab words stays on every tab. Runner,
 composer and entry editor are full-screen overlays. Comments are not: they are
 written in place, under the thread.
 
+**Routes**: the address bar says which tab is up — `/tasks`, `/journals`,
+`/notebooks`, with `/` landing on `/tasks`. A tap on a tab word pushes history,
+so back and forward walk the tabs. `/tasks/{task id}` runs that one task over
+the Tasks screen, and `/journals/{at}` and `/notebooks/{at}` open that entry's
+editor over its list; the id is the entry's `at`, url-encoded. Opening the
+runner or an entry from the app writes the same address, so the × and the
+browser's back both close the overlay and leave the list where it was, and an
+address nobody recognises simply shows the list. Deep links load: the built
+index answers every one of these paths.
+
 **Tasks**
 - Two sections, Today and Backlog, each a large Title Case heading that folds
   by tapping the heading itself, with no chevron. Folded, the count of tasks
