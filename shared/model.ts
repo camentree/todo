@@ -64,12 +64,15 @@ export interface Comment {
   seenAt: string | null;
 }
 
+export interface JournalMetadata {
+  displayTitle?: string;
+  tag?: string;
+  author?: string;
+}
+
 export interface JournalEntry {
-  id: string;
-  at: string;
   sectionTitle: string;
-  displayTitle: string | null;
-  tags: string[];
-  task: string | null;
+  at: string;
   body: string;
+  metadata: JournalMetadata;
 }

@@ -8,24 +8,27 @@ endpoints. It keeps everything in one directory, `DATA_DIR`: `parallax.json`
 model is `shared/model.ts`; the client should use it and retire the habit-app
 types in `shared/types.ts` as it goes.
 
-Entries split on H2. The section title is `YYYY-MM-DD HH:MM:SS`, the time
-part optional, and plain `key: value` lines follow it up to a blank line:
+Entries split on H2. An entry is a section title, an `at` timestamp, a body
+and metadata; the section title is always the `at` timestamp written
+`YYYY-MM-DDTHH:MM:SS`. The H2 carries the display title when there is one and
+the section title otherwise, then a blank line, then plain `key: value` lines,
+then a blank line, then the body:
 
 ```
-## 2026-09-16 21:05:00
-id: abc123
+## what I read this week
+
 at: 2026-09-16T21:05:00
 tag: books
-display_title: what I read this week
 
 body…
 ```
 
-`tag` may repeat or carry a comma list and reads the same either way; it is
-written as one comma list. `display_title` and `task` are written only when
-set. The title an entry shows, in the list and at the top of the editor, is
-`display_title` when there is one and the section title otherwise; editing
-that line writes `display_title` and leaves the section title alone.
+An entry has no id: `at` identifies it, so two entries never share a
+timestamp. `tag` may repeat or carry a comma list and reads the same either
+way; it is written as one comma list. `tag` and `author` are written only when
+set. The H2 is read back as the display title unless it is timestamp-shaped;
+editing that line in the editor writes the display title, and typing it back
+to the timestamp clears it.
 
 Endpoints, all JSON:
 
@@ -39,7 +42,7 @@ Endpoints, all JSON:
 - `GET /api/comments`, `POST /api/comments`, `PUT /api/comments/:id`,
   `DELETE /api/comments/:id`.
 - `GET /api/journal/:name` (`journal` or `notebook`), `POST /api/journal/:name`,
-  `PUT /api/journal/:name/:id`, `DELETE /api/journal/:name/:id`.
+  `PUT /api/journal/:name/:at`, `DELETE /api/journal/:name/:at`.
 - `POST /api/_fail {"writes": true}` makes every later write return 500 until
   set back to false. Use it to check the client reverts and shows the error.
 
