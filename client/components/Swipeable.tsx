@@ -3,7 +3,6 @@ import type { MouseEvent, PointerEvent, ReactNode } from "react";
 
 export const swipeThreshold = 96;
 const commitDistance = 12;
-const driftLimit = 28;
 
 interface Gesture {
   pointerId: number;
@@ -48,11 +47,6 @@ export function Swipeable({ right, left, children }: { right: Swipe | null; left
       if (Math.abs(dx) < commitDistance) return;
       current.committed = true;
       event.currentTarget.setPointerCapture(event.pointerId);
-    }
-    if (Math.abs(dy) > driftLimit) {
-      gesture.current = null;
-      springBack();
-      return;
     }
     const allowed = dx > 0 ? right !== null : left !== null;
     const magnitude = Math.abs(dx);

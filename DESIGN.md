@@ -37,16 +37,19 @@ index answers every one of these paths.
   both states and turns smoothly between them. A task with no group is
   `ungrouped`; the model and the composer default to no group. No buttons on
   headers. Generous space between groups.
-- Row: one line reading tick circle, then `{title} {target} {when}` — the
-  title in text colour, the target hint in dim after it (`30 min`, `500 ml`,
-  `8`, `3 / 8`; a count is its number alone, there is no `×` anywhere), then
-  the date and the time in dim, `friday, 9:00 pm`, `tomorrow, 9:00 pm`, a
-  past `yesterday`, `saturday` or `sep 05`, or just `9:00 pm` when the date is
-  today or there is none —
-  and at the far right a cluster, `{n} comment-glyph {m} parts-glyph ›`, whose
-  width is reserved on every row even when it is empty, so every title wraps
-  at the same place. Under the title, only the mono chip for a group-level
-  attribute. Nothing else.
+- Row: tick circle, then `{title} {target} {when} {group}` — the title in
+  text colour, the target hint in dim after it (`30 min`, `500 ml`, `8`,
+  `3 / 8`; a count is its number alone, there is no `×` anywhere), then the
+  date and the time in dim, `friday, 9:00 pm`, `tomorrow, 9:00 pm`, a past
+  `yesterday`, `saturday` or `sep 05`, or just `9:00 pm` when the date is
+  today or there is none, then in Backlog the group name in the same dim
+  style — and at the far right a cluster, `{n} comment-glyph {m} parts-glyph
+  ›`, the parts count being the total, whose width is reserved on every row
+  even when it is empty, so every title wraps at the same place. On desktop
+  that is one line. On the phone the date, time and group sit on a second
+  line under the title, starting where the title text starts; the target
+  stays on the title line. A part row has no cluster but its chevron, so its
+  title runs to the chevron.
 - The two glyphs answer to whether the row is open. Closed (chevron `›`),
   neither is in the accent: they are dim counts, and tapping one does nothing,
   except the comment glyph, which opens the row with only the comments
@@ -73,10 +76,11 @@ index answers every one of these paths.
 - One-offs due today or earlier appear in their group with the habits. Overdue
   ends its line with `yesterday`, `saturday` or `sep 05` in the dim slot,
   never red.
-- **Backlog**: collapsed by default, and every group inside it starts folded
-  too. Everything not due today or past: future one-offs, the next instance of
-  each coming definition, and every undated, unfinished one-off, grouped the
-  same way. Tick works in place.
+- **Backlog**: collapsed by default. Everything not due today or past: future
+  one-offs, the next instance of each coming definition, and every undated,
+  unfinished one-off, as one flat list, dated rows first by date then the rest
+  by sort, each row naming its group among its attributes. Dragging inside
+  Backlog only reorders. Tick works in place.
 - Every fold on the screen, the two sections and each group in each section,
   is remembered by its key in localStorage and comes back on the next visit.
   A store that refuses to be read or written just leaves the defaults.
@@ -312,7 +316,8 @@ files), main's palette in both themes: warm-dark ground `#1c1a1e`, raised
 light ground `#f5f8f6`, text `#1b2120`, accent `#356b52`. Ticks are circles
 on the left, 1.3rem, 1.5px border. Rows are two lines: title at 1.02rem,
 then the meta line at 0.86rem in dim. Group labels 0.76rem, 600, uppercase,
-0.06em, dim. Chips are mono, 0.65rem, accent on a translucent accent ground.
+0.06em, dim. Attributes after a title are all the meta size in dim; nothing
+is a pill.
 Top bar is the three words at 1.6rem bold, active in text colour, others
 faint; the date sits under it in the meta size. Round buttons are 3.25rem:
 `+`, done and play in the accent, arrows and `×` in raised; every round
@@ -331,10 +336,8 @@ september 16`, `15:00`, `done`, `add a comment`); the exceptions are group
 labels, which stay UPPERCASE, and the tab names and the two section
 headings, which stay Title Case; task titles and journal text are whatever
 was typed. One format everywhere the app writes a date: three-letter month
-and two-digit day, `sep 16`; time in 24 hours, `15:00`; the two together,
-`sep 16, 15:00`. `shared/format.ts` owns it. Three exceptions: the top bar's
-`wednesday, september 16`; the dim slot on a task row, which says
+and two-digit day, `sep 16`; time in 12 hours, `3:00 pm`; the two together,
+`sep 16, 3:00 pm`. `shared/format.ts` owns it. Two exceptions: the top bar's
+`wednesday, september 16`, and the dim slot on a task row, which says
 `yesterday`, `today`, `tomorrow`, the weekday name within a week either way,
-and the short date beyond that, and writes the clock in 12 hours, `9:00 pm`,
-`7:30 am`; and an entry's attribute line, which writes the clock the same
-way, `sep 16, 9:05 pm`.
+and the short date beyond that.

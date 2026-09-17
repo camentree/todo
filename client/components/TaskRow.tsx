@@ -7,7 +7,6 @@ import { isDone, kindHint, partCount, partToggled, whenHint } from "@shared/task
 
 import { nowStamp, useStore } from "../data/store.tsx";
 import { longPress } from "../interaction/longPress.ts";
-import { Chip } from "./Chip.tsx";
 import { CircleTick } from "./CircleTick.tsx";
 import { CommentList } from "./CommentList.tsx";
 import { Mark } from "./Mark.tsx";
@@ -139,6 +138,7 @@ export function TaskRow({
               <CircleTick done={done} onToggle={onTick} />
             )}
             <span className="text">{task.name}</span>
+            {hint && <span className="hint">{hint}</span>}
             <div className="marks">
               {comments.length > 0 && (
                 <Mark label="comments" count={String(comments.length)} active={commentsShowing} onSelect={onCommentGlyph}>
@@ -158,11 +158,10 @@ export function TaskRow({
               )}
             </div>
           </div>
-          {(hint || when || chip) && (
+          {(when || chip) && (
             <Meta>
-              {hint && <span className="hint">{hint}</span>}
               {when && <span className="when">{when}</span>}
-              {chip && <Chip>{chip}</Chip>}
+              {chip && <span className="when">{chip}</span>}
             </Meta>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { formatEntryWhen } from "@shared/format.ts";
+import { formatWhen } from "@shared/format.ts";
 import { entryFrom, entryTags, entryText, readableTitle, tagCounts } from "@shared/journal.ts";
 import { wordCount } from "@shared/markdown.ts";
 import type { JournalEntry } from "@shared/model.ts";
@@ -46,7 +46,7 @@ function EntryRow({ entry, filter, onOpen, onDelete }: { entry: JournalEntry; fi
       <button className="entry" onClick={onOpen}>
         <div className="entry-title">{readableTitle(entry)}</div>
         <div className="entry-head">
-          <span>{formatEntryWhen(entry.at)}</span>
+          <span>{formatWhen(entry.at)}</span>
           {tags.length > 0 && <span>{tags.join(", ")}</span>}
           <span className="entry-words">
             {words} {words === 1 ? "word" : "words"}
@@ -106,7 +106,7 @@ export function Entries({ name }: { name: JournalName }) {
       {editing && (
         <EditorScreen
           heading={headings[name]}
-          subheading={[formatEntryWhen(editing.at), entryTags(editing).join(", ")].filter(Boolean).join(" · ")}
+          subheading={[formatWhen(editing.at), entryTags(editing).join(", ")].filter(Boolean).join(" · ")}
           initial={entryText(editing)}
           onCancel={close}
           onDelete={() => {

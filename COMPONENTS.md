@@ -10,8 +10,8 @@ sets a primitive's size, the primitive never takes a variant prop.
 
 One stylesheet. `:root` holds the light palette, dark is the same names
 redefined. Colour: ground, raised, text, dim, faint, accent, hairline,
-chip-bg, chip-text, warn. Type: Seravek 400/500/700 from the three woff2
-files in `client/public`; heading, section, title, body, meta, label, chip,
+chip-bg (the user card tint), warn. Type: Seravek 400/500/700 from the three woff2
+files in `client/public`; heading, section, title, body, meta, label,
 big number. Sizes: tick, round button (small, normal), ring, gutter, row
 padding, card radius. Values are the ones on the canvas frames.
 
@@ -26,8 +26,7 @@ padding, card radius. Values are the ones on the canvas frames.
   remembers every fold by key so keyboard shortcuts can drive them, and Roll,
   the grid that rolls content open and closed slowly; TaskRow's thread and
   parts use Roll directly.
-- **Chip**: mono attribute pill.
-- **Meta**: the dim line under a title; holds the Chip.
+- **Meta**: the dim line under a title on the phone; holds the date, time and group.
 - **Mark**: count plus a glyph; dim, or accent when active; dead when its
   `onSelect` is null. The comment mark and the parts mark are both one of
   these, and the comment mark carries the unseen dot as a child.

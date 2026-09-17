@@ -98,9 +98,7 @@ export function kindHint(task: Pick<Task, "kind" | "timer" | "target" | "current
 
 export function partCount(task: Task): string {
   if (task.parts.length === 0) return "";
-  const done = task.parts.filter(partDone).length;
-  const total = task.parts.length;
-  return done > 0 && done < total ? done + " / " + total : String(total);
+  return String(task.parts.length);
 }
 
 export function whenHint({ task, today }: { task: Task; today: string }): string {

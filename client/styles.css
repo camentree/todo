@@ -29,7 +29,6 @@
   --accent: #356b52;
   --hairline: #dfe5e2;
   --chip-bg: #356b5224;
-  --chip-text: #356b52;
   --tag: #68726f;
   --scrim: rgba(27, 33, 32, 0.16);
   --warn: #b46a5f;
@@ -47,7 +46,6 @@
   --body: 1.03rem;
   --meta: 0.94rem;
   --label: 0.83rem;
-  --chip: 0.71rem;
   --big: 4.56rem;
 
   --tick: 1.41rem;
@@ -77,7 +75,6 @@
     --accent: #7fb996;
     --hairline: #2c2a2e;
     --chip-bg: #7fb99629;
-    --chip-text: #96c8ab;
     --tag: #857f7a;
     --scrim: rgba(0, 0, 0, 0.5);
     --warn: #c9736c;
@@ -340,7 +337,13 @@ textarea {
 
 .hint,
 .when {
+  font-size: var(--meta);
+  color: var(--dim);
   flex: none;
+}
+
+.parts .marks {
+  width: auto;
 }
 
 .marks {
@@ -411,16 +414,6 @@ textarea {
   align-items: center;
   flex-wrap: wrap;
   min-height: 1.2rem;
-}
-
-.chip {
-  font-family: var(--mono);
-  font-size: var(--chip);
-  letter-spacing: 0.06em;
-  padding: 0.22rem 0.5rem;
-  border-radius: 5px;
-  background: var(--chip-bg);
-  color: var(--chip-text);
 }
 
 .unfolded {
@@ -599,6 +592,12 @@ textarea {
   border-radius: 1rem 1rem 0 0;
   padding: 1.6rem var(--gutter) var(--bottom);
   flex: none;
+}
+
+@media (pointer: coarse) {
+  .composer-field:focus-within {
+    padding-bottom: 0.6rem;
+  }
 }
 
 .composer-field .editor .cm-content {
@@ -1405,7 +1404,6 @@ textarea {
     --body: 0.95rem;
     --meta: 0.86rem;
     --label: 0.76rem;
-    --chip: 0.65rem;
     --big: 4.2rem;
     --tick: 1.3rem;
     --tick-small: 1rem;
