@@ -8,10 +8,12 @@ import type { JournalEntry } from "@shared/model.ts";
 import type { JournalName } from "../data/store.tsx";
 import { nowStamp, useStore } from "../data/store.tsx";
 import { useRoute } from "../interaction/route.ts";
+import { Confirm } from "./Confirm.tsx";
 import { EditorScreen } from "./EditorScreen.tsx";
 import { PlusGlyph } from "./Glyphs.tsx";
 import { MarkdownPreview } from "./MarkdownPreview.tsx";
 import { RoundButton } from "./RoundButton.tsx";
+import { Swipeable } from "./Swipeable.tsx";
 import { TextButton } from "./TextButton.tsx";
 
 const headings: Record<JournalName, string> = { journal: "Journal", notebook: "Notebook" };
@@ -42,18 +44,19 @@ function EntryRow({ entry, filter, onOpen, onDelete }: { entry: JournalEntry; fi
   return (
     <Swipeable right={null} left={{ word: "delete", onSwipe: onDelete }}>
       <button className="entry" onClick={onOpen}>
-      <div className="entry-title">{readableTitle(entry)}</div>
-      <div className="entry-head">
-        <span>{formatEntryWhen(entry.at)}</span>
-        {tags.length > 0 && <span>{tags.join(", ")}</span>}
-        <span className="entry-words">
-          {words} {words === 1 ? "word" : "words"}
-        </span>
-      </div>
-      <div className="entry-body">
-        <MarkdownPreview text={entry.body} />
-      </div>
-    </button>
+        <div className="entry-title">{readableTitle(entry)}</div>
+        <div className="entry-head">
+          <span>{formatEntryWhen(entry.at)}</span>
+          {tags.length > 0 && <span>{tags.join(", ")}</span>}
+          <span className="entry-words">
+            {words} {words === 1 ? "word" : "words"}
+          </span>
+        </div>
+        <div className="entry-body">
+          <MarkdownPreview text={entry.body} />
+        </div>
+      </button>
+    </Swipeable>
   );
 }
 
@@ -62,6 +65,7 @@ export function Entries({ name }: { name: JournalName }) {
   const { route, go, close } = useRoute();
   const [filter, setFilter] = useState<string | null>(null);
   const [drafted, setDrafted] = useState<JournalEntry | null>(null);
+  const [deleting, setDeleting] = useState<JournalEntry | null>(null);
   const entries = store[name];
   const shown = entries.filter((entry) => filter === null || entryTags(entry).includes(filter)).sort((a, b) => b.at.localeCompare(a.at));
   const editing = route.id === null ? null : (entries.find((entry) => entry.at === route.id) ?? (drafted?.at === route.id ? drafted : null));
@@ -76,9 +80,24 @@ export function Entries({ name }: { name: JournalName }) {
       <Filters counts={tagCounts(entries)} active={filter} total={entries.length} onSelect={setFilter} />
       <div className="list">
         {shown.map((entry) => (
-          <EntryRow key={entry.at} entry={entry} filter={filter} onOpen={() => go({ tab: route.tab, id: entry.at })} />
+          <EntryRow key={entry.at} entry={entry} filter={filter} onOpen={() => go({ tab: route.tab, id: entry.at })} onDelete={() => setDeleting(entry)} />
         ))}
       </div>
+      {deleting && (
+        <Confirm
+          question={`delete "${readableTitle(deleting)}"?`}
+          choices={[
+            {
+              label: "delete",
+              onChoose: () => {
+                store.deleteEntry({ name, at: deleting.at });
+                setDeleting(null);
+              },
+            },
+          ]}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
       <div className="floating">
         <RoundButton label="add" onSelect={() => write(blankEntry({ tag: filter }))}>
           <PlusGlyph />
