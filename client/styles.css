@@ -659,10 +659,12 @@ textarea {
   gap: 0.4rem;
 }
 
-.row.focused,
-.group-head.focused {
-  outline: 1.5px solid var(--faint);
-  outline-offset: -1px;
+.row.focused {
+  background: var(--raised);
+}
+
+.group-head.focused .text {
+  color: var(--dim);
 }
 
 .shortcuts {
