@@ -40,13 +40,13 @@ Today
   absent from Today and Backlog the next day.
 - An unticked habit from yesterday does not appear today; an unticked one-off
   dated yesterday appears today and says since yesterday.
-- A task with parts or a note shows a chevron at the far right of its title; a
+- A task with subtasks or a note shows a chevron at the far right of its title; a
   task with neither shows nothing there.
-- Tapping the chevron unfolds the note (dim text) and then the parts (small
+- Tapping the chevron unfolds the note (dim text) and then the subtasks (small
   rows with their own ticks) under the title with visible air between title,
-  note and parts; tapping again folds them; reloading keeps the fold state.
-- Ticking every part completes the parent; ticking the parent completes every
-  part.
+  note and subtasks; tapping again folds them; reloading keeps the fold state.
+- Ticking every subtask completes the parent; ticking the parent completes every
+  subtask.
 - Tapping a group label folds its rows and shows a count; tapping again
   unfolds; reloading keeps the state.
 - Every tap target on a row can be hit with a thumb without hitting its
@@ -64,17 +64,17 @@ Composer
   shows in the meta line.
 - Pressing Shift+Enter, or tapping "more", grows the field into a multi-line
   editor with a live preview above it rendered as task rows.
-- In the editor, a dash line makes a part; a timer token on it gives the part
-  a countdown, a count token gives it a target; an indented line under a part
-  becomes that part's note; the preview shows the parts and the note.
-- A repeat marker on a part makes that many numbered copies of it.
-- A rest token on the task sets the rest between parts and the preview shows
+- In the editor, a dash line makes a subtask; a timer token on it gives the subtask
+  a countdown, a count token gives it a target; an indented line under a subtask
+  becomes that subtask's note; the preview shows the subtasks and the note.
+- A repeat marker on a subtask makes that many numbered copies of it.
+- A rest token on the task sets the rest between subtasks and the preview shows
   it.
 - Tapping a title opens the editor prefilled with the same text; saving without
   changes leaves the task identical; changing the title renames it; adding a
-  dash line adds a part; removing one removes it and keeps the other parts'
+  dash line adds a subtask; removing one removes it and keeps the other subtasks'
   progress.
-- A part with progress round-trips as a value assignment in the text and keeps
+- A subtask with progress round-trips as a value assignment in the text and keeps
   that progress on save.
 - The editor's bottom row shows delete; for a definition, delete asks whether
   today only or every day and does what was chosen; for a one-off it confirms
@@ -134,26 +134,26 @@ Runner
 - Under the heading the queue runs across one line; the current item is in
   accent, others faint; when the current item would be out of view the row
   scrolls it into view, fading at the edge instead of cutting off.
-- For a group run, a second block lists the current task's parts in an
+- For a group run, a second block lists the current task's subtasks in an
   indented column, current in accent, a few lines tall, scrolling the current
-  part into view and fading at the bottom instead of cutting off.
-- The centre is a ring with a thin track; the part name is centred inside and
+  subtask into view and fading at the bottom instead of cutting off.
+- The centre is a ring with a thin track; the subtask name is centred inside and
   wraps rather than overflowing for long names.
-- A timer part shows minutes and seconds counting down; the ring empties as it
-  runs; tapping inside starts, pauses and resumes; at zero the part is done.
-- A count part shows the number and the target; the ring fills; tapping inside
-  adds one; holding inside takes one away; reaching the target marks the part
+- A timer subtask shows minutes and seconds counting down; the ring empties as it
+  runs; tapping inside starts, pauses and resumes; at zero the subtask is done.
+- A count subtask shows the number and the target; the ring fills; tapping inside
+  adds one; holding inside takes one away; reaching the target marks the subtask
   done.
-- A boolean part shows a slide-to-complete inside the ring; sliding nearly the
+- A boolean subtask shows a slide-to-complete inside the ring; sliding nearly the
   whole way completes it, less springs back.
-- Between parts with a rest set, a rest countdown shows with the next part's
-  name and a skip; it advances by itself at zero; with no rest the next part
+- Between subtasks with a rest set, a rest countdown shows with the next subtask's
+  name and a skip; it advances by itself at zero; with no rest the next subtask
   shows immediately.
-- Between tasks, the last part's screen stays as it ended (timer at zero,
+- Between tasks, the last subtask's screen stays as it ended (timer at zero,
   count at its number) until done or next is tapped.
 - The bottom row is a round raised previous arrow, a round accent done tick,
   and a round raised next arrow; they never move when content above changes.
-- Done marks the current part complete and advances; next advances without
+- Done marks the current subtask complete and advances; next advances without
   marking; previous goes back one.
 - After the last item a screen says done; its only control returns to Today.
 - The screen does not sleep while the runner is open.
@@ -169,7 +169,7 @@ Runner
   a raised card with the body and the date in faint, then an "Add a comment"
   field; tapping the mark again folds them; the mark returns to dim once
   unfolded.
-- Parts and comments never show under a task at the same time; unfolding one
+- Subtasks and comments never show under a task at the same time; unfolding one
   folds the other.
 - In the runner, the newest comment shows as a card under the ring with "more"
   and a count in faint under it when there are more, or "add a comment" when
@@ -177,7 +177,7 @@ Runner
 - Tapping "more" shows the older cards above the newest, scrolling up into
   view, and the "Add a comment" field below; the bottom buttons do not move.
 - Tapping "Add a comment" anywhere opens a full-screen editor: heading
-  "Comment", the task and part name under it, a markdown editor, cancel and
+  "Comment", the task and subtask name under it, a markdown editor, cancel and
   save; save posts the comment and returns to where you were with the new card
   visible.
 - Swiping a card left works exactly like swiping a row left: same distance,
@@ -210,7 +210,7 @@ Runner
 - Releasing drops the row at the line; the list reorders and the order
   survives a reload.
 - Dragging clearly to the right while over a row nests the line under that
-  row; releasing makes the dragged task a part of it; dragging back left
+  row; releasing makes the dragged task a subtask of it; dragging back left
   un-nests it before release.
 - Pausing over a folded task unfolds it so the line can go inside.
 - Dropping into a different group changes the row's group. A drag stays in
@@ -218,7 +218,7 @@ Runner
   backlog.
 - With several rows selected, dragging any handle drags them all as one lifted
   row titled with the count, and they land together in order.
-- Dragging a part out to the left edge makes it a top-level task.
+- Dragging a subtask out to the left edge makes it a top-level task.
 - Nothing moves until the handle is used; dragging elsewhere on the row scrolls.
 
 ## Round 2: review of the first build
@@ -227,7 +227,7 @@ Motion and stillness
 - Switching between Journal and Notebook, or between two filters, or between
   any two screens, moves nothing sideways, whether or not the content is tall
   enough to scroll, on desktop and on the phone.
-- Folding or unfolding a group, a task's parts, or a thread rolls the content
+- Folding or unfolding a group, a task's subtasks, or a thread rolls the content
   open or closed slowly enough to follow with the eye; it never pops.
 - The fold chevron on a group label and on a task turns smoothly between its
   two positions and is visible in both.
@@ -239,8 +239,8 @@ Rows
 - A task with a duration, count, reps or amount shows it in dim right after
   the title on the same line, in the form `30 min`, `2 times`, `8 ×`,
   `500 ml`, or `3 / 8` when partly done.
-- A task with parts shows the part count in dim immediately left of its fold
-  chevron at the far right; no "N parts" appears in the meta line.
+- A task with subtasks shows the subtask count in dim immediately left of its fold
+  chevron at the far right; no "N subtasks" appears in the meta line.
 - The meta line lists the mono chip first when there is one, then the date as
   a full weekday name or full date, then the time, then the comment mark.
 - Dates never show a weekday abbreviation anywhere.
@@ -248,7 +248,7 @@ Rows
   other.
 - Holding anywhere on a row, tick or title, enters select mode with that row
   selected; a tap on the title still edits and a tap on the tick still ticks.
-- A part row looks and behaves exactly like a task row: same tick, same
+- A subtask row looks and behaves exactly like a task row: same tick, same
   title, same hint, swipes left to delete, holds to select, indented under
   its parent.
 - Tapping the title of a row under This week opens the editor and the row
@@ -256,7 +256,7 @@ Rows
 
 Under a row
 - Opening the thread shows it directly under the row's meta line; opening the
-  chevron shows the note and then the parts under whatever is already open;
+  chevron shows the note and then the subtasks under whatever is already open;
   both can be open at once and each closes on its own.
 - A swipe on a task moves only the tick, title, hint and meta line; anything
   open under it stays still and stays open.
@@ -312,8 +312,8 @@ Keyboard
 - On a desktop keyboard, and never while typing in a field: Escape closes
   whatever is open (composer, editor, runner, select mode, an open thread)
   and otherwise blurs; j / k and ctrl-n / ctrl-p move a focus ring down and
-  up the list including parts and across groups; h / l fold and unfold the
-  focused task's parts, and l unfolds a group when its label is focused;
+  up the list including subtasks and across groups; h / l fold and unfold the
+  focused task's subtasks, and l unfolds a group when its label is focused;
   Space toggles the focused row's selection, entering select mode on first
   use; Enter completes it; i edits it; d deletes it with the same confirm as
   the swipe; t marks it today or takes today off it; c opens its thread; n

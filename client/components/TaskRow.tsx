@@ -3,15 +3,14 @@ import type { MouseEvent, PointerEvent } from "react";
 
 import type { Comment, Task } from "@shared/model.ts";
 import { everyLabel } from "@shared/grammar.ts";
-import { partAsTask } from "@shared/move.ts";
-import { isDone, isSkipped, kindHint, partCount, partToggled, whenHint } from "@shared/tasks.ts";
+import { commentsFor, isDone, isSkipped, kindHint, subtaskCount, subtaskToggled, whenHint } from "@shared/tasks.ts";
 
 import { nowStamp, useStore } from "../data/store.tsx";
 import { longPress } from "../interaction/longPress.ts";
 import { CircleTick } from "./CircleTick.tsx";
 import { CommentList } from "./CommentList.tsx";
 import { Mark } from "./Mark.tsx";
-import { ChevronGlyph, PartsGlyph, RepeatGlyph, SpeechGlyph } from "./Glyphs.tsx";
+import { ChevronGlyph, RepeatGlyph, SpeechGlyph, SubtasksGlyph } from "./Glyphs.tsx";
 import { Roll, useFolds } from "./Foldable.tsx";
 import type { Folds } from "./Foldable.tsx";
 import { Handle } from "./Handle.tsx";
@@ -26,34 +25,35 @@ export interface Select {
   onHandle: ({ event, id }: { event: PointerEvent<HTMLButtonElement>; id: string }) => void;
 }
 
-export function showing({ folds, task, comments }: { folds: Folds; task: Task; comments: Comment[] }) {
+export function showing({ folds, task }: { folds: Folds; task: Task }) {
+  const comments = commentsFor(task);
   const newest = comments[0] ?? null;
   const agentUnseen = newest !== null && newest.author === "agent" && newest.seenAt === null;
-  const hasParts = task.parts.length > 0 || task.note !== "";
-  const partsShowing = hasParts && folds.isOpen({ key: partsKey(task.id), fallback: false });
+  const hasSubtasks = task.subtasks.length > 0 || task.note !== "";
+  const subtasksShowing = hasSubtasks && folds.isOpen({ key: subtasksKey(task.id), fallback: false });
   const commentsShowing = comments.length > 0 && folds.isOpen({ key: commentsKey(task.id), fallback: false });
-  return { agentUnseen, hasParts, partsShowing, commentsShowing, open: partsShowing || commentsShowing };
+  return { agentUnseen, hasSubtasks, subtasksShowing, commentsShowing, open: subtasksShowing || commentsShowing };
 }
 
-export function toggleParts({ folds, task, comments }: { folds: Folds; task: Task; comments: Comment[] }) {
-  const { agentUnseen, hasParts, partsShowing } = showing({ folds, task, comments });
-  if (!hasParts) return toggleComments({ folds, task, comments });
-  folds.set({ key: partsKey(task.id), open: !partsShowing });
-  if (!partsShowing && agentUnseen) folds.set({ key: commentsKey(task.id), open: true });
+export function toggleSubtasks({ folds, task }: { folds: Folds; task: Task }) {
+  const { agentUnseen, hasSubtasks, subtasksShowing } = showing({ folds, task });
+  if (!hasSubtasks) return toggleComments({ folds, task });
+  folds.set({ key: subtasksKey(task.id), open: !subtasksShowing });
+  if (!subtasksShowing && agentUnseen) folds.set({ key: commentsKey(task.id), open: true });
 }
 
-export function toggleComments({ folds, task, comments }: { folds: Folds; task: Task; comments: Comment[] }) {
-  const { commentsShowing } = showing({ folds, task, comments });
-  if (comments.length > 0) folds.set({ key: commentsKey(task.id), open: !commentsShowing });
+export function toggleComments({ folds, task }: { folds: Folds; task: Task }) {
+  const { commentsShowing } = showing({ folds, task });
+  if (task.comments.length > 0) folds.set({ key: commentsKey(task.id), open: !commentsShowing });
 }
 
 export function closeTask({ folds, task }: { folds: Folds; task: Task }) {
-  folds.set({ key: partsKey(task.id), open: false });
+  folds.set({ key: subtasksKey(task.id), open: false });
   folds.set({ key: commentsKey(task.id), open: false });
 }
 
-export function partsKey(id: string): string {
-  return "task:" + id + ":parts";
+export function subtasksKey(id: string): string {
+  return "task:" + id + ":subtasks";
 }
 
 export function commentsKey(id: string): string {
@@ -62,7 +62,6 @@ export function commentsKey(id: string): string {
 
 export function TaskRow({
   task,
-  comments,
   chips,
   every,
   select,
@@ -72,14 +71,13 @@ export function TaskRow({
   onTitle,
   todaySwipe,
   onDelete,
-  onDeletePart,
+  onDeleteSubtask,
   onAddComment,
   onDeleteComment,
   fixedOpen,
-  unfoldParts,
+  unfoldSubtasks,
 }: {
   task: Task;
-  comments: Comment[];
   chips: string[];
   every: string | null;
   select: Select | null;
@@ -89,20 +87,21 @@ export function TaskRow({
   onTitle: () => void;
   todaySwipe: Swipe | null;
   onDelete: (() => void) | null;
-  onDeletePart: ((index: number) => void) | null;
+  onDeleteSubtask: ((index: number) => void) | null;
   onAddComment: (body: string) => void;
   onDeleteComment: (comment: Comment) => void;
   fixedOpen: boolean;
-  unfoldParts: boolean;
+  unfoldSubtasks: boolean;
 }) {
   const store = useStore();
   const folds = useFolds();
   const [firstUnseen, setFirstUnseen] = useState<string | null>(null);
+  const comments = commentsFor(task);
   const done = isDone({ task, entries: store.journal });
   const skipped = !done && isSkipped(task);
   const unseen = comments.some((comment) => comment.seenAt === null);
-  const { agentUnseen, hasParts, open, partsShowing, commentsShowing } = showing({ folds, task, comments });
-  const partsOpen = fixedOpen || unfoldParts || partsShowing;
+  const { agentUnseen, hasSubtasks, open, subtasksShowing, commentsShowing } = showing({ folds, task });
+  const subtasksOpen = fixedOpen || unfoldSubtasks || subtasksShowing;
   const now = nowStamp();
   const press = onHold ? longPress(() => onHold(task.id)) : null;
 
@@ -112,12 +111,12 @@ export function TaskRow({
     setFirstUnseen(ordered.find((comment) => comment.seenAt === null)?.id ?? null);
     if (!unseen) return;
     for (const comment of comments) if (comment.seenAt === null) store.putComment({ ...comment, seenAt: now });
-    if (task.date === null) store.putTask({ ...task, date: store.today });
+    if (task.dueDate === null) store.putTask({ ...task, dueDate: store.today });
   }, [commentsShowing]);
 
-  const onChevron = () => (open ? closeTask({ folds, task }) : toggleParts({ folds, task, comments }));
+  const onChevron = () => (open ? closeTask({ folds, task }) : toggleSubtasks({ folds, task }));
 
-  const onCommentGlyph = () => toggleComments({ folds, task, comments });
+  const onCommentGlyph = () => toggleComments({ folds, task });
 
   const onRow = (event: MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest("button")) return;
@@ -125,7 +124,7 @@ export function TaskRow({
     onTitle();
   };
 
-  const onPartsGlyph = () => toggleParts({ folds, task, comments });
+  const onSubtasksGlyph = () => toggleSubtasks({ folds, task });
 
   const when = whenHint({ task, today: store.today });
   const schedule = everyLabel(every);
@@ -145,7 +144,7 @@ export function TaskRow({
               <CircleTick done={done} skipped={skipped} onToggle={onTick} />
             )}
             <span className="text">
-              {task.name}
+              {task.title}
               {hint && <span className="hint">{hint}</span>}
             </span>
             <div className="marks">
@@ -155,12 +154,12 @@ export function TaskRow({
                   {agentUnseen && <span className="unseen" />}
                 </Mark>
               )}
-              {hasParts && (
-                <Mark label="parts" count={partCount(task)} active={partsShowing} onSelect={open ? onPartsGlyph : null}>
-                  <PartsGlyph />
+              {hasSubtasks && (
+                <Mark label="subtasks" count={subtaskCount(task)} active={subtasksShowing} onSelect={open ? onSubtasksGlyph : null}>
+                  <SubtasksGlyph />
                 </Mark>
               )}
-              {(hasParts || comments.length > 0) && !fixedOpen && (
+              {(hasSubtasks || comments.length > 0) && !fixedOpen && (
                 <button className="fold" aria-label={open ? "fold" : "unfold"} onClick={onChevron}>
                   <ChevronGlyph open={open} />
                 </button>
@@ -192,31 +191,30 @@ export function TaskRow({
           </div>
         </Roll>
       )}
-      {hasParts && (
-        <Roll open={partsOpen}>
+      {hasSubtasks && (
+        <Roll open={subtasksOpen}>
           <div className="unfolded">
             {task.note && <div className="note">{task.note}</div>}
-            {task.parts.length > 0 && (
-              <div className="parts">
-                {task.parts.map((part, index) => (
-                  <div key={index} data-part={task.id + ":" + index}>
+            {task.subtasks.length > 0 && (
+              <div className="subtasks">
+                {task.subtasks.map((subtask, index) => (
+                  <div key={subtask.id} data-subtask={task.id + ":" + index}>
                     <TaskRow
-                      task={{ ...partAsTask({ part, host: task, id: task.id + ":" + index, created: task.created }), date: null }}
-                      comments={[]}
+                      task={{ ...subtask, id: task.id + ":" + index, dueDate: null }}
                       chips={[]}
                       every={null}
                       select={select}
                       onHold={onHold}
                       focused={focused}
-                      onTick={() => (fixedOpen ? null : store.putTask(partToggled({ task, index, now })))}
+                      onTick={() => (fixedOpen ? null : store.putTask(subtaskToggled({ task, index, now })))}
                       onTitle={onTitle}
                       todaySwipe={null}
-                      onDelete={onDeletePart ? () => onDeletePart(index) : null}
-                      onDeletePart={null}
+                      onDelete={onDeleteSubtask ? () => onDeleteSubtask(index) : null}
+                      onDeleteSubtask={null}
                       onAddComment={() => null}
                       onDeleteComment={() => null}
                       fixedOpen={fixedOpen}
-                      unfoldParts={false}
+                      unfoldSubtasks={false}
                     />
                   </div>
                 ))}

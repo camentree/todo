@@ -1,9 +1,15 @@
-import { definitionFromParsed, dueToday, taskFromParsed } from "@shared/composer.ts";
-import { parseTask, serializeTask } from "@shared/grammar.ts";
+import { dueToday, scheduleFromParsed, taskFromParsed } from "@shared/composer.ts";
+import { everyToken, parseTask, serializeTask } from "@shared/grammar.ts";
 import type { Task } from "@shared/model.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
+
+let counter = 0;
+function newId(): string {
+  counter += 1;
+  return "sub" + counter;
+}
 
 function parse(text: string) {
   const parsed = parseTask({ text, today });
@@ -13,56 +19,75 @@ function parse(text: string) {
 
 describe("taskFromParsed", () => {
   it("makes an ungrouped backlog one-off by default", () => {
-    const task = taskFromParsed({ parsed: parse("Call mum"), existing: null, id: "t1", today, now, definition: null });
-    expect(task).toMatchObject({ id: "t1", name: "Call mum", group: "", date: null, time: null, definitionId: null, kind: "boolean", doneAt: null, created: now });
+    const task = taskFromParsed({ parsed: parse("Call mum"), existing: null, id: "t1", today, now, schedule: null, newId });
+    expect(task).toMatchObject({ id: "t1", title: "Call mum", group: "", dueDate: null, dueTime: null, scheduleId: null, type: "boolean", finalizedAt: null, parentId: null });
   });
 
   it("dates a one-off from the text", () => {
-    const task = taskFromParsed({ parsed: parse("Dentist /personal fri 3pm"), existing: null, id: "t1", today, now, definition: null });
-    expect(task).toMatchObject({ date: "2026-09-18", time: "15:00" });
+    const task = taskFromParsed({ parsed: parse("Dentist /personal fri 3pm"), existing: null, id: "t1", today, now, schedule: null, newId });
+    expect(task).toMatchObject({ dueDate: "2026-09-18", dueTime: "15:00" });
   });
 
   it("keeps progress when the text has no value, and takes the value when it does", () => {
-    const existing = taskFromParsed({ parsed: parse("Pull-ups #count 5 /exercise today"), existing: null, id: "t1", today, now, definition: null });
-    const progressed: Task = { ...existing, current: 2 };
-    const edited = taskFromParsed({ parsed: parse("Pull-ups #count 8 /exercise today"), existing: progressed, id: "t1", today, now, definition: null });
-    expect(edited).toMatchObject({ id: "t1", target: 8, current: 2, date: today });
-    const overridden = taskFromParsed({ parsed: parse("Pull-ups #count 8 /exercise today = 7"), existing: progressed, id: "t1", today, now, definition: null });
-    expect(overridden.current).toBe(7);
+    const existing = taskFromParsed({ parsed: parse("Pull-ups #count 5 /exercise today"), existing: null, id: "t1", today, now, schedule: null, newId });
+    const progressed: Task = { ...existing, numericalValue: 2 };
+    const edited = taskFromParsed({ parsed: parse("Pull-ups #count 8 /exercise today"), existing: progressed, id: "t1", today, now, schedule: null, newId });
+    expect(edited).toMatchObject({ id: "t1", target: 8, numericalValue: 2, dueDate: today });
+    const overridden = taskFromParsed({ parsed: parse("Pull-ups #count 8 /exercise today = 7"), existing: progressed, id: "t1", today, now, schedule: null, newId });
+    expect(overridden.numericalValue).toBe(7);
   });
 
-  it("keeps part progress by name when a part is removed", () => {
-    const existing = taskFromParsed({ parsed: parse("Stretch /exercise\n- a #count 5\n- b #count 5\n- c #count 5"), existing: null, id: "t1", today, now, definition: null });
-    const progressed: Task = { ...existing, parts: existing.parts.map((part) => ({ ...part, current: 3 })) };
-    const edited = taskFromParsed({ parsed: parse("Stretch /exercise\n- b #count 5\n- c #count 5"), existing: progressed, id: "t1", today, now, definition: null });
-    expect(edited.parts.map((part) => [part.name, part.current])).toEqual([["b", 3], ["c", 3]]);
-    const added = taskFromParsed({ parsed: parse("Stretch /exercise\n- a #count 5\n- b #count 5\n- c #count 5\n- d #count 5"), existing: progressed, id: "t1", today, now, definition: null });
-    expect(added.parts.map((part) => part.current)).toEqual([3, 3, 3, 0]);
+  it("keeps subtask progress and identity by title when a subtask is removed", () => {
+    const existing = taskFromParsed({ parsed: parse("Stretch /exercise\n- a #count 5\n- b #count 5\n- c #count 5"), existing: null, id: "t1", today, now, schedule: null, newId });
+    const progressed: Task = { ...existing, subtasks: existing.subtasks.map((subtask) => ({ ...subtask, numericalValue: 3 })) };
+    const edited = taskFromParsed({ parsed: parse("Stretch /exercise\n- b #count 5\n- c #count 5"), existing: progressed, id: "t1", today, now, schedule: null, newId });
+    expect(edited.subtasks.map((subtask) => [subtask.title, subtask.numericalValue])).toEqual([["b", 3], ["c", 3]]);
+    expect(edited.subtasks.map((subtask) => subtask.id)).toEqual(progressed.subtasks.slice(1).map((subtask) => subtask.id));
+    expect(edited.subtasks.every((subtask) => subtask.parentId === "t1")).toBe(true);
+    const added = taskFromParsed({ parsed: parse("Stretch /exercise\n- a #count 5\n- b #count 5\n- c #count 5\n- d #count 5"), existing: progressed, id: "t1", today, now, schedule: null, newId });
+    expect(added.subtasks.map((subtask) => subtask.numericalValue)).toEqual([3, 3, 3, 0]);
   });
 
   it("round-trips through serializeTask without change", () => {
-    const first = taskFromParsed({ parsed: parse("Morning stretch /exercise #rest 30s today\n  Keep hips level.\n- neck rolls #timer 30s\n- cat cow #count 10"), existing: null, id: "t1", today, now, definition: null });
-    const progressed: Task = { ...first, parts: [{ ...first.parts[0]!, current: 30, doneAt: now }, { ...first.parts[1]!, current: 4 }] };
+    const first = taskFromParsed({ parsed: parse("Morning stretch /exercise #rest 30s today\n  Keep hips level.\n- neck rolls #timer 30s\n- cat cow #count 10"), existing: null, id: "t1", today, now, schedule: null, newId });
+    const progressed: Task = {
+      ...first,
+      subtasks: [
+        { ...first.subtasks[0]!, numericalValue: 30, finalizedAt: now },
+        { ...first.subtasks[1]!, numericalValue: 4 },
+      ],
+    };
     const text = serializeTask({ task: progressed, every: null, today });
-    const again = taskFromParsed({ parsed: parse(text), existing: progressed, id: "t1", today, now, definition: null });
+    const again = taskFromParsed({ parsed: parse(text), existing: progressed, id: "t1", today, now, schedule: null, newId });
     expect(again).toEqual(progressed);
   });
 });
 
-describe("definitionFromParsed", () => {
-  it("creates a definition anchored today with parts and says whether it is due", () => {
+describe("scheduleFromParsed", () => {
+  it("creates a schedule starting today with subtasks and says whether it is due", () => {
     const parsed = parse("Hangboard /exercise #every 2d #rest 60s\n- Hang #timer 30s ×2");
-    const definition = definitionFromParsed({ parsed, existing: null, id: "d1", today });
-    expect(definition).toMatchObject({ id: "d1", name: "Hangboard", group: "exercise", every: "2d", rest: 60, anchor: today, created: today, ended: null });
-    expect(definition.parts.map((part) => part.name)).toEqual(["Hang 1", "Hang 2"]);
-    expect(dueToday({ definition, today })).toBe(true);
-    const saturdays = definitionFromParsed({ parsed: parse("Long run #timer 1h #every sa"), existing: null, id: "d2", today });
-    expect(dueToday({ definition: saturdays, today })).toBe(false);
+    const schedule = scheduleFromParsed({ parsed, existing: null, id: "s1", today, now });
+    expect(schedule).toMatchObject({ id: "s1", title: "Hangboard", group: "exercise", frequency: "daily", repeatEvery: 2, restSeconds: 60, startsOn: today, endedOn: null });
+    expect(schedule.subtasks.map((subtask) => subtask.title)).toEqual(["Hang 1", "Hang 2"]);
+    expect(dueToday({ schedule, today })).toBe(true);
+    const saturdays = scheduleFromParsed({ parsed: parse("Long run #timer 1h #every sa"), existing: null, id: "s2", today, now });
+    expect(saturdays).toMatchObject({ frequency: "weekly", weekdays: [5], type: "timer_seconds", target: 3600 });
+    expect(dueToday({ schedule: saturdays, today })).toBe(false);
   });
 
-  it("keeps the anchor of an existing definition", () => {
-    const existing = definitionFromParsed({ parsed: parse("Read #every 1d /habits"), existing: null, id: "d1", today: "2026-09-01" });
-    const edited = definitionFromParsed({ parsed: parse("Read more #every 2d /habits"), existing, id: "d1", today });
-    expect(edited).toMatchObject({ name: "Read more", every: "2d", anchor: "2026-09-01", created: "2026-09-01" });
+  it("keeps the start of an existing schedule and its rule when the token is absent", () => {
+    const existing = scheduleFromParsed({ parsed: parse("Read #every 1d /habits"), existing: null, id: "s1", today: "2026-09-01", now });
+    const edited = scheduleFromParsed({ parsed: parse("Read more #every 2d /habits"), existing, id: "s1", today, now });
+    expect(edited).toMatchObject({ title: "Read more", frequency: "daily", repeatEvery: 2, startsOn: "2026-09-01" });
+  });
+});
+
+describe("everyToken", () => {
+  it("round-trips the composer token through the structured rule", () => {
+    for (const token of ["1d", "2d", "mo,we,fr", "2w mo", "1w", "3m"]) {
+      const parsed = parse(`Task #every ${token}`);
+      const schedule = scheduleFromParsed({ parsed, existing: null, id: "s", today, now });
+      expect(everyToken(schedule)).toBe(token);
+    }
   });
 });

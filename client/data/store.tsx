@@ -2,14 +2,13 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { dateKey } from "@shared/format.ts";
-import type { Comment, Definition, JournalEntry, Task } from "@shared/model.ts";
+import type { Comment, JournalEntry, Schedule, Task } from "@shared/model.ts";
 
 import { ApiError, get, post, put, remove } from "./api.ts";
 
 export interface Memory {
-  definitions: Definition[];
+  schedules: Schedule[];
   tasks: Task[];
-  comments: Comment[];
   journal: JournalEntry[];
   notebook: JournalEntry[];
 }
@@ -22,8 +21,8 @@ export interface Store extends Memory {
   dismissError: () => void;
   putTask: (task: Task) => void;
   deleteTask: (id: string) => void;
-  putDefinition: (definition: Definition) => void;
-  deleteDefinition: (id: string) => void;
+  putSchedule: (schedule: Schedule) => void;
+  deleteSchedule: (id: string) => void;
   putComment: (comment: Comment) => void;
   deleteComment: (id: string) => void;
   putEntry: (write: { name: JournalName; entry: JournalEntry }) => void;
@@ -54,15 +53,22 @@ function restored<T extends { id: string }>({ list, id, previous }: { list: T[];
   return replaced({ list, item: previous });
 }
 
+function normalized(task: Task): Task {
+  return {
+    ...task,
+    subtasks: (task.subtasks ?? []).map((subtask) => ({ ...subtask, subtasks: [], comments: [] })),
+    comments: task.comments ?? [],
+  };
+}
+
 async function load(): Promise<Memory> {
-  const [definitions, tasks, comments, journal, notebook] = await Promise.all([
-    get<Definition[]>("/api/definitions"),
+  const [schedules, tasks, journal, notebook] = await Promise.all([
+    get<Schedule[]>("/api/schedules"),
     get<Task[]>("/api/tasks"),
-    get<Comment[]>("/api/comments"),
-    get<JournalEntry[]>("/api/journal/journal"),
-    get<JournalEntry[]>("/api/journal/notebook"),
+    get<JournalEntry[]>("/api/journal"),
+    get<JournalEntry[]>("/api/notebook"),
   ]);
-  return { definitions, tasks, comments, journal, notebook };
+  return { schedules, tasks: tasks.map(normalized), journal, notebook };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -114,8 +120,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshTasks = () =>
     get<Task[]>("/api/tasks")
-      .then((tasks) => update((current) => ({ ...current, tasks })))
+      .then((tasks) => update((current) => ({ ...current, tasks: tasks.map(normalized) })))
       .catch(() => null);
+
+  const findComment = (id: string): { task: Task; comment: Comment } | null => {
+    for (const task of latest.current?.tasks ?? []) {
+      const comment = task.comments.find((each) => each.id === id);
+      if (comment) return { task, comment };
+    }
+    return null;
+  };
 
   const store: Store = {
     ...memory,
@@ -138,40 +152,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         request: () => remove(`/api/tasks/${id}`),
       });
     },
-    putDefinition: (definition) => {
-      const previous = latest.current?.definitions.find((each) => each.id === definition.id);
+    putSchedule: (schedule) => {
+      const previous = latest.current?.schedules.find((each) => each.id === schedule.id);
       write({
-        apply: (current) => ({ ...current, definitions: replaced({ list: current.definitions, item: definition }) }),
-        undo: (current) => ({ ...current, definitions: restored({ list: current.definitions, id: definition.id, previous }) }),
+        apply: (current) => ({ ...current, schedules: replaced({ list: current.schedules, item: schedule }) }),
+        undo: (current) => ({ ...current, schedules: restored({ list: current.schedules, id: schedule.id, previous }) }),
         request: () =>
-          (previous ? put({ path: `/api/definitions/${definition.id}`, body: definition }) : post({ path: "/api/definitions", body: definition })).then(refreshTasks),
+          (previous ? put({ path: `/api/schedules/${schedule.id}`, body: schedule }) : post({ path: "/api/schedules", body: schedule })).then(refreshTasks),
       });
     },
-    deleteDefinition: (id) => {
-      const previous = latest.current?.definitions.find((each) => each.id === id);
+    deleteSchedule: (id) => {
+      const previous = latest.current?.schedules.find((each) => each.id === id);
       write({
         apply: (current) => ({
           ...current,
-          definitions: without({ list: current.definitions, id }),
-          tasks: current.tasks.filter((task) => !(task.definitionId === id && task.date !== null && task.date >= today)),
+          schedules: without({ list: current.schedules, id }),
+          tasks: current.tasks.filter((task) => !(task.scheduleId === id && task.dueDate !== null && task.dueDate >= today)),
         }),
-        undo: (current) => ({ ...current, definitions: restored({ list: current.definitions, id, previous }) }),
-        request: () => remove(`/api/definitions/${id}`).then(refreshTasks),
+        undo: (current) => ({ ...current, schedules: restored({ list: current.schedules, id, previous }) }),
+        request: () => remove(`/api/schedules/${id}`).then(refreshTasks),
       });
     },
     putComment: (comment) => {
-      const previous = latest.current?.comments.find((each) => each.id === comment.id);
+      const previousTasks = latest.current?.tasks ?? [];
+      const existing = findComment(comment.id);
+      const host = latest.current?.tasks.find((each) => each.id === comment.taskId);
+      const carries = (task: Task): boolean =>
+        task.comments.some((each) => each.id === comment.id) || task.id === comment.taskId || (host?.scheduleId !== null && host !== undefined && task.scheduleId === host.scheduleId);
       write({
-        apply: (current) => ({ ...current, comments: replaced({ list: current.comments, item: comment }) }),
-        undo: (current) => ({ ...current, comments: restored({ list: current.comments, id: comment.id, previous }) }),
-        request: () => (previous ? put({ path: `/api/comments/${comment.id}`, body: comment }) : post({ path: "/api/comments", body: comment })),
+        apply: (current) => ({
+          ...current,
+          tasks: current.tasks.map((task) => (carries(task) ? { ...task, comments: replaced({ list: task.comments, item: comment }) } : task)),
+        }),
+        undo: (current) => ({ ...current, tasks: previousTasks }),
+        request: () =>
+          existing ? put({ path: `/api/comments/${comment.id}`, body: comment }) : post({ path: `/api/tasks/${comment.taskId}/comments`, body: comment }),
       });
     },
     deleteComment: (id) => {
-      const previous = latest.current?.comments.find((each) => each.id === id);
+      const previousTasks = latest.current?.tasks ?? [];
       write({
-        apply: (current) => ({ ...current, comments: without({ list: current.comments, id }) }),
-        undo: (current) => ({ ...current, comments: restored({ list: current.comments, id, previous }) }),
+        apply: (current) => ({ ...current, tasks: current.tasks.map((task) => ({ ...task, comments: without({ list: task.comments, id }) })) }),
+        undo: (current) => ({ ...current, tasks: previousTasks }),
         request: () => remove(`/api/comments/${id}`),
       });
     },
@@ -182,7 +204,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         apply: (current) => ({ ...current, [name]: [...others(current), entry] }),
         undo: (current) => ({ ...current, [name]: previous ? [...others(current), previous] : others(current) }),
         request: () =>
-          previous ? put({ path: `/api/journal/${name}/${encodeURIComponent(entry.at)}`, body: entry }) : post({ path: `/api/journal/${name}`, body: entry }),
+          previous ? put({ path: `/api/${name}/${encodeURIComponent(entry.at)}`, body: entry }) : post({ path: `/api/${name}`, body: entry }),
       });
     },
     deleteEntry: ({ name, at }) => {
@@ -191,7 +213,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, [name]: others(current) }),
         undo: (current) => ({ ...current, [name]: previous ? [...others(current), previous] : others(current) }),
-        request: () => remove(`/api/journal/${name}/${encodeURIComponent(at)}`),
+        request: () => remove(`/api/${name}/${encodeURIComponent(at)}`),
       });
     },
   };

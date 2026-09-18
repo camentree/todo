@@ -1,5 +1,5 @@
 import type { Task } from "@shared/model.ts";
-import { grouped, isBacklog, isDone, isOnToday, isSkipped, kindHint, partCount, partToggled, skipToggled, toggled, whenHint } from "@shared/tasks.ts";
+import { grouped, isBacklog, isDone, isOnToday, isSkipped, kindHint, skipToggled, subtaskCount, subtaskToggled, toggled, whenHint } from "@shared/tasks.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
@@ -7,132 +7,134 @@ const now = "2026-09-15T10:00:00";
 function task(id: string, overrides: Partial<Task>): Task {
   return {
     id,
-    definitionId: null,
-    date: null,
-    time: null,
-    name: id,
+    parentId: null,
+    scheduleId: null,
+    dueDate: null,
+    dueTime: null,
+    title: id,
     group: "personal",
-    kind: "boolean",
-    target: 0,
-    timer: 0,
-    rest: 0,
-    current: 0,
-    value: "",
-    doneAt: null,
-    skippedAt: null,
+    type: "boolean",
+    target: null,
+    numericalValue: null,
+    stringValue: null,
+    restSeconds: null,
+    finalizedAt: null,
+    isSkipped: false,
+    assignee: null,
     note: "",
-    parts: [],
-    sort: 0,
-    created: "2026-09-01T00:00:00",
+    sortOrder: 0,
+    subtasks: [],
+    comments: [],
+    createdAt: "2026-09-01T00:00:00+00:00",
     ...overrides,
   };
 }
 
+function subtask(id: string, overrides: Partial<Task>): Task {
+  return task(id, { parentId: "host", ...overrides });
+}
+
 describe("isDone", () => {
-  it("derives done from the tick, the parts, the target, the text and the journal", () => {
-    expect(isDone({ task: task("a", { doneAt: now }), entries: [] })).toBe(true);
-    expect(isDone({ task: task("b", { kind: "count", target: 5, current: 5 }), entries: [] })).toBe(true);
-    expect(isDone({ task: task("c", { kind: "count", target: 5, current: 2 }), entries: [] })).toBe(false);
-    expect(isDone({ task: task("d", { kind: "text", value: "yes" }), entries: [] })).toBe(true);
-    const parts = [
-      { name: "x", kind: "boolean" as const, target: 0, timer: 0, note: "", current: 0, value: "", doneAt: now },
-      { name: "y", kind: "timer" as const, target: 0, timer: 30, note: "", current: 30, value: "", doneAt: null },
-    ];
-    expect(isDone({ task: task("e", { parts }), entries: [] })).toBe(true);
-    expect(isDone({ task: task("f", { parts: [parts[0]!, { ...parts[1]!, current: 3 }] }), entries: [] })).toBe(false);
-    expect(isDone({ task: task("Journal", { date: today }), entries: [{ sectionTitle: today + "T07:00:00", at: today + "T07:00:00", body: "", metadata: {} }] })).toBe(true);
-    expect(isDone({ task: task("Journal", { date: today }), entries: [] })).toBe(false);
+  it("derives done from the tick, the subtasks, the target, the text and the journal", () => {
+    expect(isDone({ task: task("a", { finalizedAt: now }), entries: [] })).toBe(true);
+    expect(isDone({ task: task("b", { type: "count", target: 5, numericalValue: 5 }), entries: [] })).toBe(true);
+    expect(isDone({ task: task("c", { type: "count", target: 5, numericalValue: 2 }), entries: [] })).toBe(false);
+    expect(isDone({ task: task("d", { type: "text", stringValue: "yes" }), entries: [] })).toBe(true);
+    const subtasks = [subtask("x", { finalizedAt: now }), subtask("y", { type: "timer_seconds", target: 30, numericalValue: 30 })];
+    expect(isDone({ task: task("e", { subtasks }), entries: [] })).toBe(true);
+    expect(isDone({ task: task("f", { subtasks: [subtasks[0]!, { ...subtasks[1]!, numericalValue: 3 }] }), entries: [] })).toBe(false);
+    expect(isDone({ task: task("Journal", { dueDate: today }), entries: [{ sectionTitle: today + "T07:00:00", at: today + "T07:00:00", body: "", metadata: {} }] })).toBe(true);
+    expect(isDone({ task: task("Journal", { dueDate: today }), entries: [] })).toBe(false);
+  });
+
+  it("treats amount like count", () => {
+    expect(isDone({ task: task("a", { type: "amount", target: 500, numericalValue: 500 }), entries: [] })).toBe(true);
+    expect(isDone({ task: task("b", { type: "amount", target: 500, numericalValue: 100 }), entries: [] })).toBe(false);
   });
 });
 
 describe("toggled", () => {
-  it("completes every part with the parent and clears them again", () => {
-    const parent = task("p", { parts: [{ name: "x", kind: "count", target: 5, timer: 0, note: "", current: 1, value: "", doneAt: null }] });
+  it("completes every subtask with the parent and clears them again", () => {
+    const parent = task("p", { subtasks: [subtask("x", { type: "count", target: 5, numericalValue: 1 })] });
     const done = toggled({ task: parent, entries: [], now });
-    expect(done.doneAt).toBe(now);
-    expect(done.parts[0]).toMatchObject({ doneAt: now, current: 5 });
+    expect(done.finalizedAt).toBe(now);
+    expect(done.subtasks[0]).toMatchObject({ finalizedAt: now, numericalValue: 5 });
     const undone = toggled({ task: done, entries: [], now });
-    expect(undone.doneAt).toBeNull();
-    expect(undone.parts[0]).toMatchObject({ doneAt: null, current: 0 });
+    expect(undone.finalizedAt).toBeNull();
+    expect(undone.subtasks[0]).toMatchObject({ finalizedAt: null, numericalValue: 0 });
   });
 
-  it("completes the parent when the last part is ticked", () => {
-    const parent = task("p", {
-      parts: [
-        { name: "x", kind: "boolean", target: 0, timer: 0, note: "", current: 0, value: "", doneAt: now },
-        { name: "y", kind: "boolean", target: 0, timer: 0, note: "", current: 0, value: "", doneAt: null },
-      ],
-    });
-    const ticked = partToggled({ task: parent, index: 1, now });
+  it("completes the parent when the last subtask is ticked", () => {
+    const parent = task("p", { subtasks: [subtask("x", { finalizedAt: now }), subtask("y", {})] });
+    const ticked = subtaskToggled({ task: parent, index: 1, now });
     expect(isDone({ task: ticked, entries: [] })).toBe(true);
-    const unticked = partToggled({ task: ticked, index: 0, now });
+    const unticked = subtaskToggled({ task: ticked, index: 0, now });
     expect(isDone({ task: unticked, entries: [] })).toBe(false);
   });
 });
 
 describe("skipToggled", () => {
   it("marks a task skipped and back, and completing it clears the skip", () => {
-    const skipped = skipToggled({ task: task("a", { definitionId: "d1", date: today }), now });
+    const skipped = skipToggled(task("a", { scheduleId: "s1", dueDate: today }));
     expect(isSkipped(skipped)).toBe(true);
     expect(isDone({ task: skipped, entries: [] })).toBe(false);
-    expect(isSkipped(skipToggled({ task: skipped, now }))).toBe(false);
+    expect(isSkipped(skipToggled(skipped))).toBe(false);
     const completed = toggled({ task: skipped, entries: [], now });
-    expect(completed).toMatchObject({ doneAt: now, skippedAt: null });
+    expect(completed).toMatchObject({ finalizedAt: now, isSkipped: false });
   });
 });
 
-describe("partCount", () => {
-  it("counts only the parts still to do", () => {
-    const parts = [
-      { name: "x", kind: "boolean" as const, target: 0, timer: 0, note: "", current: 0, value: "", doneAt: now },
-      { name: "y", kind: "boolean" as const, target: 0, timer: 0, note: "", current: 0, value: "", doneAt: null },
-      { name: "z", kind: "count" as const, target: 5, timer: 0, note: "", current: 2, value: "", doneAt: null },
-    ];
-    expect(partCount(task("a", { parts }))).toBe("2");
-    expect(partCount(task("b", { parts: parts.map((part) => ({ ...part, doneAt: now })) }))).toBe("");
-    expect(partCount(task("c", {}))).toBe("");
+describe("subtaskCount", () => {
+  it("counts only the subtasks still to do", () => {
+    const subtasks = [subtask("x", { finalizedAt: now }), subtask("y", {}), subtask("z", { type: "count", target: 5, numericalValue: 2 })];
+    expect(subtaskCount(task("a", { subtasks }))).toBe("2");
+    expect(subtaskCount(task("b", { subtasks: subtasks.map((each) => ({ ...each, finalizedAt: now })) }))).toBe("");
+    expect(subtaskCount(task("c", {}))).toBe("");
   });
 });
 
 describe("placing rows", () => {
-  const habitToday = task("h1", { definitionId: "d", date: today });
-  const habitYesterday = task("h2", { definitionId: "d", date: "2026-09-14" });
-  const overdue = task("o1", { date: "2026-09-12" });
-  const overdueDone = task("o2", { date: "2026-09-12", doneAt: "2026-09-12T10:00:00" });
-  const soon = task("o3", { date: "2026-09-18" });
-  const later = task("o4", { date: "2026-09-22" });
+  const habitToday = task("h1", { scheduleId: "d", dueDate: today });
+  const habitYesterday = task("h2", { scheduleId: "d", dueDate: "2026-09-14" });
+  const overdue = task("o1", { dueDate: "2026-09-12" });
+  const overdueDone = task("o2", { dueDate: "2026-09-12", finalizedAt: "2026-09-12T10:00:00" });
+  const soon = task("o3", { dueDate: "2026-09-18" });
+  const later = task("o4", { dueDate: "2026-09-22" });
   const backlog = task("b1", {});
-  const backlogDoneToday = task("b2", { doneAt: now });
-  const backlogDoneYesterday = task("b3", { doneAt: "2026-09-14T10:00:00" });
-  const commented = task("b4", { name: "Refactor" });
-  const comments = [{ id: "c", definitionId: null, taskName: "Refactor", body: "?", author: "claude", writtenAt: now, seenAt: null }];
+  const backlogDoneToday = task("b2", { finalizedAt: now });
+  const backlogDoneYesterday = task("b3", { finalizedAt: "2026-09-14T10:00:00" });
+  const commented = task("b4", {
+    title: "Refactor",
+    comments: [{ id: "c", taskId: "b4", body: "?", author: "claude", writtenAt: now, seenAt: null, createdAt: now }],
+  });
 
   it("puts today's habits, overdue one-offs and unseen-comment tasks on Today", () => {
-    const onToday = (each: Task) => isOnToday({ task: each, today, entries: [], comments });
+    const onToday = (each: Task) => isOnToday({ task: each, today, entries: [] });
     expect([habitToday, habitYesterday, overdue, overdueDone, soon, backlog, commented].map(onToday)).toEqual([true, false, true, false, false, false, true]);
   });
 
   it("puts every future date and every undated one-off in Backlog, until the day after they are done", () => {
-    const inBacklog = (each: Task) => isBacklog({ task: each, today, entries: [], comments });
+    const inBacklog = (each: Task) => isBacklog({ task: each, today, entries: [] });
     expect([backlog, backlogDoneToday, backlogDoneYesterday, commented, habitToday].map(inBacklog)).toEqual([true, true, false, false, false]);
     expect([soon, later, habitYesterday, overdue].map(inBacklog)).toEqual([true, true, false, false]);
-    expect(inBacklog(task("h3", { definitionId: "d" }))).toBe(true);
+    expect(inBacklog(task("h3", { scheduleId: "d" }))).toBe(true);
   });
 
-  it("orders groups habits, exercise, personal, then the rest alphabetically, ungrouped last, rows by sort", () => {
+  it("orders groups habits, exercise, personal, then the rest alphabetically, ungrouped last, rows by sort order then creation", () => {
     const rows = [
-      task("z", { group: "programming", sort: 1 }),
+      task("z", { group: "programming", sortOrder: 1 }),
       task("t", { group: "" }),
       task("y", { group: "garden" }),
-      task("x", { group: "personal", sort: 2 }),
-      task("w", { group: "personal", sort: 1 }),
+      task("x", { group: "personal", sortOrder: 2 }),
+      task("w", { group: "personal", sortOrder: 1 }),
       task("v", { group: "exercise" }),
       task("u", { group: "habits" }),
+      task("s", { group: "personal", sortOrder: 1, createdAt: "2026-08-01T00:00:00+00:00" }),
     ];
     expect(grouped(rows).map((each) => [each.group, each.tasks.map((row) => row.id)])).toEqual([
       ["habits", ["u"]],
       ["exercise", ["v"]],
-      ["personal", ["w", "x"]],
+      ["personal", ["s", "w", "x"]],
       ["garden", ["y"]],
       ["programming", ["z"]],
       ["", ["t"]],
@@ -140,18 +142,19 @@ describe("placing rows", () => {
   });
 
   it("closes the line with the date and the time, and drops the date when it is today", () => {
-    expect(whenHint({ task: { ...soon, time: "17:00" }, today })).toBe("friday, 5:00 pm");
+    expect(whenHint({ task: { ...soon, dueTime: "17:00" }, today })).toBe("friday, 5:00 pm");
     expect(whenHint({ task: later, today })).toBe("sep 22");
-    expect(whenHint({ task: task("t", { date: "2026-09-16", time: "09:00" }), today })).toBe("tomorrow, 9:00 am");
-    expect(whenHint({ task: task("t", { date: today, time: "15:00" }), today })).toBe("3:00 pm");
+    expect(whenHint({ task: task("t", { dueDate: "2026-09-16", dueTime: "09:00" }), today })).toBe("tomorrow, 9:00 am");
+    expect(whenHint({ task: task("t", { dueDate: today, dueTime: "15:00" }), today })).toBe("3:00 pm");
     expect(whenHint({ task: overdue, today })).toBe("saturday");
-    expect(whenHint({ task: task("y", { date: "2026-09-14", time: "07:10" }), today })).toBe("yesterday, 7:10 am");
+    expect(whenHint({ task: task("y", { dueDate: "2026-09-14", dueTime: "07:10" }), today })).toBe("yesterday, 7:10 am");
     expect(whenHint({ task: backlog, today })).toBe("");
   });
 
   it("writes a count target as its number alone", () => {
-    expect(kindHint(task("c", { kind: "count", target: 8 }))).toBe("8");
-    expect(kindHint(task("c", { kind: "count", target: 8, current: 3 }))).toBe("3 / 8");
-    expect(kindHint(task("c", { kind: "timer", timer: 600 }))).toBe("10 min");
+    expect(kindHint(task("c", { type: "count", target: 8 }))).toBe("8");
+    expect(kindHint(task("c", { type: "count", target: 8, numericalValue: 3 }))).toBe("3 / 8");
+    expect(kindHint(task("c", { type: "amount", target: 8, numericalValue: 3 }))).toBe("3 / 8");
+    expect(kindHint(task("c", { type: "timer_seconds", target: 600 }))).toBe("10 min");
   });
 });

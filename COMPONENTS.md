@@ -17,7 +17,7 @@ padding, card radius. Values are the ones on the canvas frames.
 
 ## Primitives
 
-- **CircleTick**: the completion circle; empty or done; a small size for parts.
+- **CircleTick**: the completion circle; empty or done; a small size for subtasks.
 - **SquareTick**: the select box; on or off; the same slot as CircleTick.
 - **Handle**: the three-line drag grip.
 - **Foldable**: owns the chevron (closed › open ⌄) and the open state. Used by
@@ -25,10 +25,10 @@ padding, card radius. Values are the ones on the canvas frames.
   FoldsProvider, which
   remembers every fold by key so keyboard shortcuts can drive them, and Roll,
   the grid that rolls content open and closed slowly; TaskRow's thread and
-  parts use Roll directly.
+  subtasks use Roll directly.
 - **Meta**: the dim line under a title on the phone; holds the date, time and group.
 - **Mark**: count plus a glyph; dim, or accent when active; dead when its
-  `onSelect` is null. The comment mark and the parts mark are both one of
+  `onSelect` is null. The comment mark and the subtasks mark are both one of
   these, and the comment mark carries the unseen dot as a child.
 - **RoundButton**: circle with a glyph; accent or raised; sizes small and
   normal. Used for +, done, previous, next, ×, play.
@@ -45,7 +45,7 @@ padding, card radius. Values are the ones on the canvas frames.
   still while it is up and returns it to where it was. Runner, Composer and
   EditorScreen sit in one.
 - **Glyphs**: every icon in one file: plus, tick, chevron, play, arrows, ×,
-  speech mark, parts, grip. Nothing draws its own.
+  speech mark, subtasks, grip. Nothing draws its own.
 
 ## Shared composites
 
@@ -53,10 +53,10 @@ padding, card radius. Values are the ones on the canvas frames.
 - **TaskRow**: Swipeable around (CircleTick or Handle + SquareTick, the
   title, the target hint and the date and time on one line, then the
   fixed-width cluster of the two Marks and the chevron, then Meta), then the
-  CommentList and then the note and parts, each in its own Roll. The row
+  CommentList and then the note and subtasks, each in its own Roll. The row
   itself takes the click that opens the editor, so everything in it but its
-  own buttons opens the editor. A part is a TaskRow of its own, built from
-  the part with its host's callbacks; the note line lives in this file.
+  own buttons opens the editor. A subtask is a TaskRow of its own, built from
+  the subtask with its host's callbacks; the note line lives in this file.
 - **Group**: label as TextButton with the count right after it, Foldable,
   rows; a SquareTick in select mode. The Today and Backlog sections are
   Groups, sized and stripped of their chevron by the screen's stylesheet.

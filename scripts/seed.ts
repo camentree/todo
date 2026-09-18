@@ -3,7 +3,10 @@ import { join } from "node:path";
 
 import { isDue } from "../shared/schedule.ts";
 import { serializeMarkdown } from "../shared/journal.ts";
-import type { Comment, Definition, JournalEntry, Part, Task } from "../shared/model.ts";
+import { isNumericType } from "../shared/model.ts";
+import type { Comment, JournalEntry, Schedule, SubtaskSpec, Task } from "../shared/model.ts";
+
+type Row = Omit<Task, "subtasks" | "comments">;
 
 const directory = process.argv[2] ?? process.env.DATA_DIR ?? "data/dev";
 const historyDays = 21;
@@ -28,179 +31,226 @@ function identifier(prefix: string): string {
   return `${prefix}${counter.toString(36).padStart(3, "0")}`;
 }
 
-function part({ name, kind = "boolean", target = 0, timer = 0, note = "" }: Partial<Part> & { name: string }): Part {
-  return { name, kind, target, timer, note };
+function created(offset: number): string {
+  return `${daysFromToday(offset)}T05:00:00+00:00`;
 }
 
-function definition(fields: Partial<Definition> & { name: string; group: string; every: string }): Definition {
+function spec({ title, type = "boolean", target = null, note = "", sortOrder = 0 }: Partial<SubtaskSpec> & { title: string }): SubtaskSpec {
+  return { title, type, target, restSeconds: null, note, sortOrder };
+}
+
+function schedule(fields: Partial<Schedule> & { title: string; group: string }): Schedule {
   return {
-    id: identifier("def"),
-    kind: "boolean",
-    target: 0,
-    timer: 0,
-    rest: 0,
-    time: null,
-    anchor: daysFromToday(-historyDays),
-    parts: [],
+    id: identifier("sch"),
+    type: "boolean",
+    target: null,
+    restSeconds: null,
+    subtasks: [],
+    dueTime: null,
+    frequency: "daily",
+    repeatEvery: 1,
+    weekdays: null,
+    dayOfMonth: null,
+    startsOn: daysFromToday(-historyDays),
+    endedOn: null,
     note: "",
-    sort: 0,
-    created: daysFromToday(-historyDays),
-    ended: null,
+    sortOrder: 0,
+    createdAt: created(-historyDays),
     ...fields,
   };
 }
 
-const definitions: Definition[] = [
-  definition({ name: "Journal", group: "habits", every: "1d", sort: 0 }),
-  definition({ name: "Meditate", group: "habits", every: "1d", kind: "timer", timer: 600, sort: 1 }),
-  definition({ name: "Drink water", group: "habits", every: "1d", kind: "count", target: 8, sort: 2 }),
-  definition({ name: "Read for twenty minutes", group: "habits", every: "1d", kind: "timer", timer: 1200, time: "21:00", sort: 3 }),
-  definition({
-    name: "Morning stretch",
+const weekly = (days: number[]) => ({ frequency: "weekly" as const, weekdays: days });
+
+const schedules: Schedule[] = [
+  schedule({ title: "Journal", group: "habits", sortOrder: 0 }),
+  schedule({ title: "Meditate", group: "habits", type: "timer_seconds", target: 600, sortOrder: 1 }),
+  schedule({ title: "Drink water", group: "habits", type: "count", target: 8, sortOrder: 2 }),
+  schedule({ title: "Read for twenty minutes", group: "habits", type: "timer_seconds", target: 1200, dueTime: "21:00", sortOrder: 3 }),
+  schedule({
+    title: "Morning stretch",
     group: "exercise",
-    every: "mo,we,fr",
-    rest: 30,
-    time: "07:30",
+    ...weekly([0, 2, 4]),
+    restSeconds: 30,
+    dueTime: "07:30",
     note: "Keep hips level through the plank. Breathe out on the way down in cat cow.",
-    parts: [
-      part({ name: "neck rolls", kind: "timer", timer: 30 }),
-      part({ name: "cat cow", kind: "count", target: 10 }),
-      part({ name: "plank", kind: "timer", timer: 45, note: "elbows under shoulders" }),
-      part({ name: "side bend", kind: "count", target: 8 }),
+    subtasks: [
+      spec({ title: "neck rolls", type: "timer_seconds", target: 30, sortOrder: 0 }),
+      spec({ title: "cat cow", type: "count", target: 10, sortOrder: 1 }),
+      spec({ title: "plank", type: "timer_seconds", target: 45, note: "elbows under shoulders", sortOrder: 2 }),
+      spec({ title: "side bend", type: "count", target: 8, sortOrder: 3 }),
     ],
-    sort: 0,
+    sortOrder: 0,
   }),
-  definition({ name: "Pull-ups", group: "exercise", every: "mo,we,fr", kind: "count", target: 5, sort: 1 }),
-  definition({ name: "Push-ups", group: "exercise", every: "mo,we,fr", kind: "count", target: 20, sort: 2 }),
-  definition({ name: "Yoga", group: "exercise", every: "tu,th", kind: "timer", timer: 1800, sort: 3 }),
-  definition({
-    name: "Physio and mobility",
+  schedule({ title: "Pull-ups", group: "exercise", ...weekly([0, 2, 4]), type: "count", target: 5, sortOrder: 1 }),
+  schedule({ title: "Push-ups", group: "exercise", ...weekly([0, 2, 4]), type: "count", target: 20, sortOrder: 2 }),
+  schedule({ title: "Yoga", group: "exercise", ...weekly([1, 3]), type: "timer_seconds", target: 1800, sortOrder: 3 }),
+  schedule({
+    title: "Physio and mobility",
     group: "exercise",
-    every: "tu,th,sa",
-    rest: 45,
-    parts: [
-      part({ name: "cat-cow with slow breathing", kind: "count", target: 12 }),
-      part({ name: "bird dog, hold each side for two breaths", kind: "count", target: 10 }),
-      part({ name: "glute bridge", kind: "count", target: 15 }),
-      part({ name: "dead bug", kind: "count", target: 10 }),
+    ...weekly([1, 3, 5]),
+    restSeconds: 45,
+    subtasks: [
+      spec({ title: "cat-cow with slow breathing", type: "count", target: 12, sortOrder: 0 }),
+      spec({ title: "bird dog, hold each side for two breaths", type: "count", target: 10, sortOrder: 1 }),
+      spec({ title: "glute bridge", type: "count", target: 15, sortOrder: 2 }),
+      spec({ title: "dead bug", type: "count", target: 10, sortOrder: 3 }),
     ],
-    sort: 4,
+    sortOrder: 4,
   }),
-  definition({ name: "Long run", group: "exercise", every: "sa", kind: "timer", timer: 3600, sort: 5 }),
-  definition({ name: "Water the plants", group: "garden", every: "1w", sort: 0 }),
-  definition({ name: "Change the water filter", group: "personal", every: "1m", sort: 5 }),
-  definition({ name: "Weekly review", group: "personal", every: "su", kind: "text", note: "Clear the inbox, look at next week, tidy the lists.", sort: 6 }),
+  schedule({ title: "Long run", group: "exercise", ...weekly([5]), type: "timer_seconds", target: 3600, sortOrder: 5 }),
+  schedule({ title: "Water the plants", group: "garden", frequency: "weekly", sortOrder: 0 }),
+  schedule({ title: "Change the water filter", group: "personal", frequency: "monthly", sortOrder: 5 }),
+  schedule({ title: "Weekly review", group: "personal", ...weekly([6]), type: "text", note: "Clear the inbox, look at next week, tidy the lists.", sortOrder: 6 }),
 ];
 
-const tasks: Task[] = [];
+const rows: Row[] = [];
 const instantiated: string[] = [];
 const random = seeded(7);
+
+function instantiate({ from, date }: { from: Schedule; date: string }): { parent: Row; children: Row[] } {
+  const parent: Row = {
+    id: identifier("tsk"),
+    parentId: null,
+    scheduleId: from.id,
+    dueDate: date,
+    dueTime: from.dueTime,
+    title: from.title,
+    group: from.group,
+    type: from.type,
+    target: from.target,
+    numericalValue: isNumericType(from.type) ? 0 : null,
+    stringValue: from.type === "text" ? "" : null,
+    restSeconds: from.restSeconds,
+    finalizedAt: null,
+    isSkipped: false,
+    assignee: null,
+    note: from.note,
+    sortOrder: from.sortOrder,
+    createdAt: `${date}T05:00:00+00:00`,
+  };
+  const children = from.subtasks.map(
+    (piece): Row => ({
+      id: identifier("sub"),
+      parentId: parent.id,
+      scheduleId: null,
+      dueDate: null,
+      dueTime: null,
+      title: piece.title,
+      group: from.group,
+      type: piece.type,
+      target: piece.target,
+      numericalValue: isNumericType(piece.type) ? 0 : null,
+      stringValue: piece.type === "text" ? "" : null,
+      restSeconds: piece.restSeconds,
+      finalizedAt: null,
+      isSkipped: false,
+      assignee: null,
+      note: piece.note,
+      sortOrder: piece.sortOrder,
+      createdAt: `${date}T05:00:00+00:00`,
+    }),
+  );
+  return { parent, children };
+}
 
 for (let offset = -historyDays; offset <= 0; offset += 1) {
   const date = daysFromToday(offset);
   instantiated.push(date);
-  for (const each of definitions) {
-    if (!isDue({ every: each.every, anchor: each.anchor, date })) continue;
-    const task: Task = {
-      id: identifier("tsk"),
-      definitionId: each.id,
-      date,
-      time: each.time,
-      name: each.name,
-      group: each.group,
-      kind: each.kind,
-      target: each.target,
-      timer: each.timer,
-      rest: each.rest,
-      current: 0,
-      value: "",
-      doneAt: null,
-      skippedAt: null,
-      note: each.note,
-      parts: each.parts.map((piece) => ({ ...piece, current: 0, value: "", doneAt: null })),
-      sort: each.sort,
-      created: `${date}T00:00:00`,
-    };
-    if (offset < 0) finishSomehow({ task, chance: each.group === "exercise" ? 0.6 : 0.8, date });
-    tasks.push(task);
+  for (const each of schedules) {
+    if (!isDue({ schedule: each, date })) continue;
+    const { parent, children } = instantiate({ from: each, date });
+    if (offset < 0) finishSomehow({ parent, children, chance: each.group === "exercise" ? 0.6 : 0.8, date });
+    rows.push(parent, ...children);
   }
 }
 
-function finishSomehow({ task, chance, date }: { task: Task; chance: number; date: string }): void {
+function finishSomehow({ parent, children, chance, date }: { parent: Row; children: Row[]; chance: number; date: string }): void {
   const roll = random();
   if (roll > chance) {
-    if (task.kind === "count" && roll < chance + 0.1) task.current = Math.floor(task.target * random());
+    if (parent.type === "count" && roll < chance + 0.1) parent.numericalValue = Math.floor((parent.target ?? 0) * random());
     return;
   }
-  const at = `${date}T${task.time ?? "18:30"}:00`;
-  task.doneAt = at;
-  if (task.kind === "count") task.current = task.target;
-  if (task.kind === "text") task.value = "Inbox at zero. Next week is light until Thursday.";
-  for (const piece of task.parts) {
-    piece.doneAt = at;
-    if (piece.kind === "count") piece.current = piece.target;
+  const at = `${date}T${parent.dueTime ?? "18:30"}:00`;
+  parent.finalizedAt = at;
+  if (isNumericType(parent.type)) parent.numericalValue = parent.target;
+  if (parent.type === "text") parent.stringValue = "Inbox at zero. Next week is light until Thursday.";
+  for (const piece of children) {
+    piece.finalizedAt = at;
+    if (isNumericType(piece.type)) piece.numericalValue = piece.target;
   }
 }
 
-function oneOff(fields: Partial<Task> & { name: string; group: string }): Task {
+function oneOff(fields: Partial<Row> & { title: string; group: string }): Row {
   return {
     id: identifier("one"),
-    definitionId: null,
-    date: null,
-    time: null,
-    kind: "boolean",
-    target: 0,
-    timer: 0,
-    rest: 0,
-    current: 0,
-    value: "",
-    doneAt: null,
-    skippedAt: null,
+    parentId: null,
+    scheduleId: null,
+    dueDate: null,
+    dueTime: null,
+    type: "boolean",
+    target: null,
+    numericalValue: null,
+    stringValue: null,
+    restSeconds: null,
+    finalizedAt: null,
+    isSkipped: false,
+    assignee: null,
     note: "",
-    parts: [],
-    sort: 0,
-    created: stamp(-10, "09:00:00"),
+    sortOrder: 0,
+    createdAt: created(-15),
     ...fields,
   };
 }
 
-tasks.push(
-  oneOff({ name: "Call the pharmacy about the refill", group: "personal", date: daysFromToday(-3), sort: 0 }),
-  oneOff({ name: "Get groceries", group: "personal", date: daysFromToday(0), time: "15:00", note: "Lentils, ghee, coffee beans, the good tomatoes.", sort: 1 }),
-  oneOff({ name: "Take the bins out", group: "personal", date: daysFromToday(-1), doneAt: stamp(-1, "07:10:00"), sort: 2 }),
-  oneOff({ name: "Book the dentist", group: "personal", date: daysFromToday(2), sort: 3 }),
-  oneOff({ name: "Return the library books", group: "personal", date: daysFromToday(4), time: "17:00", sort: 4 }),
-  oneOff({ name: "Sam's birthday dinner", group: "personal", date: daysFromToday(6), time: "19:30", note: "Bring the bottle from the cupboard.", sort: 5 }),
-  oneOff({ name: "Renew the passport", group: "personal", note: "Photos first. The form wants the old number.", sort: 10 }),
-  oneOff({
-    name: "Plan the trip to Portland",
-    group: "personal",
-    parts: [
-      { name: "Pick dates", kind: "boolean", target: 0, timer: 0, note: "", current: 0, value: "", doneAt: stamp(-4, "20:00:00") },
-      { name: "Look at flights", kind: "boolean", target: 0, timer: 0, note: "", current: 0, value: "", doneAt: null },
-      { name: "Ask about the dog", kind: "boolean", target: 0, timer: 0, note: "", current: 0, value: "", doneAt: null },
-    ],
-    sort: 11,
-  }),
-  oneOff({ name: "Order more coffee", group: "personal", sort: 12 }),
-  oneOff({ name: "Fix the gate latch", group: "garden", sort: 0 }),
-  oneOff({ name: "Move the rosemary to the sunny bed", group: "garden", sort: 1 }),
-  oneOff({ name: "Refactor the auth middleware", group: "programming", note: "Started on branch auth-middleware.", sort: 0 }),
-  oneOff({ name: "Write tests for the recurrence maths", group: "programming", sort: 1 }),
-  oneOff({ name: "Tidy the dotfiles flake", group: "programming", sort: 2 }),
-  oneOff({ name: "Cache the health view refresh", group: "programming", doneAt: stamp(-2, "16:40:00"), date: daysFromToday(-2), sort: 3 }),
-  oneOff({ name: "Read the Overstory", group: "personal", kind: "count", target: 12, current: 3, note: "Chapters. Library copy, due in three weeks.", sort: 13 }),
+rows.push(
+  oneOff({ title: "Call the pharmacy about the refill", group: "personal", dueDate: daysFromToday(-3), sortOrder: 0 }),
+  oneOff({ title: "Get groceries", group: "personal", dueDate: daysFromToday(0), dueTime: "15:00", note: "Lentils, ghee, coffee beans, the good tomatoes.", sortOrder: 1 }),
+  oneOff({ title: "Take the bins out", group: "personal", dueDate: daysFromToday(-1), finalizedAt: stamp(-1, "07:10:00"), sortOrder: 2 }),
+  oneOff({ title: "Book the dentist", group: "personal", dueDate: daysFromToday(2), sortOrder: 3 }),
+  oneOff({ title: "Return the library books", group: "personal", dueDate: daysFromToday(4), dueTime: "17:00", sortOrder: 4 }),
+  oneOff({ title: "Sam's birthday dinner", group: "personal", dueDate: daysFromToday(6), dueTime: "19:30", note: "Bring the bottle from the cupboard.", sortOrder: 5 }),
+  oneOff({ title: "Renew the passport", group: "personal", note: "Photos first. The form wants the old number.", sortOrder: 10 }),
+  oneOff({ title: "Order more coffee", group: "personal", sortOrder: 12 }),
+  oneOff({ title: "Fix the gate latch", group: "garden", sortOrder: 0 }),
+  oneOff({ title: "Move the rosemary to the sunny bed", group: "garden", sortOrder: 1 }),
+  oneOff({ title: "Refactor the auth middleware", group: "programming", note: "Started on branch auth-middleware.", sortOrder: 0 }),
+  oneOff({ title: "Write tests for the recurrence maths", group: "programming", sortOrder: 1 }),
+  oneOff({ title: "Tidy the dotfiles flake", group: "programming", sortOrder: 2 }),
+  oneOff({ title: "Cache the health view refresh", group: "programming", finalizedAt: stamp(-2, "16:40:00"), dueDate: daysFromToday(-2), sortOrder: 3 }),
+  oneOff({ title: "Read the Overstory", group: "personal", type: "count", target: 12, numericalValue: 3, note: "Chapters. Library copy, due in three weeks.", sortOrder: 13 }),
 );
 
-const stretch = definitions.find((each) => each.name === "Morning stretch")!;
-const physio = definitions.find((each) => each.name === "Physio and mobility")!;
+const portland = oneOff({ title: "Plan the trip to Portland", group: "personal", sortOrder: 11 });
+rows.push(
+  portland,
+  oneOff({ title: "Pick dates", group: "personal", parentId: portland.id, finalizedAt: stamp(-4, "20:00:00"), sortOrder: 0 }),
+  oneOff({ title: "Look at flights", group: "personal", parentId: portland.id, sortOrder: 1 }),
+  oneOff({ title: "Ask about the dog", group: "personal", parentId: portland.id, sortOrder: 2 }),
+);
+
+function latestInstance(title: string): Row {
+  const instances = rows.filter((row) => {
+    const from = schedules.find((each) => each.id === row.scheduleId);
+    return from?.title === title && row.parentId === null;
+  });
+  const found = instances[instances.length - 1];
+  if (!found) throw new Error(`no instance of ${title}`);
+  return found;
+}
+
+function oneOffRow(title: string): Row {
+  const found = rows.find((row) => row.title === title && row.scheduleId === null && row.parentId === null);
+  if (!found) throw new Error(`no one-off named ${title}`);
+  return found;
+}
 
 const comments: Comment[] = [
-  { id: identifier("cmt"), definitionId: stretch.id, taskName: stretch.name, body: "Left hip tight. Go slower on the second side of cat cow.", author: "user", writtenAt: stamp(-3, "07:52:00"), seenAt: stamp(-3, "07:52:00") },
-  { id: identifier("cmt"), definitionId: stretch.id, taskName: stretch.name, body: "Plank felt easy at 45s, try 60s next week.", author: "user", writtenAt: stamp(-10, "07:48:00"), seenAt: stamp(-10, "07:48:00") },
-  { id: identifier("cmt"), definitionId: physio.id, taskName: physio.name, body: "Bird dog: the cue that works is reaching, not lifting.", author: "user", writtenAt: stamp(-5, "08:05:00"), seenAt: stamp(-5, "08:05:00") },
-  { id: identifier("cmt"), definitionId: null, taskName: "Refactor the auth middleware", body: "The middleware reads the session from two places. Which one is canonical, the cookie or the header?", author: "agent", writtenAt: stamp(0, "06:12:00"), seenAt: null },
-  { id: identifier("cmt"), definitionId: null, taskName: "Plan the trip to Portland", body: "Flights are cheapest the second week of October.", author: "user", writtenAt: stamp(-4, "20:10:00"), seenAt: stamp(-4, "20:10:00") },
+  { id: identifier("cmt"), taskId: latestInstance("Morning stretch").id, body: "Left hip tight. Go slower on the second side of cat cow.", author: "user", writtenAt: stamp(-3, "07:52:00"), seenAt: stamp(-3, "07:52:00"), createdAt: created(-3) },
+  { id: identifier("cmt"), taskId: latestInstance("Morning stretch").id, body: "Plank felt easy at 45s, try 60s next week.", author: "user", writtenAt: stamp(-10, "07:48:00"), seenAt: stamp(-10, "07:48:00"), createdAt: created(-10) },
+  { id: identifier("cmt"), taskId: latestInstance("Physio and mobility").id, body: "Bird dog: the cue that works is reaching, not lifting.", author: "user", writtenAt: stamp(-5, "08:05:00"), seenAt: stamp(-5, "08:05:00"), createdAt: created(-5) },
+  { id: identifier("cmt"), taskId: oneOffRow("Refactor the auth middleware").id, body: "The middleware reads the session from two places. Which one is canonical, the cookie or the header?", author: "agent", writtenAt: stamp(0, "06:12:00"), seenAt: null, createdAt: created(0) },
+  { id: identifier("cmt"), taskId: oneOffRow("Plan the trip to Portland").id, body: "Flights are cheapest the second week of October.", author: "user", writtenAt: stamp(-4, "20:10:00"), seenAt: stamp(-4, "20:10:00"), createdAt: created(-4) },
 ];
 
 function entry({ at, title, tag, body }: { at: string; title?: string; tag: string; body: string }): JournalEntry {
@@ -274,7 +324,7 @@ function seeded(seed: number): () => number {
 }
 
 mkdirSync(directory, { recursive: true });
-writeFileSync(join(directory, "parallax.json"), JSON.stringify({ definitions, tasks, comments, instantiated }, null, 2));
+writeFileSync(join(directory, "parallax.json"), JSON.stringify({ schedules, tasks: rows, comments, instantiated }, null, 2));
 writeFileSync(join(directory, "journal.md"), serializeMarkdown(journal));
 writeFileSync(join(directory, "notebook.md"), serializeMarkdown(notebook));
-console.log(`seeded ${directory}: ${definitions.length} definitions, ${tasks.length} tasks, ${comments.length} comments, ${journal.length} journal entries, ${notebook.length} notes`);
+console.log(`seeded ${directory}: ${schedules.length} schedules, ${rows.length} task rows, ${comments.length} comments, ${journal.length} journal entries, ${notebook.length} notes`);

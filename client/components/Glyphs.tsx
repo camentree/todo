@@ -63,7 +63,7 @@ export function RepeatGlyph() {
   );
 }
 
-export function PartsGlyph() {
+export function SubtasksGlyph() {
   return (
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
       <path d="M2.5 3.5h11M6 8h7.5M6 12.5h7.5" />

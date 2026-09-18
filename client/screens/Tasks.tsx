@@ -7,13 +7,13 @@ import type { Extension } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, drawSelection, keymap, placeholder } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 
-import { definitionFromParsed, dueToday, taskFromParsed } from "@shared/composer.ts";
+import { dueToday, scheduleFromParsed, taskFromParsed } from "@shared/composer.ts";
 import { formatDuration } from "@shared/format.ts";
-import { parseTask, serializeTask, tokenSpans } from "@shared/grammar.ts";
-import type { Comment, Definition, Task } from "@shared/model.ts";
-import { changedOnly, partAsTask, placed, regrouped, taskAsParts, withPartsInserted, withoutPart } from "@shared/move.ts";
+import { everyToken, parseTask, serializeTask, tokenSpans } from "@shared/grammar.ts";
+import type { Comment, Schedule, Task } from "@shared/model.ts";
+import { changedOnly, placed, regrouped, subtaskAsTask, taskAsSubtasks, withSubtasksInserted, withoutSubtask } from "@shared/move.ts";
 import type { Container, Target } from "@shared/move.ts";
-import { byPosition, commentsFor, grouped, groupLabel, isBacklog, isOnToday, isSkipped, partToggled, skipToggled, toggled } from "@shared/tasks.ts";
+import { byPosition, grouped, groupLabel, isBacklog, isOnToday, isSkipped, skipToggled, subtaskToggled, toggled } from "@shared/tasks.ts";
 
 import { Confirm } from "../components/Confirm.tsx";
 import type { Choice } from "../components/Confirm.tsx";
@@ -27,7 +27,7 @@ import type { Swipe } from "../components/Swipeable.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { useFolds } from "../components/Foldable.tsx";
-import { closeTask, partsKey, showing, toggleComments, toggleParts } from "../components/TaskRow.tsx";
+import { closeTask, showing, subtasksKey, toggleComments, toggleSubtasks } from "../components/TaskRow.tsx";
 import { longPress } from "../interaction/longPress.ts";
 import { useRoute } from "../interaction/route.ts";
 import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
@@ -47,7 +47,7 @@ interface Asking {
 
 interface Drag {
   ids: string[];
-  fromPart: { taskId: string; index: number } | null;
+  fromSubtask: { taskId: string; index: number } | null;
   title: string;
   startX: number;
   x: number;
@@ -102,22 +102,22 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
   const [closing, setClosing] = useState(false);
   const close = () => (sheetSlides() ? setClosing(true) : onClose());
   const parsed = parseTask({ text: draft.text, today: store.today });
-  const definition = draft.editing?.definitionId ? (store.definitions.find((each) => each.id === draft.editing?.definitionId) ?? null) : null;
+  const schedule = draft.editing?.scheduleId ? (store.schedules.find((each) => each.id === draft.editing?.scheduleId) ?? null) : null;
 
   const commit = () => {
     if (!parsed) return;
     const now = nowStamp();
     const existing = draft.editing;
     if (parsed.every) {
-      const nextDefinition = definitionFromParsed({ parsed, existing: definition, id: definition?.id ?? identifier(), today: store.today });
+      const nextSchedule = scheduleFromParsed({ parsed, existing: schedule, id: schedule?.id ?? identifier(), today: store.today, now });
       if (existing) {
-        onCommit(taskFromParsed({ parsed, existing, id: existing.id, today: store.today, now, definition: nextDefinition }));
-      } else if (dueToday({ definition: nextDefinition, today: store.today })) {
-        onCommit(taskFromParsed({ parsed, existing: null, id: identifier(), today: store.today, now, definition: nextDefinition }));
+        onCommit(taskFromParsed({ parsed, existing, id: existing.id, today: store.today, now, schedule: nextSchedule, newId: identifier }));
+      } else if (dueToday({ schedule: nextSchedule, today: store.today })) {
+        onCommit(taskFromParsed({ parsed, existing: null, id: identifier(), today: store.today, now, schedule: nextSchedule, newId: identifier }));
       }
-      store.putDefinition(nextDefinition);
+      store.putSchedule(nextSchedule);
     } else {
-      onCommit(taskFromParsed({ parsed, existing, id: existing?.id ?? identifier(), today: store.today, now, definition: null }));
+      onCommit(taskFromParsed({ parsed, existing, id: existing?.id ?? identifier(), today: store.today, now, schedule: null, newId: identifier }));
     }
     close();
   };
@@ -182,7 +182,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [draft.text, leaving]);
 
-  const preview = parsed ? taskFromParsed({ parsed, existing: draft.editing, id: "preview", today: store.today, now: nowStamp(), definition: null }) : null;
+  const preview = parsed ? taskFromParsed({ parsed, existing: draft.editing, id: "preview", today: store.today, now: nowStamp(), schedule: null, newId: identifier }) : null;
 
   return (
     <Overlay>
@@ -193,8 +193,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
             {preview && parsed ? (
               <TaskRow
                 task={preview}
-                comments={[]}
-                chips={[preview.group, parsed.rest ? "rest " + formatDuration(parsed.rest) : ""].filter(Boolean)}
+                chips={[preview.group, parsed.restSeconds ? "rest " + formatDuration(parsed.restSeconds) : ""].filter(Boolean)}
                 every={parsed.every}
                 select={null}
                 onHold={null}
@@ -203,11 +202,11 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
                 onTitle={() => null}
                 todaySwipe={null}
                 onDelete={null}
-                onDeletePart={null}
+                onDeleteSubtask={null}
                 onAddComment={() => null}
                 onDeleteComment={() => null}
                 fixedOpen
-                unfoldParts={false}
+                unfoldSubtasks={false}
               />
             ) : (
               <div className="dateline">type a task below to see it here</div>
@@ -299,58 +298,60 @@ export function Tasks() {
     return () => window.clearTimeout(settled);
   }, [landed]);
 
-  const placing = { today: store.today, entries: store.journal, comments: store.comments };
+  const placing = { today: store.today, entries: store.journal };
   const onToday = store.tasks.filter((task) => isOnToday({ task, ...placing }));
   const backlog = store.tasks
     .filter((task) => isBacklog({ task, ...placing }))
-    .sort((a, b) => (a.date === null ? 1 : 0) - (b.date === null ? 1 : 0) || (a.date ?? "").localeCompare(b.date ?? "") || byPosition(a, b))
-    .filter((task, index, all) => task.definitionId === null || all.findIndex((each) => each.definitionId === task.definitionId) === index);
+    .sort((a, b) => (a.dueDate === null ? 1 : 0) - (b.dueDate === null ? 1 : 0) || (a.dueDate ?? "").localeCompare(b.dueDate ?? "") || byPosition(a, b))
+    .filter((task, index, all) => task.scheduleId === null || all.findIndex((each) => each.scheduleId === task.scheduleId) === index);
+
+  const scheduleOf = (task: Task): Schedule | null => (task.scheduleId ? (store.schedules.find((each) => each.id === task.scheduleId) ?? null) : null);
 
   const edit = (task: Task) => {
-    const definition = task.definitionId ? (store.definitions.find((each) => each.id === task.definitionId) ?? null) : null;
-    setDraft({ text: serializeTask({ task, every: definition?.every ?? null, today: store.today }), block: true, editing: task });
+    const schedule = scheduleOf(task);
+    setDraft({ text: serializeTask({ task, every: schedule ? everyToken(schedule) : null, today: store.today }), block: true, editing: task });
   };
 
   const askDelete = (task: Task) => {
-    const definition: Definition | null = task.definitionId ? (store.definitions.find((each) => each.id === task.definitionId) ?? null) : null;
+    const schedule = scheduleOf(task);
     const finish = () => {
       setAsking(null);
       setDraft(null);
     };
-    if (definition) {
+    if (schedule) {
       setAsking({
-        question: `delete ${task.name}?`,
+        question: `delete ${task.title}?`,
         choices: [
           { label: "today only", onChoose: () => { store.deleteTask(task.id); finish(); } },
-          { label: "every day", onChoose: () => { store.deleteTask(task.id); store.deleteDefinition(definition.id); finish(); } },
+          { label: "every day", onChoose: () => { store.deleteTask(task.id); store.deleteSchedule(schedule.id); finish(); } },
         ],
       });
     } else {
-      setAsking({ question: `delete ${task.name}?`, choices: [{ label: "delete", onChoose: () => { store.deleteTask(task.id); finish(); } }] });
+      setAsking({ question: `delete ${task.title}?`, choices: [{ label: "delete", onChoose: () => { store.deleteTask(task.id); finish(); } }] });
     }
   };
 
   const askDeleteComment = (comment: Comment) =>
     setAsking({ question: "delete this comment?", choices: [{ label: "delete", onChoose: () => { store.deleteComment(comment.id); setAsking(null); } }] });
 
-  const askDeletePart = ({ task, index }: { task: Task; index: number }) =>
-    setAsking({ question: `delete ${task.parts[index]?.name ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutPart({ host: task, index })); setAsking(null); } }] });
+  const askDeleteSubtask = ({ task, index }: { task: Task; index: number }) =>
+    setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); } }] });
 
   const sendToBacklog = (task: Task): Swipe => {
-    if (task.definitionId) return { word: isSkipped(task) ? "unskip" : "skip", onSwipe: () => store.putTask(skipToggled({ task, now: nowStamp() })) };
-    return { word: "backlog", onSwipe: () => store.putTask({ ...task, date: null }) };
+    if (task.scheduleId) return { word: isSkipped(task) ? "unskip" : "skip", onSwipe: () => store.putTask(skipToggled(task)) };
+    return { word: "backlog", onSwipe: () => store.putTask({ ...task, dueDate: null }) };
   };
 
-  const bringToToday = (task: Task): Swipe => ({ word: "today", onSwipe: () => store.putTask({ ...task, date: store.today }) });
+  const bringToToday = (task: Task): Swipe => ({ word: "today", onSwipe: () => store.putTask({ ...task, dueDate: store.today }) });
 
   const addComment = ({ task, body }: { task: Task; body: string }) =>
-    store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp() });
+    store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() });
 
   const reveal = (task: Task) => {
     store.putTask(task);
-    setList(task.date !== null && task.date <= store.today ? "today" : "backlog");
+    setList(task.dueDate !== null && task.dueDate <= store.today ? "today" : "backlog");
     folds.set({ key: "today:" + task.group, open: true });
-    folds.set({ key: partsKey(task.id), open: true });
+    folds.set({ key: subtasksKey(task.id), open: true });
     setLanded(task.id);
   };
 
@@ -378,11 +379,11 @@ export function Tasks() {
     selection ? { on: tasks.length > 0 && tasks.every((task) => selection.has(task.id)), onToggle: () => toggleSelected(tasks.map((task) => task.id)) } : null;
 
   const play = () => {
-    const chosen = listOrder.filter((task) => selection?.has(task.id) || task.parts.some((_, index) => selection?.has(task.id + ":" + index)));
+    const chosen = listOrder.filter((task) => selection?.has(task.id) || task.subtasks.some((_, index) => selection?.has(task.id + ":" + index)));
     const first = chosen[0];
     if (!first) return;
     const groups = new Set(chosen.map((task) => task.group));
-    const label = chosen.length === 1 ? first.name : groups.size === 1 ? first.group : "selection";
+    const label = chosen.length === 1 ? first.title : groups.size === 1 ? first.group : "selection";
     setSelectedRun({ taskIds: chosen.map((task) => task.id), label });
     go({ tab: "tasks", id: first.id });
   };
@@ -391,7 +392,7 @@ export function Tasks() {
     if (route.id === null) return null;
     if (selectedRun?.taskIds[0] === route.id) return selectedRun;
     const task = store.tasks.find((each) => each.id === route.id);
-    return task ? { taskIds: [task.id], label: task.name } : null;
+    return task ? { taskIds: [task.id], label: task.title } : null;
   };
 
   const running = currentRun();
@@ -404,21 +405,21 @@ export function Tasks() {
     if (!column) return { target: null, line: null, hovered: null };
     const element = document.elementFromPoint(Math.max(column.left + 8, Math.min(column.right - 8, x)), y);
     const taskElement = element?.closest<HTMLElement>("[data-task]");
-    const partElement =
-      element?.closest<HTMLElement>("[data-part]") ??
-      [...(taskElement?.querySelectorAll<HTMLElement>("[data-part]") ?? [])].find((candidate) => {
+    const subtaskElement =
+      element?.closest<HTMLElement>("[data-subtask]") ??
+      [...(taskElement?.querySelectorAll<HTMLElement>("[data-subtask]") ?? [])].find((candidate) => {
         const rect = candidate.getBoundingClientRect();
         return y >= rect.top && y <= rect.bottom;
       }) ??
       null;
     const nesting = x - current.startX > nestDistance;
-    const leaving = current.fromPart !== null && x - current.startX < -nestDistance;
-    if (partElement && taskElement && !leaving) {
-      const [taskId = "", indexText = "0"] = (partElement.dataset.part ?? "").split(":");
-      const rect = partElement.getBoundingClientRect();
+    const leaving = current.fromSubtask !== null && x - current.startX < -nestDistance;
+    if (subtaskElement && taskElement && !leaving) {
+      const [taskId = "", indexText = "0"] = (subtaskElement.dataset.subtask ?? "").split(":");
+      const rect = subtaskElement.getBoundingClientRect();
       const after = y > rect.top + rect.height / 2;
       return {
-        target: { kind: "part", taskId, index: Number(indexText) + (after ? 1 : 0) },
+        target: { kind: "subtask", taskId, index: Number(indexText) + (after ? 1 : 0) },
         line: { top: after ? rect.bottom : rect.top, left: rect.left, width: column.right - rect.left },
         hovered: taskId,
       };
@@ -433,7 +434,7 @@ export function Tasks() {
     const rect = taskElement.getBoundingClientRect();
     if (nesting && !leaving) {
       const indent = main.left + 2.05 * 16 + (selection ? 2.05 * 16 : 0);
-      return { target: { kind: "part", taskId, index: 0 }, line: { top: main.bottom + 4, left: indent, width: column.right - indent }, hovered: taskId };
+      return { target: { kind: "subtask", taskId, index: 0 }, line: { top: main.bottom + 4, left: indent, width: column.right - indent }, hovered: taskId };
     }
     const after = y > rect.top + rect.height / 2;
     const rows = rowsOf({ container, group });
@@ -448,38 +449,37 @@ export function Tasks() {
   const applyDrop = (current: Drag) => {
     const target = current.target;
     if (!target) return;
-    const now = nowStamp();
-    const source = current.fromPart ? (store.tasks.find((each) => each.id === current.fromPart?.taskId) ?? null) : null;
-    const sourcePart = source && current.fromPart ? source.parts[current.fromPart.index] : undefined;
-    const moving: Task[] = source && sourcePart && current.fromPart
-      ? [partAsTask({ part: sourcePart, host: source, id: identifier(), created: now })]
+    const source = current.fromSubtask ? (store.tasks.find((each) => each.id === current.fromSubtask?.taskId) ?? null) : null;
+    const sourceSubtask = source && current.fromSubtask ? source.subtasks[current.fromSubtask.index] : undefined;
+    const moving: Task[] = source && sourceSubtask && current.fromSubtask
+      ? [subtaskAsTask({ subtask: sourceSubtask, host: source })]
       : listOrder.filter((task) => current.ids.includes(task.id));
     if (moving.length === 0) return;
     if (target.kind === "top") {
       const rows = rowsOf({ container: target.container, group: target.group });
       const after = placed({ rows, moving, target, today: store.today });
       for (const task of changedOnly({ before: rows, after })) store.putTask(task);
-      if (target.container === "today") for (const definition of regrouped({ moving, definitions: store.definitions, group: target.group })) store.putDefinition(definition);
-      if (source && current.fromPart) store.putTask(withoutPart({ host: source, index: current.fromPart.index }));
+      if (target.container === "today") for (const schedule of regrouped({ moving, schedules: store.schedules, group: target.group })) store.putSchedule(schedule);
+      if (source && current.fromSubtask) store.putTask(withoutSubtask({ host: source, index: current.fromSubtask.index }));
       return;
     }
     const host = store.tasks.find((each) => each.id === target.taskId);
     if (!host) return;
-    const parts = moving.flatMap(taskAsParts);
-    if (source && current.fromPart && source.id === host.id) {
-      const index = target.index > current.fromPart.index ? target.index - 1 : target.index;
-      store.putTask(withPartsInserted({ host: withoutPart({ host, index: current.fromPart.index }), parts, index }));
+    const subtasks = moving.flatMap(taskAsSubtasks);
+    if (source && current.fromSubtask && source.id === host.id) {
+      const index = target.index > current.fromSubtask.index ? target.index - 1 : target.index;
+      store.putTask(withSubtasksInserted({ host: withoutSubtask({ host, index: current.fromSubtask.index }), subtasks, index }));
       return;
     }
-    store.putTask(withPartsInserted({ host, parts, index: target.index }));
-    if (source && current.fromPart) store.putTask(withoutPart({ host: source, index: current.fromPart.index }));
-    else for (const task of moving) store.deleteTask(task.id);
+    store.putTask(withSubtasksInserted({ host, subtasks, index: target.index }));
+    if (source && current.fromSubtask) store.putTask(withoutSubtask({ host: source, index: current.fromSubtask.index }));
+    else for (const task of moving) if (task.subtasks.length) store.deleteTask(task.id);
   };
 
-  const beginDrag = ({ event, ids, fromPart, title }: { event: ReactPointerEvent<HTMLButtonElement>; ids: string[]; fromPart: Drag["fromPart"]; title: string }) => {
+  const beginDrag = ({ event, ids, fromSubtask, title }: { event: ReactPointerEvent<HTMLButtonElement>; ids: string[]; fromSubtask: Drag["fromSubtask"]; title: string }) => {
     event.preventDefault();
     event.stopPropagation();
-    const start: Drag = { ids, fromPart, title, startX: event.clientX, x: event.clientX, y: event.clientY, target: null, line: null, hover: null };
+    const start: Drag = { ids, fromSubtask, title, startX: event.clientX, x: event.clientX, y: event.clientY, target: null, line: null, hover: null };
     dragRef.current = start;
     setDrag(start);
     const track = ({ x, y }: { x: number; y: number }) => {
@@ -516,7 +516,7 @@ export function Tasks() {
       setOpenedByDrag(new Set());
       if (!current) return;
       applyDrop(current);
-      if (current.fromPart && current.target) toggleSelected([current.fromPart.taskId + ":" + current.fromPart.index]);
+      if (current.fromSubtask && current.target) toggleSelected([current.fromSubtask.taskId + ":" + current.fromSubtask.index]);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", finish);
@@ -533,39 +533,41 @@ export function Tasks() {
           const chosen = selection.has(id) ? selection : new Set(selection).add(id);
           setSelection(chosen);
           if (dragged.index !== null) {
-            beginDrag({ event, ids: [], fromPart: { taskId: dragged.host.id, index: dragged.index }, title: dragged.host.parts[dragged.index]?.name ?? "" });
+            beginDrag({ event, ids: [], fromSubtask: { taskId: dragged.host.id, index: dragged.index }, title: dragged.host.subtasks[dragged.index]?.title ?? "" });
             return;
           }
           const bundle = listOrder.filter((each) => chosen.has(each.id)).map((each) => each.id);
-          beginDrag({ event, ids: bundle, fromPart: null, title: bundle.length > 1 ? `${bundle.length} tasks` : dragged.host.name });
+          beginDrag({ event, ids: bundle, fromSubtask: null, title: bundle.length > 1 ? `${bundle.length} tasks` : dragged.host.title });
         },
       }
     : null;
 
   const holdToSelect = (id: string) => setSelection((current) => new Set(current).add(id));
 
-  const row = ({ task, chips, todaySwipe, onTick }: { task: Task; chips: string[]; todaySwipe: Swipe | null; onTick: () => void }) => (
-    <div key={task.id} className={drag?.ids.includes(task.id) ? "lifting" : undefined} data-task={task.id}>
+  const row = ({ task, chips, todaySwipe, onTick }: { task: Task; chips: string[]; todaySwipe: Swipe | null; onTick: () => void }) => {
+    const schedule = scheduleOf(task);
+    return (
+      <div key={task.id} className={drag?.ids.includes(task.id) ? "lifting" : undefined} data-task={task.id}>
         <TaskRow
           task={task}
-          comments={commentsFor({ task, comments: store.comments })}
           chips={chips}
-          every={store.definitions.find((definition) => definition.id === task.definitionId)?.every ?? null}
+          every={schedule ? everyToken(schedule) : null}
           select={select}
           onHold={holdToSelect}
           focused={focused}
           onTick={onTick}
           onTitle={() => edit(task)}
           todaySwipe={todaySwipe}
-          onDelete={() => (task.definitionId ? askDelete(task) : store.deleteTask(task.id))}
-          onDeletePart={(index) => store.putTask(withoutPart({ host: task, index }))}
+          onDelete={() => (task.scheduleId ? askDelete(task) : store.deleteTask(task.id))}
+          onDeleteSubtask={(index) => store.putTask(withoutSubtask({ host: task, index }))}
           onAddComment={(body) => addComment({ task, body })}
           onDeleteComment={askDeleteComment}
           fixedOpen={false}
-          unfoldParts={openedByDrag.has(task.id)}
+          unfoldSubtasks={openedByDrag.has(task.id)}
         />
-    </div>
-  );
+      </div>
+    );
+  };
 
   const tick = (task: Task) => store.putTask(toggled({ task, entries: store.journal, now: nowStamp() }));
 
@@ -595,7 +597,7 @@ export function Tasks() {
       if (draft) return setDraft(null);
       if (running) return close();
       if (selection) return setSelection(null);
-      if (target && showing({ folds, task: target.host, comments: commentsFor({ task: target.host, comments: store.comments }) }).open) return closeTask({ folds, task: target.host });
+      if (target && showing({ folds, task: target.host }).open) return closeTask({ folds, task: target.host });
       setFocused(null);
       return (document.activeElement as HTMLElement | null)?.blur();
     }
@@ -610,16 +612,16 @@ export function Tasks() {
     }
     if (!target || !focused) return;
     const { host, index } = target;
-    if (action === "fold") return toggleParts({ folds, task: host, comments: commentsFor({ task: host, comments: store.comments }) });
+    if (action === "fold") return toggleSubtasks({ folds, task: host });
     if (action === "select") return selection ? toggleSelected([focused]) : setSelection(new Set([focused]));
-    if (action === "complete") return index === null ? tick(host) : store.putTask(partToggled({ task: host, index, now: nowStamp() }));
+    if (action === "complete") return index === null ? tick(host) : store.putTask(subtaskToggled({ task: host, index, now: nowStamp() }));
     if (action === "edit") return edit(host);
-    if (action === "delete") return index === null ? askDelete(host) : askDeletePart({ task: host, index });
+    if (action === "delete") return index === null ? askDelete(host) : askDeleteSubtask({ task: host, index });
     if (action === "today") {
-      if (host.definitionId) return store.putTask(skipToggled({ task: host, now: nowStamp() }));
-      return store.putTask({ ...host, date: host.date === null ? store.today : null });
+      if (host.scheduleId) return store.putTask(skipToggled(host));
+      return store.putTask({ ...host, dueDate: host.dueDate === null ? store.today : null });
     }
-    if (action === "thread") toggleComments({ folds, task: host, comments: commentsFor({ task: host, comments: store.comments }) });
+    if (action === "thread") toggleComments({ folds, task: host });
   };
 
   useShortcuts(shortcut);

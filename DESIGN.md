@@ -43,27 +43,27 @@ index answers every one of these paths.
   date and the time in dim, `friday, 9:00 pm`, `tomorrow, 9:00 pm`, a past
   `yesterday`, `saturday` or `sep 05`, or just `9:00 pm` when the date is
   today or there is none, then in Backlog the group name in the same dim
-  style — and at the far right a cluster, `{n} comment-glyph {m} parts-glyph
-  ›`, the parts count being the total, whose width is reserved on every row
+  style — and at the far right a cluster, `{n} comment-glyph {m} subtasks-glyph
+  ›`, the subtask count being the total, whose width is reserved on every row
   even when it is empty, so every title wraps at the same place. On desktop
   that is one line. On the phone the date, time and group sit on a second
   line under the title, starting where the title text starts; the target
-  stays on the title line. A part row has no cluster but its chevron, so its
+  stays on the title line. A subtask row has no cluster but its chevron, so its
   title runs to the chevron.
 - The two glyphs answer to whether the row is open. Closed (chevron `›`),
   neither is in the accent: they are dim counts, and tapping one does nothing,
   except the comment glyph, which opens the row with only the comments
-  showing. Opening with the chevron shows the parts, the note and the
-  subtasks, so the parts glyph turns accent; comments do not show by default.
+  showing. Opening with the chevron shows the note and the
+  subtasks, so the subtasks glyph turns accent; comments do not show by default.
   With the row open, tapping the comment glyph toggles the comments, accent
-  while they show, and tapping the parts glyph toggles the parts. The
+  while they show, and tapping the subtasks glyph toggles the subtasks. The
   exception is a newest comment written by `agent` and unseen: the comment
   glyph carries a small dot in the warn colour at its top right, open or
   closed, until the thread is opened and marked seen, and the chevron then
-  opens comments and parts together, so both glyphs are accent. Closing the
+  opens comments and subtasks together, so both glyphs are accent. Closing the
   row drops both glyphs back to dim. An accent glyph is colour alone, with no
-  background. Comments come first, then the note and the parts. Everything
-  that opens rolls into view slowly; nothing pops. The note and the parts
+  background. Comments come first, then the note and the subtasks. Everything
+  that opens rolls into view slowly; nothing pops. The note and the subtasks
   start where the title text starts, not at the tick.
 - Tap the row to edit: anywhere on it that is not one of its own controls,
   the tick, the handle and square in select mode, the two glyphs and the
@@ -71,7 +71,7 @@ index answers every one of these paths.
   open the editor. Tap the tick to complete. Hold anywhere on the row to
   enter select mode. The hover lift covers exactly the area a tap would open;
   the controls answer hover themselves and leave the row flat.
-- A part is a TaskRow: same look, same tick, same swipes, same hold, indented
+- A subtask is a TaskRow: same look, same tick, same swipes, same hold, indented
   under its parent.
 - One-offs due today or earlier appear in their group with the habits. Overdue
   ends its line with `yesterday`, `saturday` or `sep 05` in the dim slot,
@@ -133,11 +133,11 @@ colour, sits at the bottom left, opposite cancel and save, and asks first.
 - Top: the scope name (task or group) as the heading, a round `×` button.
   Under it the queue across one line, current in accent, others faint,
   scrolling sideways behind a fade to keep the current one in view. For a
-  group run a second block lists the current task's parts in a short indented
+  group run a second block lists the current task's subtasks in a short indented
   column, same colours, scrolling the same way.
 - Middle: a ring. Timer counts down and the ring empties; count shows the
   number, `of 10`, and the ring fills; tap anywhere inside to add one, hold to
-  take one away. Part name centred inside the ring, wrapping if long.
+  take one away. Subtask name centred inside the ring, wrapping if long.
   Boolean is slide-to-complete inside the ring.
 - Under the ring: the newest comment as a card, then `▾ N more` in faint, or
   `add a comment` when there are none. Tapping opens the rest: older cards
@@ -145,8 +145,8 @@ colour, sits at the bottom left, opposite cancel and save, and asks first.
   swipe left to delete.
 - Bottom: previous and next as round raised arrows, done as the round accent
   tick between them. These never move.
-- Between parts: the rest timer if there is one, auto-advancing; otherwise
-  straight on. Between tasks: the last part's screen stays as it ended, timer
+- Between subtasks: the rest timer if there is one, auto-advancing; otherwise
+  straight on. Between tasks: the last subtask's screen stays as it ended, timer
   at zero, count at the number you stopped on, until done or next. At the end
   of the queue a screen that says done. Wake lock throughout. Amounts are
   dropped; water is `#count 8`.
@@ -157,21 +157,21 @@ colour, sits at the bottom left, opposite cancel and save, and asks first.
   The preview is its own section on the ground colour and the text field is a
   raised sheet under it, with no line between them; nothing shows a scrollbar
   while you edit.
-- Grammar: first line is the task; `- ` lines are parts; indented lines are
+- Grammar: first line is the task; `- ` lines are subtasks; indented lines are
   notes. Tokens: `/group`, `#every 2d|1w|mo,we,fr`, `#timer 30s`, `#count 10`,
-  `#rest 60s`, `#text`, `×3` on a part to repeat it as three parts with the
+  `#rest 60s`, `#text`, `×3` on a subtask to repeat it as three subtasks with the
   rest between. Dates for one-offs: `tomorrow`, `fri`, `sep 20`,
   `2026-09-20`, `3pm` or `15:00`; the round-trip writes `15:00`. No `#every`
   and no date means backlog. `=` sets the current value.
 - Every token the grammar knows is in the accent colour as you type, and the
-  `- ` of a part is faint. Anything it does not know, a `#word` included, is
+  `- ` of a subtask is faint. Anything it does not know, a `#word` included, is
   title text in the text colour, never an error. The highlighter reads the
   spans from the parser, so the colours cannot say one thing and the preview
   another.
 - Tap a title to edit; the same text round-trips with progress kept, a blank
-  line standing between the title, the note and the parts.
+  line standing between the title, the note and the subtasks.
 - What is added ends up visible: the section and the group it lands in unfold,
-  the row scrolls slowly into view, and its parts start unfolded.
+  the row scrolls slowly into view, and its subtasks start unfolded.
 - Escape leaves the composer, asking whether to save when the text changed
   since it opened; cmd+enter saves and leaves. Enter keeps its own meaning: it
   adds from the single line and makes a new line in the block.
@@ -223,7 +223,7 @@ Nothing else appears.
 
 **Swipes**: right on a backlog row is today; left on any row or comment is
 delete with confirm. Only the row itself moves: tick, title, hint and meta
-line; whatever is open under it (comments, note, parts) stays put. A part
+line; whatever is open under it (comments, note, subtasks) stays put. A subtask
 swipes as its own row. Nothing else swipes.
 
 **Motion**: any intentional movement is slow: folds roll open and closed,
@@ -268,22 +268,34 @@ absence hurts.
 Postgres, in the Parallax database, one schema. Parallax's HTTP server owns the
 tables and the app talks only to Parallax. Agents use the same HTTP API.
 
-- `definitions`: id, name, group, kind, target, timer, rest, every (interval or
-  weekday list), anchor date, parts (jsonb, ordered: name, kind, target, note),
-  note, sort, created, ended.
-- `tasks`: one row per instance. id, definition id (nullable for one-offs),
-  date (nullable for backlog), name, group, kind, target, current, value, done
-  at, parts (jsonb with per-part current/value/done), note, sort, created.
-- `comments`: id, definition id (nullable), task name, body, author, written
-  at, seen at.
+- `schedules`: id, title, group, type (boolean, timer_seconds, count, amount,
+  text), target (required for the numeric types, null for boolean and text),
+  rest seconds, subtasks (ordered template: title, type, target, rest seconds,
+  note, sort order), due time, and the recurrence rule: frequency (daily,
+  weekly, monthly), repeat every, weekdays (Monday is 0), day of month, starts
+  on, ended on. Created at is read-only.
+- `tasks`: one row per instance and per subtask. id, parent id (a subtask is a
+  child row), schedule id (nullable for one-offs), due date (nullable for
+  backlog), due time, title, group, type, target, numerical value (progress on
+  the numeric types), string value (text tasks only), rest seconds, finalized
+  at (done means finalized and not skipped), is skipped, assignee, note, sort
+  order, created at (read-only). On the wire a task carries its subtasks and
+  comments nested; a write with a `subtasks` array replaces the children and
+  ignores `comments`. Shape violations are 400.
+- `comments`: id, task id, body, author, written at, seen at, created at.
+  Reading a schedule instance's comments aggregates across every instance of
+  its schedule.
 - Journal and notes are the two markdown files Parallax already indexes; the
-  app reads and appends through Parallax's journal endpoints.
+  app reads and appends through Parallax's `/api/journal` and `/api/notebook`
+  endpoints.
 
-Until Parallax has these endpoints, `server/main.ts` stands in over a data
-directory; `DEV.md` lists the endpoints, how to run, seed, isolate and reset.
+The composer's `#every` token is client syntax only: it compiles to the
+recurrence rule and serialises back for editing. For dev and testing,
+`server/standin.ts` serves the same contract over a data directory; `DEV.md`
+lists the endpoints, how to run, seed, isolate and reset.
 
-The client loads definitions, every task, every comment and both journals
-once at start and holds them in memory; every screen renders from memory.
+The client loads schedules, every task and both journals once at start and
+holds them in memory; every screen renders from memory.
 A write changes memory first and the screen moves at once, then the request
 goes to the API. If the request fails, memory is reverted to what it was and
 an error sprite appears with the message from the response, or "could not
@@ -291,11 +303,11 @@ reach Parallax" when there was none; it dismisses on tap. The sprite is red,
 with delete and the unseen dot.
 
 Rules the server owns:
-- Opening a date instantiates every definition due that day, once.
+- Opening a date instantiates every schedule due that day, once.
 - A habit's instance from a previous day is never carried; it stays as history.
 - A one-off with a date earlier than today shows on Today until done.
 - Done is derived: manual tick, else journal rule, else target reached, else
-  non-empty text. Parents derive from parts.
+  non-empty text. Parents derive from subtasks.
 - Delete removes the row. Nothing hides.
 
 Migration from main: rows in `tasks` with `recurring_task_id` become

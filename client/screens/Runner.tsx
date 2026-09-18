@@ -3,10 +3,11 @@ import type { PointerEvent, ReactNode } from "react";
 
 import { formatClock, formatWhen } from "@shared/format.ts";
 import { entryFrom, entryText } from "@shared/journal.ts";
-import type { Comment, JournalEntry, Task, TaskPart } from "@shared/model.ts";
+import type { Comment, JournalEntry, Task } from "@shared/model.ts";
+import { isNumericType } from "@shared/model.ts";
 import { advance, afterFinish, currentItem, goBack, jumpTo, startRunner, stepOf } from "@shared/runner.ts";
 import type { QueueItem, RunnerState } from "@shared/runner.ts";
-import { commentsFor, isDone, partDone } from "@shared/tasks.ts";
+import { commentsFor, isDone, subtaskDone } from "@shared/tasks.ts";
 
 import { Card } from "../components/Card.tsx";
 import { CommentList } from "../components/CommentList.tsx";
@@ -97,10 +98,10 @@ function Slide({ done, onComplete }: { done: boolean; onComplete: () => void }) 
   );
 }
 
-function withStep({ task, item, change }: { task: Task; item: QueueItem; change: (part: TaskPart | Task) => Partial<TaskPart> }): Task {
-  if (item.partIndex === null) return { ...task, ...change(task) };
-  const parts = task.parts.map((part, index) => (index === item.partIndex ? { ...part, ...change(part) } : part));
-  return { ...task, parts, doneAt: parts.every(partDone) ? (task.doneAt ?? nowStamp()) : null };
+function withStep({ task, item, change }: { task: Task; item: QueueItem; change: (subtask: Task) => Partial<Task> }): Task {
+  if (item.subtaskIndex === null) return { ...task, ...change(task) };
+  const subtasks = task.subtasks.map((subtask, index) => (index === item.subtaskIndex ? { ...subtask, ...change(subtask) } : subtask));
+  return { ...task, subtasks, finalizedAt: subtasks.every(subtaskDone) ? (task.finalizedAt ?? nowStamp()) : null };
 }
 
 export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: string; onClose: () => void }) {
@@ -128,12 +129,12 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   const item = currentItem(state);
   const step = item ? stepOf({ item, tasks: tasksInOrder }) : null;
   const task = step?.task ?? null;
-  const part = step?.part ?? null;
-  const partIsDone = part && task ? (part === task ? isDone({ task, entries: store.journal }) : partDone(part)) : false;
+  const subtask = step?.subtask ?? null;
+  const subtaskIsDone = subtask && task ? (subtask === task ? isDone({ task, entries: store.journal }) : subtaskDone(subtask)) : false;
   const uniqueTaskIds = [...new Set(state.queue.map((each) => each.taskId))];
   const groupRun = uniqueTaskIds.length > 1;
 
-  const write = (change: (part: TaskPart | Task) => Partial<TaskPart>) => {
+  const write = (change: (subtask: Task) => Partial<Task>) => {
     const current = latest.current;
     const currentItemNow = currentItem(current.state);
     const currentTask = currentItemNow ? current.tasks.find((each) => each.id === currentItemNow.taskId) : undefined;
@@ -150,13 +151,13 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   const finish = () => {
     const current = latest.current;
     const now = nowStamp();
-    write((each) => ({ doneAt: now, current: each.kind === "count" ? each.target : each.kind === "timer" ? each.timer : each.current }));
+    write((each) => ({ finalizedAt: now, numericalValue: isNumericType(each.type) ? each.target : each.numericalValue }));
     move(afterFinish({ state: current.state, tasks: current.tasks }));
   };
 
   const pauseTimer = () => {
     const current = latest.current;
-    if (current.elapsed > 0) write(() => ({ current: current.elapsed }));
+    if (current.elapsed > 0) write(() => ({ numericalValue: current.elapsed }));
     setState({ ...current.state, running: false });
   };
 
@@ -171,9 +172,9 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
       }
       const runningItem = currentItem(current.state);
       const runningStep = runningItem ? stepOf({ item: runningItem, tasks: current.tasks }) : null;
-      if (!runningStep || runningStep.part.kind !== "timer") return;
+      if (!runningStep || runningStep.subtask.type !== "timer_seconds") return;
       const next = current.elapsed + 1;
-      if (next >= runningStep.part.timer) {
+      if (next >= (runningStep.subtask.target ?? 0)) {
         setElapsed(next);
         finish();
       } else setElapsed(next);
@@ -182,15 +183,17 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   }, [state.running]);
 
   useEffect(() => {
-    if (part && part.kind === "timer") setElapsed(Math.min(part.current, part.timer));
+    if (subtask && subtask.type === "timer_seconds") {
+      setElapsed(Math.min(subtask.numericalValue ?? 0, subtask.target ?? 0));
+    }
   }, [state.index, state.phase]);
 
   const exit = () => {
-    if (state.running && part?.kind === "timer" && elapsed > 0) write(() => ({ current: elapsed }));
+    if (state.running && subtask?.type === "timer_seconds" && elapsed > 0) write(() => ({ numericalValue: elapsed }));
     onClose();
   };
 
-  const comments = task ? commentsFor({ task, comments: store.comments }) : [];
+  const comments = task ? commentsFor(task) : [];
   const newest = comments[0];
   const commentBox = useRef<HTMLDivElement>(null);
 
@@ -199,20 +202,20 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   }, [commentsOpen, comments.length]);
 
   const ringContent = (): { fraction: number; onTap: (() => void) | null; onHold: (() => void) | null; inside: ReactNode } => {
-    if (state.phase === "end") return { fraction: 1, onTap: null, onHold: null, inside: <div className="ring-part">done</div> };
+    if (state.phase === "end") return { fraction: 1, onTap: null, onHold: null, inside: <div className="ring-subtask">done</div> };
     if (state.phase === "rest") {
       const nextItem = state.queue[state.index + 1];
       const nextStep = nextItem ? stepOf({ item: nextItem, tasks: tasksInOrder }) : null;
-      const total = task?.rest ?? 1;
+      const total = task?.restSeconds ?? 1;
       return {
-        fraction: state.rest / total,
+        fraction: state.rest / (total || 1),
         onTap: null,
         onHold: null,
         inside: (
           <>
             <div className="ring-big">{formatClock(state.rest)}</div>
             <div className="ring-hint">rest</div>
-            <div className="ring-part">{nextStep?.part.name}</div>
+            <div className="ring-subtask">{nextStep?.subtask.title}</div>
             <TextButton active={false} onSelect={() => move(advance(state))}>
               skip
             </TextButton>
@@ -220,54 +223,57 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
         ),
       };
     }
-    if (!part) return { fraction: 0, onTap: null, onHold: null, inside: null };
-    if (part.kind === "timer") {
-      const remaining = Math.max(0, part.timer - elapsed);
+    if (!subtask) return { fraction: 0, onTap: null, onHold: null, inside: null };
+    if (subtask.type === "timer_seconds") {
+      const duration = subtask.target ?? 0;
+      const remaining = Math.max(0, duration - elapsed);
       return {
-        fraction: part.timer ? remaining / part.timer : 0,
-        onTap: partIsDone ? null : () => (state.running ? pauseTimer() : setState({ ...state, running: true })),
+        fraction: duration ? remaining / duration : 0,
+        onTap: subtaskIsDone ? null : () => (state.running ? pauseTimer() : setState({ ...state, running: true })),
         onHold: null,
         inside: (
           <>
             <div className="ring-big">{formatClock(remaining)}</div>
-            <div className="ring-hint">{partIsDone ? "done" : state.running ? "tap to pause" : elapsed > 0 ? "paused" : "tap to start"}</div>
-            <div className="ring-part">{part.name}</div>
+            <div className="ring-hint">{subtaskIsDone ? "done" : state.running ? "tap to pause" : elapsed > 0 ? "paused" : "tap to start"}</div>
+            <div className="ring-subtask">{subtask.title}</div>
           </>
         ),
       };
     }
-    if (part.kind === "count") {
+    if (subtask.type === "count" || subtask.type === "amount") {
+      const target = subtask.target ?? 0;
+      const current = subtask.numericalValue ?? 0;
       return {
-        fraction: part.target ? part.current / part.target : 0,
+        fraction: target ? current / target : 0,
         onTap: () => {
-          const next = part.current + 1;
-          if (next >= part.target) finish();
-          else write(() => ({ current: next }));
+          const next = current + 1;
+          if (next >= target) finish();
+          else write(() => ({ numericalValue: next }));
         },
-        onHold: () => write((each) => ({ current: Math.max(0, each.current - 1), doneAt: null })),
+        onHold: () => write((each) => ({ numericalValue: Math.max(0, (each.numericalValue ?? 0) - 1), finalizedAt: null })),
         inside: (
           <>
-            <div className="ring-big">{part.current}</div>
-            <div className="ring-hint">of {part.target}</div>
-            <div className="ring-part">{part.name}</div>
+            <div className="ring-big">{current}</div>
+            <div className="ring-hint">of {target}</div>
+            <div className="ring-subtask">{subtask.title}</div>
           </>
         ),
       };
     }
-    const journalTask = part === task && task.kind === "boolean" && task.name.toLowerCase() === "journal";
+    const journalTask = subtask === task && task.type === "boolean" && task.title.toLowerCase() === "journal";
     return {
-      fraction: partIsDone ? 1 : 0,
+      fraction: subtaskIsDone ? 1 : 0,
       onTap: null,
       onHold: null,
       inside: (
         <>
-          <div className="ring-part">{part.name}</div>
-          {journalTask && !partIsDone ? (
+          <div className="ring-subtask">{subtask.title}</div>
+          {journalTask && !subtaskIsDone ? (
             <TextButton active onSelect={() => setWriting(blankEntry({ tag: null }))}>
               write
             </TextButton>
           ) : (
-            <Slide done={partIsDone} onComplete={finish} />
+            <Slide done={subtaskIsDone} onComplete={finish} />
           )}
         </>
       ),
@@ -282,29 +288,29 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
         const first = state.queue.findIndex((queued) => queued.taskId === id);
         const firstOpen = state.queue.findIndex((queued) => {
           const candidate = stepOf({ item: queued, tasks: tasksInOrder });
-          return queued.taskId === id && candidate !== null && !partDone(candidate.part);
+          return queued.taskId === id && candidate !== null && !subtaskDone(candidate.subtask);
         });
         return {
           key: id,
-          label: each?.name ?? "",
+          label: each?.title ?? "",
           current: item?.taskId === id,
-          done: each ? each.parts.length > 0 ? each.parts.every(partDone) : partDone(each) : false,
+          done: each ? each.subtasks.length > 0 ? each.subtasks.every(subtaskDone) : subtaskDone(each) : false,
           onSelect: () => move(jumpTo({ state, index: firstOpen === -1 ? first : firstOpen })),
         };
       })
     : state.queue.map((queued, index) => {
         const each = stepOf({ item: queued, tasks: tasksInOrder });
-        return { key: String(index), label: each?.part.name ?? "", current: state.phase !== "end" && index === state.index, done: each ? partDone(each.part) : false, onSelect: () => move(jumpTo({ state, index })) };
+        return { key: String(index), label: each?.subtask.title ?? "", current: state.phase !== "end" && index === state.index, done: each ? subtaskDone(each.subtask) : false, onSelect: () => move(jumpTo({ state, index })) };
       });
 
   const downItems =
-    groupRun && task && task.parts.length > 0
-      ? task.parts.map((each, partIndex) => ({
-          key: String(partIndex),
-          label: each.name,
-          current: item?.partIndex === partIndex && state.phase !== "end",
-          done: partDone(each),
-          onSelect: () => move(jumpTo({ state, index: state.queue.findIndex((queued) => queued.taskId === task.id && queued.partIndex === partIndex) })),
+    groupRun && task && task.subtasks.length > 0
+      ? task.subtasks.map((each, subtaskIndex) => ({
+          key: String(subtaskIndex),
+          label: each.title,
+          current: item?.subtaskIndex === subtaskIndex && state.phase !== "end",
+          done: subtaskDone(each),
+          onSelect: () => move(jumpTo({ state, index: state.queue.findIndex((queued) => queued.taskId === task.id && queued.subtaskIndex === subtaskIndex) })),
         }))
       : [];
 
@@ -336,7 +342,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
                   comments={comments}
                   scrollTo={null}
                   onAdd={(body) =>
-                    store.putComment({ id: identifier(), definitionId: task.definitionId, taskName: task.name, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp() })
+                    store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() })
                   }
                   onDelete={setDeleting}
                 />
@@ -374,7 +380,7 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
       {writing && task && (
         <EditorScreen
           heading="Journal"
-          subheading={task.name}
+          subheading={task.title}
           initial={entryText(writing)}
           onCancel={() => setWriting(null)}
           onSave={(text) => {

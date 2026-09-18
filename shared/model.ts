@@ -1,68 +1,73 @@
-export type Kind = "boolean" | "timer" | "count" | "text";
+export type TaskType = "boolean" | "timer_seconds" | "count" | "amount" | "text";
+
+export type Frequency = "daily" | "weekly" | "monthly";
 
 export const groupOrder = ["habits", "exercise", "personal"];
 
-export interface Part {
-  name: string;
-  kind: Kind;
-  target: number;
-  timer: number;
-  note: string;
+export function isNumericType(type: TaskType): boolean {
+  return type === "timer_seconds" || type === "count" || type === "amount";
 }
 
-export interface Definition {
+export interface SubtaskSpec {
+  title: string;
+  type: TaskType;
+  target: number | null;
+  restSeconds: number | null;
+  note: string;
+  sortOrder: number;
+}
+
+export interface Schedule {
   id: string;
-  name: string;
+  title: string;
   group: string;
-  kind: Kind;
-  target: number;
-  timer: number;
-  rest: number;
-  time: string | null;
-  every: string;
-  anchor: string;
-  parts: Part[];
+  type: TaskType;
+  target: number | null;
+  restSeconds: number | null;
+  subtasks: SubtaskSpec[];
+  dueTime: string | null;
+  frequency: Frequency;
+  repeatEvery: number;
+  weekdays: number[] | null;
+  dayOfMonth: number | null;
+  startsOn: string;
+  endedOn: string | null;
   note: string;
-  sort: number;
-  created: string;
-  ended: string | null;
-}
-
-export interface TaskPart extends Part {
-  current: number;
-  value: string;
-  doneAt: string | null;
-}
-
-export interface Task {
-  id: string;
-  definitionId: string | null;
-  date: string | null;
-  time: string | null;
-  name: string;
-  group: string;
-  kind: Kind;
-  target: number;
-  timer: number;
-  rest: number;
-  current: number;
-  value: string;
-  doneAt: string | null;
-  skippedAt: string | null;
-  note: string;
-  parts: TaskPart[];
-  sort: number;
-  created: string;
+  sortOrder: number;
+  createdAt: string;
 }
 
 export interface Comment {
   id: string;
-  definitionId: string | null;
-  taskName: string;
+  taskId: string;
   body: string;
   author: string;
   writtenAt: string;
   seenAt: string | null;
+  createdAt: string;
+}
+
+export interface Task {
+  id: string;
+  parentId: string | null;
+  scheduleId: string | null;
+  dueDate: string | null;
+  dueTime: string | null;
+  title: string;
+  group: string;
+  type: TaskType;
+  target: number | null;
+  numericalValue: number | null;
+  stringValue: string | null;
+  restSeconds: number | null;
+  finalizedAt: string | null;
+  isSkipped: boolean;
+  assignee: string | null;
+  note: string;
+  sortOrder: number;
+  subtasks: Task[];
+  comments: Comment[];
+  createdAt: string;
 }
 
 export interface JournalMetadata {

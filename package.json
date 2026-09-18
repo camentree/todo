@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=.env ./node_modules/.bin/concurrently -n server,client -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:server": "tsx watch --env-file=.env server/main.ts",
+    "dev:server": "tsx watch --env-file=.env server/standin.ts",
     "dev:client": "vite --host",
     "build": "tsc --noEmit && vite build",
-    "start": "NODE_ENV=production tsx server/main.ts",
+    "start": "tsx server/main.ts",
     "test": "scripts/test",
     "seed": "tsx scripts/seed.ts"
   },
