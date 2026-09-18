@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+stamp=dist/deployed-sha
+
 [ -d node_modules ] || npm ci --include=dev --silent
 [ -d dist/client ] || npm run build
 
@@ -13,11 +15,13 @@ git fetch --quiet origin main
 
 previous="$(git rev-parse HEAD)"
 target="$(git rev-parse origin/main)"
-[ "$previous" = "$target" ] && exit 0
+deployed="$(cat "$stamp" 2>/dev/null || true)"
+[ "$deployed" = "$target" ] && exit 0
 
 git reset --hard --quiet "$target"
 git diff --quiet "$previous" "$target" -- package-lock.json || npm ci --include=dev --silent
 
 npm run build
 launchctl kickstart -k "gui/$UID/org.nixos.todo"
+echo "$target" > "$stamp"
 echo "$(date -u +%FT%TZ) deployed $(git rev-parse --short HEAD)"
