@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent, ReactNode } from "react";
 
-import { formatClock, formatWhen } from "@shared/format.ts";
+import { formatClock } from "@shared/format.ts";
 import { entryFrom, entryText } from "@shared/journal.ts";
 import type { Comment, JournalEntry, Task } from "@shared/model.ts";
 import { isNumericType } from "@shared/model.ts";
@@ -9,7 +9,6 @@ import { advance, afterFinish, currentItem, goBack, jumpTo, startRunner, stepOf 
 import type { QueueItem, RunnerState } from "@shared/runner.ts";
 import { commentsFor, isDone, subtaskDone } from "@shared/tasks.ts";
 
-import { Card } from "../components/Card.tsx";
 import { CommentList } from "../components/CommentList.tsx";
 import { Confirm } from "../components/Confirm.tsx";
 import { EditorScreen } from "../components/EditorScreen.tsx";
@@ -20,8 +19,9 @@ import { RoundButton } from "../components/RoundButton.tsx";
 import { TextButton } from "../components/TextButton.tsx";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { longPress } from "../interaction/longPress.ts";
+import { useRoute } from "../interaction/route.ts";
 
-const ringSize = 250;
+const ringSize = 300;
 const ringRadius = ringSize / 2 - 1.5;
 const ringLength = 2 * Math.PI * ringRadius;
 
@@ -30,7 +30,7 @@ function Queue({ direction, items }: { direction: "across" | "down"; items: { ke
   const currentKey = items.find((item) => item.current)?.key;
   useEffect(() => {
     const element = host.current?.querySelector<HTMLElement>(".text.active");
-    element?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    element?.scrollIntoView(direction === "across" ? { block: "nearest", inline: "center", behavior: "smooth" } : { block: "center", inline: "nearest", behavior: "smooth" });
   }, [currentKey]);
   return (
     <div ref={host} className={direction === "across" ? "queue across" : "queue down"}>
@@ -104,12 +104,12 @@ function withStep({ task, item, change }: { task: Task; item: QueueItem; change:
   return { ...task, subtasks, finalizedAt: subtasks.every(subtaskDone) ? (task.finalizedAt ?? nowStamp()) : null };
 }
 
-export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: string; onClose: () => void }) {
+export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () => void }) {
   const store = useStore();
+  const { route, replace } = useRoute();
   const tasksInOrder = taskIds.map((id) => store.tasks.find((task) => task.id === id)).filter((task): task is Task => task !== undefined);
-  const [state, setState] = useState<RunnerState>(() => startRunner({ tasks: tasksInOrder, label }));
+  const [state, setState] = useState<RunnerState>(() => startRunner({ tasks: tasksInOrder, from: route.id ?? "" }));
   const [elapsed, setElapsed] = useState(0);
-  const [commentsOpen, setCommentsOpen] = useState(false);
   const [writing, setWriting] = useState<JournalEntry | null>(null);
   const [deleting, setDeleting] = useState<Comment | null>(null);
   const latest = useRef({ state, tasks: tasksInOrder, elapsed });
@@ -129,6 +129,10 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   const item = currentItem(state);
   const step = item ? stepOf({ item, tasks: tasksInOrder }) : null;
   const task = step?.task ?? null;
+
+  useEffect(() => {
+    if (task && route.id !== task.id) replace({ ...route, id: task.id });
+  }, [task?.id]);
   const subtask = step?.subtask ?? null;
   const subtaskIsDone = subtask && task ? (subtask === task ? isDone({ task, entries: store.journal }) : subtaskDone(subtask)) : false;
   const uniqueTaskIds = [...new Set(state.queue.map((each) => each.taskId))];
@@ -144,7 +148,6 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
 
   const move = (next: RunnerState) => {
     setElapsed(0);
-    setCommentsOpen(false);
     setState(next);
   };
 
@@ -194,12 +197,11 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
   };
 
   const comments = task ? commentsFor(task) : [];
-  const newest = comments[0];
   const commentBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (commentsOpen) commentBox.current?.scrollTo({ top: commentBox.current.scrollHeight });
-  }, [commentsOpen, comments.length]);
+    commentBox.current?.scrollTo({ top: commentBox.current.scrollHeight });
+  }, [task?.id, comments.length]);
 
   const ringContent = (): { fraction: number; onTap: (() => void) | null; onHold: (() => void) | null; inside: ReactNode } => {
     if (state.phase === "end") return { fraction: 1, onTap: null, onHold: null, inside: <div className="ring-subtask">done</div> };
@@ -324,7 +326,10 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
     <Overlay>
       <div className="page runner">
         <div className="screen-head">
-          <span className="heading">{label}</span>
+          <span className="heading">
+            {(task ?? tasksInOrder[0])?.group}
+            {tasksInOrder.length > 1 && task && <span className="position">{tasksInOrder.indexOf(task) + 1} of {tasksInOrder.length}</span>}
+          </span>
           <RoundButton label="close" onSelect={exit}>
             <CrossGlyph />
           </RoundButton>
@@ -336,28 +341,15 @@ export function Runner({ taskIds, label, onClose }: { taskIds: string[]; label: 
             {ring.inside}
           </Ring>
           {task && state.phase !== "rest" && (
-            <div ref={commentBox} className={commentsOpen ? "runner-comments open" : "runner-comments"}>
-              {commentsOpen ? (
-                <CommentList
-                  comments={comments}
-                  scrollTo={null}
-                  onAdd={(body) =>
-                    store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() })
-                  }
-                  onDelete={setDeleting}
-                />
-              ) : newest ? (
-                <>
-                  <Card body={newest.body} author={newest.author} when={formatWhen(newest.writtenAt)} />
-                  <TextButton active={false} onSelect={() => setCommentsOpen(true)}>
-                    {comments.length > 1 ? `▾ ${comments.length - 1} more` : "▾ add a comment"}
-                  </TextButton>
-                </>
-              ) : (
-                <TextButton active onSelect={() => setCommentsOpen(true)}>
-                  add a comment
-                </TextButton>
-              )}
+            <div ref={commentBox} className="runner-comments">
+              <CommentList
+                comments={comments}
+                scrollTo={null}
+                onAdd={(body) =>
+                  store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() })
+                }
+                onDelete={setDeleting}
+              />
             </div>
           )}
         </div>

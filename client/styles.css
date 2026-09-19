@@ -56,7 +56,7 @@
   --tick: 1.6rem;
   --round-small: 2.6rem;
   --round: 3.53rem;
-  --ring: 250px;
+  --ring: 300px;
   --gutter: 1.25rem;
   --row-padding: 0.42rem 0.25rem;
   --card-radius: 0.7rem;
@@ -554,10 +554,6 @@ textarea {
   border-radius: 1rem 1rem 0 0;
   display: flex;
   flex-direction: column;
-  max-height: 100%;
-}
-
-.composer:has(.preview) {
   height: calc(100% - var(--top));
 }
 
@@ -775,10 +771,12 @@ textarea {
 
 .bubble.user {
   align-self: flex-start;
+  margin-left: 0.6rem;
 }
 
 .bubble.agent {
   align-self: flex-end;
+  margin-right: 0.6rem;
 }
 
 .card-body {
@@ -937,6 +935,7 @@ textarea {
   white-space: pre-wrap;
 }
 
+.editor .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground,
 .editor .cm-selectionBackground,
 .editor ::selection {
   background: var(--chip-bg);
@@ -1004,6 +1003,14 @@ textarea {
   padding-bottom: 0;
 }
 
+.heading .position {
+  font-size: var(--meta);
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--dim);
+  margin-left: 0.6rem;
+}
+
 .screen-head .round {
   width: var(--round-small);
   height: var(--round-small);
@@ -1059,7 +1066,7 @@ textarea {
   flex-direction: column;
   gap: 0;
   font-size: var(--body);
-  padding: 0.3rem 0 0 1.2rem;
+  padding: 0.3rem 0 2.2rem 1.2rem;
   max-height: 6.2rem;
   overflow-y: auto;
   scrollbar-width: none;
@@ -1083,7 +1090,7 @@ textarea {
   flex-direction: column;
   align-items: center;
   gap: 0.6rem;
-  padding-top: 1.2rem;
+  padding-top: 2.4rem;
   overflow: hidden;
 }
 
@@ -1240,15 +1247,9 @@ textarea {
   color: var(--accent);
 }
 
-.runner-comments.open {
-  mask-image: linear-gradient(to bottom, transparent, black 2rem);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 2rem);
-}
-
 .runner-comments .comment-list {
   width: 100%;
   flex: none;
-  padding-top: 2rem;
 }
 
 .runner-comments .thread {

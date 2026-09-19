@@ -73,6 +73,14 @@ in memory and an error sprite shows the message.
 
 ## Running
 
+Run `npm install` first in a fresh checkout or worktree, and again whenever
+`package.json` has changed since the last one: Vite fails at request time with
+`Failed to resolve import "<package>"` rather than at startup, so a missing
+dependency looks like a broken page instead of a failed launch. If Vite was
+already running during the install, restart it after
+`rm -rf node_modules/.vite`: its pre-bundled dependency cache keeps the old
+hashes, the chunks come back 503 and the page stays blank with an empty console.
+
 ```
 DATA_DIR=data/dev PORT=8795 npm run dev:server
 PORT=8795 npm run dev:client
@@ -101,6 +109,9 @@ personal, garden and programming, comments on habits, one unseen comment from
 an agent on a backlog task, two weeks of journal entries across four tags, and
 eight notes across five tags, some of both left at their auto-generated title
 and some renamed. Re-run it any time to start over; it is deterministic.
+
+The stand-in reads the directory once at startup and keeps it in memory, so
+restart `npm run dev` after seeding or the app keeps showing the old data.
 
 ## Isolation
 

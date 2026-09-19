@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { Compartment, EditorState } from "@codemirror/state";
+import { EditorState } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, drawSelection, keymap, placeholder } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
@@ -36,7 +36,6 @@ import { Runner } from "./Runner.tsx";
 
 interface Draft {
   text: string;
-  block: boolean;
   editing: Task | null;
 }
 
@@ -62,16 +61,8 @@ const unfoldDelay = 480;
 const scrollEdge = 120;
 const scrollStep = 10;
 
-const mode = new Compartment();
-const touchKeyboard = window.matchMedia("(pointer: coarse)").matches;
 const sheetSlides = () => window.matchMedia("(min-width: 700px)").matches;
 
-function modeExtensions(block: boolean): Extension {
-  return [
-    placeholder(block ? "Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s" : "add a task"),
-    EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: block || touchKeyboard ? "enter" : "done" }),
-  ];
-}
 
 function grammarHighlighting(today: string): Extension {
   const marks = (view: EditorView): DecorationSet =>
@@ -122,10 +113,10 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     close();
   };
 
-  const onText = (text: string) => onChange({ ...draft, text, block: draft.block || text.includes("\n") });
+  const onText = (text: string) => onChange({ ...draft, text });
 
-  const latest = useRef({ block: draft.block, commit, onText });
-  latest.current = { block: draft.block, commit, onText };
+  const latest = useRef({ commit, onText });
+  latest.current = { commit, onText };
 
   useEffect(() => {
     const element = host.current;
@@ -136,14 +127,6 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
         doc: draft.text,
         extensions: [
           keymap.of([
-            {
-              key: "Enter",
-              run: () => {
-                if (latest.current.block || touchKeyboard) return false;
-                latest.current.commit();
-                return true;
-              },
-            },
             ...defaultKeymap,
             ...historyKeymap,
           ]),
@@ -151,7 +134,8 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           drawSelection(),
           EditorView.lineWrapping,
           grammarHighlighting(store.today),
-          mode.of(modeExtensions(draft.block)),
+          placeholder("Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s"),
+          EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: "enter" }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) latest.current.onText(update.state.doc.toString());
           }),
@@ -163,10 +147,6 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     view.dispatch({ selection: { anchor: view.state.doc.line(1).to } });
     return () => view.destroy();
   }, []);
-
-  useEffect(() => {
-    field.current?.dispatch({ effects: mode.reconfigure(modeExtensions(draft.block)) });
-  }, [draft.block]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -188,8 +168,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     <Overlay>
       <div className="scrim" onClick={close} />
       <div className={closing ? "composer closing" : "composer"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
-        {draft.block && (
-          <div className="preview">
+        <div className="preview">
             {preview && parsed ? (
               <TaskRow
                 task={preview}
@@ -212,7 +191,6 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
               <div className="dateline">type a task below to see it here</div>
             )}
           </div>
-        )}
         <div className="composer-field">
           <div className="editor" ref={host} />
           <div className="actions">
@@ -220,11 +198,6 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
               {draft.editing && (
                 <TextButton active={false} warn onSelect={onDelete}>
                   delete
-                </TextButton>
-              )}
-              {!draft.block && (
-                <TextButton active={false} onSelect={() => onChange({ ...draft, block: true })}>
-                  more
                 </TextButton>
               )}
             </div>
@@ -266,7 +239,6 @@ export function Tasks() {
   const folds = useFolds();
   const [selection, setSelection] = useState<Set<string> | null>(null);
   const [list, setList] = useState<Container>("today");
-  const [selectedRun, setSelectedRun] = useState<{ taskIds: string[]; label: string } | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [openedByDrag, setOpenedByDrag] = useState<Set<string>>(new Set());
   const [landed, setLanded] = useState<string | null>(null);
@@ -309,7 +281,7 @@ export function Tasks() {
 
   const edit = (task: Task) => {
     const schedule = scheduleOf(task);
-    setDraft({ text: serializeTask({ task, every: schedule ? everyToken(schedule) : null, today: store.today }), block: true, editing: task });
+    setDraft({ text: serializeTask({ task, every: schedule ? everyToken(schedule) : null, today: store.today }), editing: task });
   };
 
   const askDelete = (task: Task) => {
@@ -382,17 +354,14 @@ export function Tasks() {
     const chosen = listOrder.filter((task) => selection?.has(task.id) || task.subtasks.some((_, index) => selection?.has(task.id + ":" + index)));
     const first = chosen[0];
     if (!first) return;
-    const groups = new Set(chosen.map((task) => task.group));
-    const label = chosen.length === 1 ? first.title : groups.size === 1 ? first.group : "selection";
-    setSelectedRun({ taskIds: chosen.map((task) => task.id), label });
-    go({ tab: "tasks", id: first.id });
+    go({ tab: "tasks", id: first.id, run: chosen.map((task) => task.id) });
   };
 
-  const currentRun = (): { taskIds: string[]; label: string } | null => {
+  const currentRun = (): string[] | null => {
     if (route.id === null) return null;
-    if (selectedRun?.taskIds[0] === route.id) return selectedRun;
-    const task = store.tasks.find((each) => each.id === route.id);
-    return task ? { taskIds: [task.id], label: task.title } : null;
+    const run = route.run ?? [];
+    const chosen = (run.includes(route.id) ? run : [route.id]).filter((id) => store.tasks.some((task) => task.id === id));
+    return chosen.length === 0 ? null : chosen;
   };
 
   const running = currentRun();
@@ -588,7 +557,7 @@ export function Tasks() {
     const target = focused && !focused.startsWith("group:") ? rowAt(focused) : null;
     if (action === "help") return setHelping(true);
     if (action === "switch") return setList(list === "today" ? "backlog" : "today");
-    if (action === "add") return setDraft({ text: "", block: false, editing: null });
+    if (action === "add") return setDraft({ text: "", editing: null });
     if (action === "down") return moveFocus(1);
     if (action === "up") return moveFocus(-1);
     if (action === "close") {
@@ -676,15 +645,14 @@ export function Tasks() {
         </div>
       ) : (
         <div className="floating">
-          <RoundButton label="add" onSelect={() => setDraft({ text: "", block: false, editing: null })}>
+          <RoundButton label="add" onSelect={() => setDraft({ text: "", editing: null })}>
             <PlusGlyph />
           </RoundButton>
         </div>
       )}
       {running && (
         <Runner
-          taskIds={running.taskIds}
-          label={running.label}
+          taskIds={running}
           onClose={() => {
             setSelection(null);
             close();

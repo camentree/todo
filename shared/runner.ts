@@ -9,7 +9,6 @@ export interface QueueItem {
 export type Phase = "subtask" | "rest" | "taskEnd" | "end";
 
 export interface RunnerState {
-  label: string;
   queue: QueueItem[];
   index: number;
   phase: Phase;
@@ -30,14 +29,15 @@ export function stepOf({ item, tasks }: { item: QueueItem; tasks: Task[] }): { t
   return subtask ? { task, subtask } : null;
 }
 
-export function startRunner({ tasks, label }: { tasks: Task[]; label: string }): RunnerState {
+export function startRunner({ tasks, from }: { tasks: Task[]; from: string }): RunnerState {
   const queue = buildQueue(tasks);
-  const firstOpen = queue.findIndex((item) => {
+  const start = Math.max(0, queue.findIndex((item) => item.taskId === from));
+  const firstOpen = queue.findIndex((item, index) => {
     const step = stepOf({ item, tasks });
-    return step ? !subtaskDone(step.subtask) : false;
+    return index >= start && step ? !subtaskDone(step.subtask) : false;
   });
-  if (firstOpen === -1) return { label, queue, index: Math.max(0, queue.length - 1), phase: queue.length ? "taskEnd" : "end", running: false, rest: 0 };
-  return { label, queue, index: firstOpen, phase: "subtask", running: false, rest: 0 };
+  if (firstOpen === -1) return { queue, index: queue.length ? start : 0, phase: queue.length ? "taskEnd" : "end", running: false, rest: 0 };
+  return { queue, index: firstOpen, phase: "subtask", running: false, rest: 0 };
 }
 
 export function currentItem(state: RunnerState): QueueItem | null {
