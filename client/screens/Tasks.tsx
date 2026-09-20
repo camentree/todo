@@ -214,14 +214,10 @@ function Composer({ task, sheet, onCommit, onClose, onDelete }: { task: Task | n
 
   return (
     <>
-      {sheet ? (
-        <Overlay>
-          <div className="scrim" onClick={close} />
-          {composer}
-        </Overlay>
-      ) : (
-        composer
-      )}
+      <Overlay>
+        {sheet && <div className="scrim" onClick={close} />}
+        {composer}
+      </Overlay>
       {leaving && (
         <Confirm
           question="save this task?"
@@ -605,38 +601,32 @@ export function Tasks() {
 
   useShortcuts(shortcut);
 
-  const showList = sheet || !editing;
-
   return (
     <>
-      {showList && (
-        <>
-          <div className="filters">
-            <TextButton active={list === "today"} onSelect={() => setList("today")}>
-              today ({onToday.length})
-            </TextButton>
-            <TextButton active={list === "backlog"} onSelect={() => setList("backlog")}>
-              backlog ({backlog.length})
-            </TextButton>
+      <div className="filters">
+        <TextButton active={list === "today"} onSelect={() => setList("today")}>
+          today ({onToday.length})
+        </TextButton>
+        <TextButton active={list === "backlog"} onSelect={() => setList("backlog")}>
+          backlog ({backlog.length})
+        </TextButton>
+      </div>
+      <div className="list" ref={listRef} onPointerOver={followPointer}>
+        {list === "today" ? (
+          todayGroups.map(({ group, tasks }) => (
+            <div key={group} data-container="today" data-group={group}>
+              <Group storageKey={"today:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:today:" + group}>
+                {tasks.map((task) => row({ task, chips: [], todaySwipe: sendToBacklog(task), onTick: () => tick(task) }))}
+              </Group>
+            </div>
+          ))
+        ) : (
+          <div data-container="backlog" data-group="">
+            {backlog.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
           </div>
-          <div className="list" ref={listRef} onPointerOver={followPointer}>
-            {list === "today" ? (
-              todayGroups.map(({ group, tasks }) => (
-                <div key={group} data-container="today" data-group={group}>
-                  <Group storageKey={"today:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:today:" + group}>
-                    {tasks.map((task) => row({ task, chips: [], todaySwipe: sendToBacklog(task), onTick: () => tick(task) }))}
-                  </Group>
-                </div>
-              ))
-            ) : (
-              <div data-container="backlog" data-group="">
-                {backlog.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-      {drag && drag.line &&<div className="drop-line" style={{ top: drag.line.top, left: drag.line.left, width: drag.line.width }} />}
+        )}
+      </div>
+      {drag && drag.line && <div className="drop-line" style={{ top: drag.line.top, left: drag.line.left, width: drag.line.width }} />}
       {drag && (
         <div className="drag-ghost" style={{ top: drag.y - 24, left: listRef.current?.getBoundingClientRect().left ?? 0, width: listRef.current?.getBoundingClientRect().width ?? 0 }}>
           <span className="handle">
@@ -650,23 +640,22 @@ export function Tasks() {
           <span className="text">{drag.title}</span>
         </div>
       )}
-      {showList &&
-        (selection ? (
-          <div className="floating select-bar">
-            <RoundButton label="leave select mode" onSelect={() => setSelection(null)}>
-              <CrossGlyph />
-            </RoundButton>
-            <RoundButton label="play" onSelect={play}>
-              <PlayGlyph />
-            </RoundButton>
-          </div>
-        ) : (
-          <div className="floating">
-            <RoundButton label="add" onSelect={add}>
-              <PlusGlyph />
-            </RoundButton>
-          </div>
-        ))}
+      {selection ? (
+        <div className="floating select-bar">
+          <RoundButton label="leave select mode" onSelect={() => setSelection(null)}>
+            <CrossGlyph />
+          </RoundButton>
+          <RoundButton label="play" onSelect={play}>
+            <PlayGlyph />
+          </RoundButton>
+        </div>
+      ) : (
+        <div className="floating">
+          <RoundButton label="add" onSelect={add}>
+            <PlusGlyph />
+          </RoundButton>
+        </div>
+      )}
       {running && (
         <Runner
           taskIds={running}
