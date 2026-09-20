@@ -932,6 +932,10 @@ textarea {
   text-underline-offset: 0.15em;
 }
 
+.editor .cm-line:not(.cm-writing) .cm-link {
+  cursor: pointer;
+}
+
 .editor .cm-attribute {
   color: var(--accent);
 }

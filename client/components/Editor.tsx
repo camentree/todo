@@ -31,8 +31,10 @@ const toneByNode: Record<string, string> = {
 function decorate(view: EditorView): DecorationSet {
   const { doc, selection } = view.state;
   const caretLine = view.hasFocus ? doc.lineAt(selection.main.head).number : -1;
+  const caretStart = caretLine > 0 ? doc.line(caretLine).from : -1;
   const ranges: Range<Decoration>[] = [];
   for (const { from, to } of view.visibleRanges) {
+    if (caretStart >= from && caretStart <= to) ranges.push(Decoration.line({ class: "cm-writing" }).range(caretStart));
     syntaxTree(view.state).iterate({
       from,
       to,
