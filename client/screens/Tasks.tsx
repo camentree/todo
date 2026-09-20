@@ -58,17 +58,17 @@ interface Drag {
 
 const nestDistance = 40;
 const unfoldDelay = 480;
-const highlightDuration = 2000;
+const savedDuration = 2000;
 const scrollEdge = 120;
 const scrollStep = 10;
 
 const sheetSlides = () => window.matchMedia("(min-width: 700px)").matches;
 
 
-function grammarHighlighting(today: string): Extension {
+function grammarHighlighting({ today, subtasks }: { today: string; subtasks: boolean }): Extension {
   const marks = (view: EditorView): DecorationSet =>
     Decoration.set(
-      tokenSpans({ text: view.state.doc.toString(), today }).map((span) => Decoration.mark({ class: span.kind === "bullet" ? "cm-bullet" : "cm-attribute" }).range(span.from, span.to)),
+      tokenSpans({ text: view.state.doc.toString(), today, subtasks }).map((span) => Decoration.mark({ class: span.kind === "bullet" ? "cm-bullet" : "cm-attribute" }).range(span.from, span.to)),
       true,
     );
   return ViewPlugin.fromClass(
@@ -93,7 +93,8 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
   const [leaving, setLeaving] = useState(false);
   const [closing, setClosing] = useState(false);
   const close = () => (sheetSlides() ? setClosing(true) : onClose());
-  const parsed = parseTask({ text: draft.text, today: store.today });
+  const subtasks = !draft.editing || draft.editing.parentId === null;
+  const parsed = parseTask({ text: draft.text, today: store.today, subtasks });
   const schedule = draft.editing?.scheduleId ? (store.schedules.find((each) => each.id === draft.editing?.scheduleId) ?? null) : null;
 
   const commit = () => {
@@ -134,7 +135,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           history(),
           drawSelection(),
           EditorView.lineWrapping,
-          grammarHighlighting(store.today),
+          grammarHighlighting({ today: store.today, subtasks }),
           placeholder("Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s"),
           EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: "enter" }),
           EditorView.updateListener.of((update) => {
@@ -178,6 +179,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
                 select={null}
                 onHold={null}
                 focused={null}
+                saved={null}
                 onTick={() => null}
                 onTitle={() => null}
                 onTitleSubtask={null}
@@ -235,8 +237,9 @@ export function Tasks() {
   const [asking, setAsking] = useState<Asking | null>(null);
   const [helping, setHelping] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
-  const highlighting = useRef<number | null>(null);
+  const savedTimer = useRef<number | null>(null);
   const pointerWas = useRef({ x: 0, y: 0 });
   if (focused) lastFocused.current = focused;
   const folds = useFolds();
@@ -339,10 +342,10 @@ export function Tasks() {
   const addComment = ({ task, body }: { task: Task; body: string }) =>
     store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() });
 
-  const highlight = (id: string) => {
-    if (highlighting.current !== null) window.clearTimeout(highlighting.current);
-    setFocused(id);
-    highlighting.current = window.setTimeout(() => setFocused((current) => (current === id ? null : current)), highlightDuration);
+  const markSaved = (id: string) => {
+    if (savedTimer.current !== null) window.clearTimeout(savedTimer.current);
+    setSaved(id);
+    savedTimer.current = window.setTimeout(() => setSaved(null), savedDuration);
   };
 
   const reveal = (task: Task) => {
@@ -354,7 +357,7 @@ export function Tasks() {
     folds.set({ key: "today:" + shown.group, open: true });
     folds.set({ key: subtasksKey(shown.id), open: true });
     setLanded(shown.id);
-    highlight(parent ? shown.id + ":" + parent.index : shown.id);
+    markSaved(parent ? shown.id + ":" + parent.index : shown.id);
   };
 
   const todayGroups = grouped(onToday);
@@ -554,6 +557,7 @@ export function Tasks() {
           select={select}
           onHold={holdToSelect}
           focused={focused}
+          saved={saved}
           onTick={onTick}
           onTitle={() => edit(task)}
           onTitleSubtask={(index) => editSubtask({ host: task, index })}

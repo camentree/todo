@@ -29,6 +29,7 @@
   --accent: #356b52;
   --hairline: #dfe5e2;
   --chip-bg: #356b5224;
+  --saved: #356b5233;
   --tag: #68726f;
   --scrim: rgba(27, 33, 32, 0.16);
   --warn: #b46a5f;
@@ -79,6 +80,7 @@
     --accent: #7fb996;
     --hairline: #2c2a2e;
     --chip-bg: #7fb99629;
+    --saved: #7fb9963d;
     --tag: #857f7a;
     --scrim: rgba(0, 0, 0, 0.5);
     --warn: #c9736c;
@@ -414,7 +416,7 @@ textarea {
 }
 
 .unfolded {
-  padding-inline: var(--indent);
+  padding-left: var(--indent);
   display: flex;
   flex-direction: column;
 }
@@ -676,8 +678,12 @@ textarea {
   background: var(--raised);
 }
 
+.row.saved {
+  background: var(--saved);
+}
+
 @starting-style {
-  .row.focused {
+  .row.saved {
     background: transparent;
   }
 }
@@ -1006,7 +1012,7 @@ textarea {
 }
 
 .task:has(> .swipeable .handle) > .roll > div > .unfolded {
-  padding-inline: calc(var(--indent) * 2);
+  padding-left: calc(var(--indent) * 2);
 }
 
 .select-bar .round:first-child {

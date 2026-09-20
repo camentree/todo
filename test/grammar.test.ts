@@ -55,6 +55,11 @@ describe("parseTask", () => {
     expect(parsed?.subtasks[0]).toMatchObject({ title: "charger", note: "the short one" });
   });
 
+  it("reads a dashed line as part of the note when subtasks are off", () => {
+    const parsed = parseTask({ text: "cat cow #count 10\n\n  breathe out\n- and again\n", today, subtasks: false });
+    expect(parsed).toMatchObject({ title: "cat cow", type: "count", target: 10, note: "breathe out\n- and again", subtasks: [] });
+  });
+
   it("keeps a word that only looks like a token in the title", () => {
     expect(parseTask({ text: "Read #chapter 3 of the manual", today })?.title).toBe("Read #chapter 3 of the manual");
   });
