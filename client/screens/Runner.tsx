@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent, ReactNode } from "react";
 
 import { formatClock } from "@shared/format.ts";
-import { entryFrom, entryText } from "@shared/journal.ts";
+import { entryFrom, entryTags, entryText } from "@shared/journal.ts";
 import type { Comment, JournalEntry, Task } from "@shared/model.ts";
 import { isNumericType } from "@shared/model.ts";
 import { advance, afterFinish, currentItem, goBack, jumpTo, startRunner, stepOf } from "@shared/runner.ts";
@@ -374,9 +374,10 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
           heading="Journal"
           subheading={task.title}
           initial={entryText(writing)}
+          initialTags={entryTags(writing)}
           onCancel={() => setWriting(null)}
-          onSave={(text) => {
-            store.putEntry({ name: "journal", entry: entryFrom({ entry: writing, text }) });
+          onSave={({ text, tags }) => {
+            store.putEntry({ name: "journal", entry: entryFrom({ entry: writing, text, tags }) });
             setWriting(null);
             move(afterFinish({ state, tasks: tasksInOrder }));
           }}

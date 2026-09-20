@@ -65,24 +65,16 @@ export function readableTitle(entry: JournalEntry): string {
 }
 
 export function entryText(entry: JournalEntry): string {
-  const tags = entryTags(entry);
-  const tagLine = tags.map((tag) => "#" + tag).join(" ");
-  const lines = tags.length ? [`## ${entryTitle(entry)}`, tagLine, entry.body] : [`## ${entryTitle(entry)}`, entry.body];
-  return lines.join("\n\n");
+  return [`## ${entryTitle(entry)}`, entry.body].join("\n\n");
 }
 
-export function entryFrom({ entry, text }: { entry: JournalEntry; text: string }): JournalEntry {
+export function entryFrom({ entry, text, tags }: { entry: JournalEntry; text: string; tags: string[] }): JournalEntry {
   const lines = text.split("\n");
-  const tags: string[] = [];
   let index = 0;
   const titled = (lines[index] ?? "").startsWith("## ");
   const heading = titled ? (lines[index] ?? "").slice(3).trim() : "";
   if (titled) index += 1;
   while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
-  while (isTagLine(lines[index] ?? "")) {
-    for (const word of (lines[index] ?? "").trim().split(/\s+/)) tags.push(word.slice(1).toLowerCase());
-    index += 1;
-  }
   const body = lines.slice(index).join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
   const displayTitle = titled ? (heading === entry.sectionTitle ? "" : heading) : (entry.metadata.displayTitle ?? "");
   return {
@@ -103,7 +95,3 @@ export function tagsFrom(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function isTagLine(line: string): boolean {
-  const words = line.trim().split(/\s+/).filter(Boolean);
-  return words.length > 0 && words.every((word) => /^#\S+$/.test(word));
-}

@@ -65,8 +65,8 @@ describe("the title an entry shows", () => {
 });
 
 describe("editor text", () => {
-  it("writes the title, the tag line and the body", () => {
-    expect(entryText(entries[1]!)).toBe("## after the session\n\n#therapy #personal\n\nTalked about the thing.\n\n### homework\n\n- one\n- two");
+  it("writes the title and the body, leaving tags to their own field", () => {
+    expect(entryText(entries[1]!)).toBe("## after the session\n\nTalked about the thing.\n\n### homework\n\n- one\n- two");
   });
 
   it("leaves a line to write on when the body is empty", () => {
@@ -74,12 +74,16 @@ describe("editor text", () => {
   });
 
   it("round-trips through the editor", () => {
-    expect(entryFrom({ entry: entries[1]!, text: entryText(entries[1]!) })).toEqual(entries[1]);
-    expect(entryFrom({ entry: entries[0]!, text: entryText(entries[0]!) })).toEqual(entries[0]);
+    expect(entryFrom({ entry: entries[1]!, text: entryText(entries[1]!), tags: entryTags(entries[1]!) })).toEqual(entries[1]);
+    expect(entryFrom({ entry: entries[0]!, text: entryText(entries[0]!), tags: entryTags(entries[0]!) })).toEqual(entries[0]);
+  });
+
+  it("keeps a body line that starts with a hash as body", () => {
+    expect(entryFrom({ entry: entries[0]!, text: "## 2026-09-13T08:15:00\n\n#1 on the list", tags: [] }).body).toBe("#1 on the list");
   });
 
   it("writes a display title and leaves the section title alone", () => {
-    expect(entryFrom({ entry: entries[0]!, text: "## blue v4\n\n#climbing\n\nHeel hook first.\n" })).toEqual({
+    expect(entryFrom({ entry: entries[0]!, text: "## blue v4\n\nHeel hook first.\n", tags: ["climbing"] })).toEqual({
       ...entries[0]!,
       body: "Heel hook first.",
       metadata: { displayTitle: "blue v4", tag: ["climbing"] },
@@ -87,16 +91,16 @@ describe("editor text", () => {
   });
 
   it("drops the display title when the title is typed back to the section title", () => {
-    expect(entryFrom({ entry: entries[1]!, text: "## 2026-09-14T21:40:00\n\nstill here." }).metadata.displayTitle).toBe(undefined);
+    expect(entryFrom({ entry: entries[1]!, text: "## 2026-09-14T21:40:00\n\nstill here.", tags: [] }).metadata.displayTitle).toBe(undefined);
   });
 
   it("keeps an author nobody typed", () => {
     const entry: JournalEntry = { ...entries[0]!, metadata: { author: "parallax" } };
-    expect(entryFrom({ entry, text: "## blue v4\n\nHeel hook first." }).metadata).toEqual({ displayTitle: "blue v4", author: "parallax" });
+    expect(entryFrom({ entry, text: "## blue v4\n\nHeel hook first.", tags: [] }).metadata).toEqual({ displayTitle: "blue v4", author: "parallax" });
   });
 
   it("keeps the title when the line is gone, and reads deeper headings as body", () => {
-    expect(entryFrom({ entry: entries[1]!, text: "### tempering\n\ncumin in ghee" })).toEqual({
+    expect(entryFrom({ entry: entries[1]!, text: "### tempering\n\ncumin in ghee", tags: [] })).toEqual({
       ...entries[1]!,
       body: "### tempering\n\ncumin in ghee",
       metadata: { displayTitle: "after the session" },

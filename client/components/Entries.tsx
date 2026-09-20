@@ -106,11 +106,12 @@ export function Entries({ name }: { name: JournalName }) {
       {editing && (
         <EditorScreen
           heading={headings[name]}
-          subheading={[formatWhen(editing.at), entryTags(editing).join(", ")].filter(Boolean).join(" · ")}
+          subheading={formatWhen(editing.at)}
           initial={entryText(editing)}
+          initialTags={entryTags(editing)}
           onCancel={close}
-          onSave={(text) => {
-            store.putEntry({ name, entry: entryFrom({ entry: editing, text }) });
+          onSave={({ text, tags }) => {
+            store.putEntry({ name, entry: entryFrom({ entry: editing, text, tags }) });
             close();
           }}
         />

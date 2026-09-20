@@ -811,7 +811,8 @@ textarea {
   padding: 0.7rem 1rem;
 }
 
-.field textarea {
+.field textarea,
+.field input {
   flex: 1;
   min-width: 0;
   font-size: var(--body);
@@ -821,7 +822,8 @@ textarea {
   overflow: hidden;
 }
 
-.field textarea::placeholder {
+.field textarea::placeholder,
+.field input::placeholder {
   color: var(--faint);
 }
 
