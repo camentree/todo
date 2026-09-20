@@ -53,6 +53,7 @@ interface Drag {
 
 const nestDistance = 40;
 const unfoldDelay = 480;
+const savedDuration = 3000;
 const scrollEdge = 120;
 const scrollStep = 10;
 
@@ -65,10 +66,10 @@ function useSheet(): boolean {
   }, () => sheetQuery.matches);
 }
 
-function grammarHighlighting(today: string): Extension {
+function grammarHighlighting({ today, subtasks }: { today: string; subtasks: boolean }): Extension {
   const marks = (view: EditorView): DecorationSet =>
     Decoration.set(
-      tokenSpans({ text: view.state.doc.toString(), today }).map((span) => Decoration.mark({ class: span.kind === "bullet" ? "cm-bullet" : "cm-attribute" }).range(span.from, span.to)),
+      tokenSpans({ text: view.state.doc.toString(), today, subtasks }).map((span) => Decoration.mark({ class: span.kind === "bullet" ? "cm-bullet" : "cm-attribute" }).range(span.from, span.to)),
       true,
     );
   return ViewPlugin.fromClass(
@@ -95,7 +96,8 @@ function Composer({ task, sheet, onCommit, onClose, onDelete }: { task: Task | n
   const [leaving, setLeaving] = useState(false);
   const [closing, setClosing] = useState(false);
   const close = () => (sheet ? setClosing(true) : onClose());
-  const parsed = parseTask({ text, today: store.today });
+  const subtasks = task === null || task.parentId === null;
+  const parsed = parseTask({ text, today: store.today, subtasks });
 
   const commit = () => {
     if (!parsed) return;
@@ -133,7 +135,7 @@ function Composer({ task, sheet, onCommit, onClose, onDelete }: { task: Task | n
           history(),
           drawSelection(),
           EditorView.lineWrapping,
-          grammarHighlighting(store.today),
+          grammarHighlighting({ today: store.today, subtasks }),
           placeholder("Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s"),
           EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: "enter" }),
           EditorView.updateListener.of((update) => {
@@ -170,13 +172,15 @@ function Composer({ task, sheet, onCommit, onClose, onDelete }: { task: Task | n
             {preview && parsed ? (
               <TaskRow
                 task={preview}
-                chips={[preview.group, parsed.restSeconds ? "rest " + formatDuration(parsed.restSeconds) : ""].filter(Boolean)}
+                chips={[preview.parentId === null ? preview.group : "", parsed.restSeconds ? "rest " + formatDuration(parsed.restSeconds) : ""].filter(Boolean)}
                 every={parsed.every}
                 select={null}
                 onHold={null}
                 focused={null}
+                saved={null}
                 onTick={() => null}
                 onTitle={() => null}
+                onTitleSubtask={null}
                 todaySwipe={null}
                 onDelete={null}
                 onDeleteSubtask={null}
@@ -239,7 +243,9 @@ export function Tasks() {
   const [asking, setAsking] = useState<Asking | null>(null);
   const [helping, setHelping] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
+  const savedTimer = useRef<number | null>(null);
   const pointerWas = useRef({ x: 0, y: 0 });
   if (focused) lastFocused.current = focused;
   const folds = useFolds();
@@ -289,6 +295,17 @@ export function Tasks() {
 
   const add = () => go({ tab: "tasks", id: null, edit: true });
 
+  const editSubtask = ({ host, index }: { host: Task; index: number }) => {
+    const subtask = host.subtasks[index];
+    if (subtask) go({ tab: "tasks", id: subtask.id, edit: true });
+  };
+
+  const hostOf = (subtask: Task): { host: Task; index: number } | null => {
+    const host = subtask.parentId ? (store.tasks.find((each) => each.id === subtask.parentId) ?? null) : null;
+    const index = host ? host.subtasks.findIndex((each) => each.id === subtask.id) : -1;
+    return host && index !== -1 ? { host, index } : null;
+  };
+
   const askDelete = (task: Task) => {
     const schedule = scheduleOf(task);
     const finish = () => {
@@ -308,11 +325,16 @@ export function Tasks() {
     }
   };
 
+  const askDeleteEditing = (editing: Task) => {
+    const parent = hostOf(editing);
+    return parent ? askDeleteSubtask({ task: parent.host, index: parent.index }) : askDelete(editing);
+  };
+
   const askDeleteComment = (comment: Comment) =>
     setAsking({ question: "delete this comment?", choices: [{ label: "delete", onChoose: () => { store.deleteComment(comment.id); setAsking(null); } }] });
 
   const askDeleteSubtask = ({ task, index }: { task: Task; index: number }) =>
-    setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); } }] });
+    setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); if (route.edit) close(); } }] });
 
   const sendToBacklog = (task: Task): Swipe => {
     if (task.scheduleId) return { word: isSkipped(task) ? "unskip" : "skip", onSwipe: () => store.putTask(skipToggled(task)) };
@@ -324,12 +346,22 @@ export function Tasks() {
   const addComment = ({ task, body }: { task: Task; body: string }) =>
     store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() });
 
+  const markSaved = (id: string) => {
+    if (savedTimer.current !== null) window.clearTimeout(savedTimer.current);
+    setSaved(id);
+    savedTimer.current = window.setTimeout(() => setSaved(null), savedDuration);
+  };
+
   const reveal = (task: Task) => {
-    store.putTask(task);
-    setList(task.dueDate !== null && task.dueDate <= store.today ? "today" : "backlog");
-    folds.set({ key: "today:" + task.group, open: true });
-    folds.set({ key: subtasksKey(task.id), open: true });
-    setLanded(task.id);
+    const parent = hostOf(task);
+    const saved = parent ? { ...task, group: parent.host.group } : task;
+    const shown = parent ? { ...parent.host, subtasks: parent.host.subtasks.map((each) => (each.id === saved.id ? saved : each)) } : saved;
+    store.putTask(shown);
+    setList(shown.dueDate !== null && shown.dueDate <= store.today ? "today" : "backlog");
+    folds.set({ key: "today:" + shown.group, open: true });
+    folds.set({ key: subtasksKey(shown.id), open: true });
+    setLanded(shown.id);
+    markSaved(parent ? shown.id + ":" + parent.index : shown.id);
   };
 
   const todayGroups = grouped(onToday);
@@ -370,7 +402,8 @@ export function Tasks() {
   };
 
   const running = currentRun();
-  const editingTask = route.id === null ? null : (store.tasks.find((task) => task.id === route.id) ?? null);
+  const editingTask =
+    route.id === null ? null : (store.tasks.find((task) => task.id === route.id) ?? store.tasks.flatMap((task) => task.subtasks).find((subtask) => subtask.id === route.id) ?? null);
   const editing = route.edit === true && (route.id === null || editingTask !== null);
 
   const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] =>
@@ -531,8 +564,10 @@ export function Tasks() {
           select={select}
           onHold={holdToSelect}
           focused={focused}
+          saved={saved}
           onTick={onTick}
           onTitle={() => edit(task)}
+          onTitleSubtask={(index) => editSubtask({ host: task, index })}
           todaySwipe={todaySwipe}
           onDelete={() => (task.scheduleId ? askDelete(task) : store.deleteTask(task.id))}
           onDeleteSubtask={(index) => store.putTask(withoutSubtask({ host: task, index }))}
@@ -590,7 +625,7 @@ export function Tasks() {
     if (action === "fold") return toggleSubtasks({ folds, task: host });
     if (action === "select") return selection ? toggleSelected([focused]) : setSelection(new Set([focused]));
     if (action === "complete") return index === null ? tick(host) : store.putTask(subtaskToggled({ task: host, index, now: nowStamp() }));
-    if (action === "edit") return edit(host);
+    if (action === "edit") return index === null ? edit(host) : editSubtask({ host, index });
     if (action === "delete") return index === null ? askDelete(host) : askDeleteSubtask({ task: host, index });
     if (action === "today") {
       if (host.scheduleId) return store.putTask(skipToggled(host));
@@ -665,7 +700,7 @@ export function Tasks() {
           }}
         />
       )}
-      {editing && <Composer key={route.id ?? "new"} task={editingTask} sheet={sheet} onCommit={reveal} onClose={close} onDelete={() => editingTask && askDelete(editingTask)} />}
+      {editing && <Composer key={route.id ?? "new"} task={editingTask} sheet={sheet} onCommit={reveal} onClose={close} onDelete={() => editingTask && askDeleteEditing(editingTask)} />}
       {asking && <Confirm question={asking.question} choices={asking.choices} onCancel={() => setAsking(null)} />}
       {helping && <ShortcutsSheet onClose={() => setHelping(false)} />}
     </>

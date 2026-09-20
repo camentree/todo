@@ -230,11 +230,11 @@ function parseLine({ text, today, from }: { text: string; today: string; from: n
   return line;
 }
 
-function documentLines(text: string): DocumentLine[] {
+function documentLines({ text, subtasks }: { text: string; subtasks: boolean }): DocumentLine[] {
   const lines: DocumentLine[] = [];
   let at = 0;
   text.split("\n").forEach((line, index) => {
-    const marker = /^\s*- /.exec(line);
+    const marker = subtasks ? /^\s*- /.exec(line) : null;
     if (marker) lines.push({ role: "subtask", text: line.slice(marker[0].length), from: at + marker[0].length, bullet: at + marker[0].length - 2 });
     else if (!line.trim()) lines.push({ role: "blank", text: "", from: at, bullet: null });
     else if (index === 0) lines.push({ role: "task", text: line, from: at, bullet: null });
@@ -244,9 +244,9 @@ function documentLines(text: string): DocumentLine[] {
   return lines;
 }
 
-export function tokenSpans({ text, today }: { text: string; today: string }): TokenSpan[] {
+export function tokenSpans({ text, today, subtasks = true }: { text: string; today: string; subtasks?: boolean }): TokenSpan[] {
   const spans: TokenSpan[] = [];
-  for (const line of documentLines(text)) {
+  for (const line of documentLines({ text, subtasks })) {
     if (line.bullet !== null) spans.push({ from: line.bullet, to: line.bullet + 1, kind: "bullet" });
     if (line.role === "task" || line.role === "subtask") spans.push(...parseLine({ text: line.text, today, from: line.from }).spans);
   }
@@ -259,7 +259,7 @@ function subtaskFrom({ line, notes }: { line: Line; notes: string[] }): ParsedSu
     title: line.words.join(" "),
     type,
     target: type === "count" ? (line.target ?? 1) : type === "timer_seconds" ? (line.target ?? 0) : null,
-    note: notes.join("\n"),
+    note: notes.join("\n").replace(/^\n+|\n+$/g, ""),
     current: null,
     value: null,
     done: null,
@@ -273,8 +273,8 @@ function subtaskFrom({ line, notes }: { line: Line; notes: string[] }): ParsedSu
   return subtask;
 }
 
-export function parseTask({ text, today }: { text: string; today: string }): ParsedTask | null {
-  const lines = documentLines(text);
+export function parseTask({ text, today, subtasks = true }: { text: string; today: string; subtasks?: boolean }): ParsedTask | null {
+  const lines = documentLines({ text, subtasks });
   const first = lines[0];
   if (!first || first.role !== "task") return null;
   const rootLine = parseLine({ text: first.text, today, from: first.from });
@@ -286,15 +286,10 @@ export function parseTask({ text, today }: { text: string; today: string }): Par
     if (line.role === "subtask") {
       current = { line: parseLine({ text: line.text, today, from: line.from }), notes: [] };
       subtaskLines.push(current);
-    } else if (line.role === "note") {
+    } else if (line.role === "note" || line.role === "blank") {
       (current ? current.notes : rootNotes).push(line.text);
     }
   }
-  const subtasks = subtaskLines.flatMap(({ line, notes }) => {
-    const subtask = subtaskFrom({ line, notes });
-    if (line.repeat === 1) return [subtask];
-    return Array.from({ length: line.repeat }, (_, index) => ({ ...subtask, title: `${subtask.title} ${index + 1}`, current: null, value: null, done: null }));
-  });
   return {
     ...subtaskFrom({ line: rootLine, notes: rootNotes }),
     group: rootLine.group,
@@ -302,7 +297,11 @@ export function parseTask({ text, today }: { text: string; today: string }): Par
     every: rootLine.every,
     date: rootLine.date,
     time: rootLine.time,
-    subtasks,
+    subtasks: subtaskLines.flatMap(({ line, notes }) => {
+      const subtask = subtaskFrom({ line, notes });
+      if (line.repeat === 1) return [subtask];
+      return Array.from({ length: line.repeat }, (_, index) => ({ ...subtask, title: `${subtask.title} ${index + 1}`, current: null, value: null, done: null }));
+    }),
   };
 }
 
@@ -323,11 +322,11 @@ function valueTokens(task: Task): string {
 }
 
 function noteLines(note: string): string {
-  return note ? "\n" + note.split("\n").map((line) => "  " + line).join("\n") : "";
+  return note ? "\n" + note.split("\n").map((line) => (line ? "  " + line : "")).join("\n") : "";
 }
 
 export function serializeTask({ task, every, today }: { task: Task; every: string | null; today: string }): string {
-  let text = task.group ? task.title + " /" + task.group : task.title;
+  let text = task.group && task.parentId === null ? task.title + " /" + task.group : task.title;
   if (every) text += " #every " + every;
   if (task.subtasks.length === 0) text += typeTokens(task);
   if (task.restSeconds) text += " #rest " + durationToken(task.restSeconds);
@@ -336,7 +335,7 @@ export function serializeTask({ task, every, today }: { task: Task; every: strin
   if (task.subtasks.length === 0) text += valueTokens(task);
   else if (task.finalizedAt) text += " = done";
   if (task.note) text += "\n" + noteLines(task.note);
-  if (task.note && task.subtasks.length > 0) text += "\n";
+  if (task.subtasks.length > 0) text += "\n";
   for (const subtask of task.subtasks) text += "\n- " + subtask.title + typeTokens(subtask) + valueTokens(subtask) + noteLines(subtask.note);
   return text;
 }

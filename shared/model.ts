@@ -72,7 +72,7 @@ export interface Task {
 
 export interface JournalMetadata {
   displayTitle?: string;
-  tag?: string;
+  tag?: string[];
   author?: string;
 }
 

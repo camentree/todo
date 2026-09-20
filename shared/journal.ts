@@ -21,13 +21,14 @@ export function parseMarkdown(markdown: string): JournalEntry[] {
     }
     while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
     const at = fields.at ?? heading;
+    const tags = tagsFrom(fields.tag);
     return {
       sectionTitle: at,
       at,
       body: lines.slice(index).join("\n"),
       metadata: {
         ...(timestampShape.test(heading) ? {} : { displayTitle: heading }),
-        ...(fields.tag ? { tag: fields.tag } : {}),
+        ...(tags.length ? { tag: tags } : {}),
         ...(fields.author ? { author: fields.author } : {}),
       },
     };
@@ -37,7 +38,7 @@ export function parseMarkdown(markdown: string): JournalEntry[] {
 export function serializeMarkdown(entries: JournalEntry[]): string {
   return entries
     .map((entry) => {
-      const metadata = [`at: ${entry.at}`, entry.metadata.tag ? `tag: ${entry.metadata.tag}` : "", entry.metadata.author ? `author: ${entry.metadata.author}` : ""]
+      const metadata = [`at: ${entry.at}`, entry.metadata.tag?.length ? `tag: ${entry.metadata.tag.join(", ")}` : "", entry.metadata.author ? `author: ${entry.metadata.author}` : ""]
         .filter(Boolean)
         .join("\n");
       return `## ${entryTitle(entry)}\n\n${metadata}\n\n${entry.body}\n`;
@@ -46,10 +47,7 @@ export function serializeMarkdown(entries: JournalEntry[]): string {
 }
 
 export function entryTags(entry: JournalEntry): string[] {
-  return (entry.metadata.tag ?? "")
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  return entry.metadata.tag ?? [];
 }
 
 export function tagCounts(entries: JournalEntry[]): { tag: string; count: number }[] {
@@ -67,24 +65,16 @@ export function readableTitle(entry: JournalEntry): string {
 }
 
 export function entryText(entry: JournalEntry): string {
-  const tags = entryTags(entry);
-  const tagLine = tags.map((tag) => "#" + tag).join(" ");
-  const lines = tags.length ? [`## ${entryTitle(entry)}`, tagLine, entry.body] : [`## ${entryTitle(entry)}`, entry.body];
-  return lines.join("\n\n");
+  return [`## ${entryTitle(entry)}`, entry.body].join("\n\n");
 }
 
-export function entryFrom({ entry, text }: { entry: JournalEntry; text: string }): JournalEntry {
+export function entryFrom({ entry, text, tags }: { entry: JournalEntry; text: string; tags: string[] }): JournalEntry {
   const lines = text.split("\n");
-  const tags: string[] = [];
   let index = 0;
   const titled = (lines[index] ?? "").startsWith("## ");
   const heading = titled ? (lines[index] ?? "").slice(3).trim() : "";
   if (titled) index += 1;
   while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
-  while (isTagLine(lines[index] ?? "")) {
-    for (const word of (lines[index] ?? "").trim().split(/\s+/)) tags.push(word.slice(1).toLowerCase());
-    index += 1;
-  }
   const body = lines.slice(index).join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
   const displayTitle = titled ? (heading === entry.sectionTitle ? "" : heading) : (entry.metadata.displayTitle ?? "");
   return {
@@ -92,13 +82,16 @@ export function entryFrom({ entry, text }: { entry: JournalEntry; text: string }
     body,
     metadata: {
       ...(displayTitle ? { displayTitle } : {}),
-      ...(tags.length ? { tag: tags.join(", ") } : {}),
+      ...(tags.length ? { tag: tags } : {}),
       ...(entry.metadata.author ? { author: entry.metadata.author } : {}),
     },
   };
 }
 
-function isTagLine(line: string): boolean {
-  const words = line.trim().split(/\s+/).filter(Boolean);
-  return words.length > 0 && words.every((word) => /^#\S+$/.test(word));
+export function tagsFrom(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
+

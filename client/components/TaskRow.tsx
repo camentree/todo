@@ -67,8 +67,10 @@ export function TaskRow({
   select,
   onHold,
   focused,
+  saved,
   onTick,
   onTitle,
+  onTitleSubtask,
   todaySwipe,
   onDelete,
   onDeleteSubtask,
@@ -83,8 +85,10 @@ export function TaskRow({
   select: Select | null;
   onHold: ((id: string) => void) | null;
   focused: string | null;
+  saved: string | null;
   onTick: () => void;
   onTitle: () => void;
+  onTitleSubtask: ((index: number) => void) | null;
   todaySwipe: Swipe | null;
   onDelete: (() => void) | null;
   onDeleteSubtask: ((index: number) => void) | null;
@@ -133,7 +137,7 @@ export function TaskRow({
   return (
     <div className={done ? "task done" : skipped ? "task skipped" : "task"}>
       <Swipeable right={select ? null : todaySwipe} left={select || !onDelete ? null : { word: "delete", onSwipe: onDelete }}>
-        <div className={focused === task.id ? "row focused" : "row"} data-focus={task.id} onClick={onRow} {...press}>
+        <div className={"row" + (focused === task.id ? " focused" : "") + (saved === task.id ? " saved" : "")} data-focus={task.id} onClick={onRow} {...press}>
           <div className="main">
             {select ? (
               <>
@@ -206,8 +210,10 @@ export function TaskRow({
                       select={select}
                       onHold={onHold}
                       focused={focused}
+                      saved={saved}
                       onTick={() => (fixedOpen ? null : store.putTask(subtaskToggled({ task, index, now })))}
-                      onTitle={onTitle}
+                      onTitle={onTitleSubtask ? () => onTitleSubtask(index) : onTitle}
+                      onTitleSubtask={null}
                       todaySwipe={null}
                       onDelete={onDeleteSubtask ? () => onDeleteSubtask(index) : null}
                       onDeleteSubtask={null}
