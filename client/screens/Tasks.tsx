@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
@@ -34,11 +34,6 @@ import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
 import type { ShortcutAction } from "../interaction/shortcuts.tsx";
 import { Runner } from "./Runner.tsx";
 
-interface Draft {
-  text: string;
-  editing: Task | null;
-}
-
 interface Asking {
   question: string;
   choices: Choice[];
@@ -62,8 +57,14 @@ const savedDuration = 3000;
 const scrollEdge = 120;
 const scrollStep = 10;
 
-const sheetSlides = () => window.matchMedia("(min-width: 700px)").matches;
+const sheetQuery = window.matchMedia("(min-width: 700px) and (hover: hover)");
 
+function useSheet(): boolean {
+  return useSyncExternalStore((listener) => {
+    sheetQuery.addEventListener("change", listener);
+    return () => sheetQuery.removeEventListener("change", listener);
+  }, () => sheetQuery.matches);
+}
 
 function grammarHighlighting({ today, subtasks }: { today: string; subtasks: boolean }): Extension {
   const marks = (view: EditorView): DecorationSet =>
@@ -85,22 +86,23 @@ function grammarHighlighting({ today, subtasks }: { today: string; subtasks: boo
   );
 }
 
-function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Draft; onChange: (draft: Draft) => void; onCommit: (task: Task) => void; onClose: () => void; onDelete: () => void }) {
+function Composer({ task, sheet, onCommit, onClose, onDelete }: { task: Task | null; sheet: boolean; onCommit: (task: Task) => void; onClose: () => void; onDelete: () => void }) {
   const store = useStore();
   const host = useRef<HTMLDivElement>(null);
   const field = useRef<EditorView | null>(null);
-  const opened = useRef(draft.text);
+  const schedule = task?.scheduleId ? (store.schedules.find((each) => each.id === task.scheduleId) ?? null) : null;
+  const [text, setText] = useState(() => (task === null ? "" : serializeTask({ task, every: schedule ? everyToken(schedule) : null, today: store.today })));
+  const opened = useRef(text);
   const [leaving, setLeaving] = useState(false);
   const [closing, setClosing] = useState(false);
-  const close = () => (sheetSlides() ? setClosing(true) : onClose());
-  const subtasks = !draft.editing || draft.editing.parentId === null;
-  const parsed = parseTask({ text: draft.text, today: store.today, subtasks });
-  const schedule = draft.editing?.scheduleId ? (store.schedules.find((each) => each.id === draft.editing?.scheduleId) ?? null) : null;
+  const close = () => (sheet ? setClosing(true) : onClose());
+  const subtasks = task === null || task.parentId === null;
+  const parsed = parseTask({ text, today: store.today, subtasks });
 
   const commit = () => {
     if (!parsed) return;
     const now = nowStamp();
-    const existing = draft.editing;
+    const existing = task;
     if (parsed.every) {
       const nextSchedule = scheduleFromParsed({ parsed, existing: schedule, id: schedule?.id ?? identifier(), today: store.today, now });
       if (existing) {
@@ -115,10 +117,8 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     close();
   };
 
-  const onText = (text: string) => onChange({ ...draft, text });
-
-  const latest = useRef({ commit, onText });
-  latest.current = { commit, onText };
+  const latest = useRef({ commit, setText });
+  latest.current = { commit, setText };
 
   useEffect(() => {
     const element = host.current;
@@ -126,7 +126,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     const view = new EditorView({
       parent: element,
       state: EditorState.create({
-        doc: draft.text,
+        doc: text,
         extensions: [
           keymap.of([
             ...defaultKeymap,
@@ -139,7 +139,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           placeholder("Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s"),
           EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: "enter" }),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) latest.current.onText(update.state.doc.toString());
+            if (update.docChanged) latest.current.setText(update.state.doc.toString());
           }),
         ],
       }),
@@ -157,18 +157,16 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
       event.stopPropagation();
       if (event.key === "Enter") commit();
       else if (leaving) setLeaving(false);
-      else if (parsed && draft.text !== opened.current) setLeaving(true);
+      else if (parsed && text !== opened.current) setLeaving(true);
       else close();
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [draft.text, leaving]);
+  }, [text, leaving]);
 
-  const preview = parsed ? taskFromParsed({ parsed, existing: draft.editing, id: "preview", today: store.today, now: nowStamp(), schedule: null, newId: identifier }) : null;
+  const preview = parsed ? taskFromParsed({ parsed, existing: task, id: "preview", today: store.today, now: nowStamp(), schedule: null, newId: identifier }) : null;
 
-  return (
-    <Overlay>
-      <div className="scrim" onClick={close} />
+  const composer = (
       <div className={closing ? "composer closing" : "composer"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
         <div className="preview">
             {preview && parsed ? (
@@ -199,7 +197,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           <div className="editor" ref={host} />
           <div className="actions">
             <div className="actions-left">
-              {draft.editing && (
+              {task && (
                 <TextButton active={false} warn onSelect={onDelete}>
                   delete
                 </TextButton>
@@ -210,12 +208,20 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
                 cancel
               </TextButton>
               <TextButton active={parsed !== null} onSelect={commit}>
-                {draft.editing ? "save" : "add"}
+                {task ? "save" : "add"}
               </TextButton>
             </div>
           </div>
         </div>
       </div>
+  );
+
+  return (
+    <>
+      <Overlay>
+        {sheet && <div className="scrim" onClick={close} />}
+        {composer}
+      </Overlay>
       {leaving && (
         <Confirm
           question="save this task?"
@@ -226,14 +232,14 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
           onCancel={() => setLeaving(false)}
         />
       )}
-    </Overlay>
+    </>
   );
 }
 
 export function Tasks() {
   const store = useStore();
   const { route, go, close } = useRoute();
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const sheet = useSheet();
   const [asking, setAsking] = useState<Asking | null>(null);
   const [helping, setHelping] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
@@ -285,15 +291,13 @@ export function Tasks() {
 
   const scheduleOf = (task: Task): Schedule | null => (task.scheduleId ? (store.schedules.find((each) => each.id === task.scheduleId) ?? null) : null);
 
-  const edit = (task: Task) => {
-    const schedule = scheduleOf(task);
-    setDraft({ text: serializeTask({ task, every: schedule ? everyToken(schedule) : null, today: store.today }), editing: task });
-  };
+  const edit = (task: Task) => go({ tab: "tasks", id: task.id, edit: true });
+
+  const add = () => go({ tab: "tasks", id: null, edit: true });
 
   const editSubtask = ({ host, index }: { host: Task; index: number }) => {
     const subtask = host.subtasks[index];
-    if (!subtask) return;
-    setDraft({ text: serializeTask({ task: subtask, every: null, today: store.today }), editing: subtask });
+    if (subtask) go({ tab: "tasks", id: subtask.id, edit: true });
   };
 
   const hostOf = (subtask: Task): { host: Task; index: number } | null => {
@@ -306,7 +310,7 @@ export function Tasks() {
     const schedule = scheduleOf(task);
     const finish = () => {
       setAsking(null);
-      setDraft(null);
+      if (route.edit) close();
     };
     if (schedule) {
       setAsking({
@@ -321,7 +325,7 @@ export function Tasks() {
     }
   };
 
-  const askDeleteDraft = (editing: Task) => {
+  const askDeleteEditing = (editing: Task) => {
     const parent = hostOf(editing);
     return parent ? askDeleteSubtask({ task: parent.host, index: parent.index }) : askDelete(editing);
   };
@@ -330,7 +334,7 @@ export function Tasks() {
     setAsking({ question: "delete this comment?", choices: [{ label: "delete", onChoose: () => { store.deleteComment(comment.id); setAsking(null); } }] });
 
   const askDeleteSubtask = ({ task, index }: { task: Task; index: number }) =>
-    setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); setDraft(null); } }] });
+    setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); if (route.edit) close(); } }] });
 
   const sendToBacklog = (task: Task): Swipe => {
     if (task.scheduleId) return { word: isSkipped(task) ? "unskip" : "skip", onSwipe: () => store.putTask(skipToggled(task)) };
@@ -391,13 +395,16 @@ export function Tasks() {
   };
 
   const currentRun = (): string[] | null => {
-    if (route.id === null) return null;
+    if (route.edit || route.id === null) return null;
     const run = route.run ?? [];
     const chosen = (run.includes(route.id) ? run : [route.id]).filter((id) => store.tasks.some((task) => task.id === id));
     return chosen.length === 0 ? null : chosen;
   };
 
   const running = currentRun();
+  const editingTask =
+    route.id === null ? null : (store.tasks.find((task) => task.id === route.id) ?? store.tasks.flatMap((task) => task.subtasks).find((subtask) => subtask.id === route.id) ?? null);
+  const editing = route.edit === true && (route.id === null || editingTask !== null);
 
   const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] =>
     container === "backlog" ? backlog : (todayGroups.find((each) => each.group === group)?.tasks ?? []);
@@ -592,14 +599,13 @@ export function Tasks() {
     const target = focused && !focused.startsWith("group:") ? rowAt(focused) : null;
     if (action === "help") return setHelping(true);
     if (action === "switch") return setList(list === "today" ? "backlog" : "today");
-    if (action === "add") return setDraft({ text: "", editing: null });
+    if (action === "add") return add();
     if (action === "down") return moveFocus(1);
     if (action === "up") return moveFocus(-1);
     if (action === "close") {
       if (asking) return setAsking(null);
       if (helping) return setHelping(false);
-      if (draft) return setDraft(null);
-      if (running) return close();
+      if (editing || running) return close();
       if (selection) return setSelection(null);
       if (target && showing({ folds, task: target.host }).open) return closeTask({ folds, task: target.host });
       setFocused(null);
@@ -680,7 +686,7 @@ export function Tasks() {
         </div>
       ) : (
         <div className="floating">
-          <RoundButton label="add" onSelect={() => setDraft({ text: "", editing: null })}>
+          <RoundButton label="add" onSelect={add}>
             <PlusGlyph />
           </RoundButton>
         </div>
@@ -694,7 +700,7 @@ export function Tasks() {
           }}
         />
       )}
-      {draft && <Composer draft={draft} onChange={setDraft} onCommit={reveal} onClose={() => setDraft(null)} onDelete={() => draft.editing && askDeleteDraft(draft.editing)} />}
+      {editing && <Composer key={route.id ?? "new"} task={editingTask} sheet={sheet} onCommit={reveal} onClose={close} onDelete={() => editingTask && askDeleteEditing(editingTask)} />}
       {asking && <Confirm question={asking.question} choices={asking.choices} onCancel={() => setAsking(null)} />}
       {helping && <ShortcutsSheet onClose={() => setHelping(false)} />}
     </>

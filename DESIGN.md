@@ -11,15 +11,23 @@ Structure page is earlier thinking, right on behaviour, wrong on skin).
 ## Screens
 
 Three tabs in the top bar, Tasks, Journal, Notebook, plus a floating `+` that
-follows the tab. The date line under the tab words stays on every tab. Runner,
-composer and entry editor are full-screen overlays. Comments are not: they are
-written in place, under the thread.
+follows the tab. The date line under the tab words stays on every tab. Runner
+and entry editor are full-screen overlays. The composer is one too on a phone,
+covering the top bar and showing the preview and then the text field and
+nothing else: no close button, the field held at the bottom so it sits right
+above the keyboard, and the preview taking whatever is left. Where there is a
+mouse and room it is a sheet sliding over the list instead. Comments are
+neither: they are written in place, under the thread.
 
 **Routes**: the address bar says which tab is up — `/tasks`, `/journals`,
 `/notebooks`, with `/` landing on `/tasks`. A tap on a tab word pushes history,
 so back and forward walk the tabs. `/tasks/{task id}` runs that one task over
-the Tasks screen, and `/journals/{at}` and `/notebooks/{at}` open that entry's
-editor over its list; the id is the entry's `at`, url-encoded. Opening the
+the Tasks screen, `/tasks/{task id}?edit` opens that task in the composer and
+`/tasks?edit` opens an empty one, and `/journals/{at}` and `/notebooks/{at}`
+open that entry's editor over its list; the id is the entry's `at`,
+url-encoded. Running and editing are the same slot, so `?run` and `?edit`
+never appear together: an address carrying both keeps the run and drops the
+edit. Opening the
 runner or an entry from the app writes the same address, so the × and the
 browser's back both close the overlay and leave the list where it was, and an
 address nobody recognises simply shows the list. Deep links load: the built
