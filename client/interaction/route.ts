@@ -6,6 +6,7 @@ export interface Route {
   tab: Tab;
   id: string | null;
   run?: string[];
+  edit?: boolean;
 }
 
 const segments: Record<Tab, string> = { tasks: "tasks", journal: "journals", notebook: "notebooks" };
@@ -14,12 +15,14 @@ const listeners = new Set<() => void>();
 
 function routeOf({ pathname, search }: { pathname: string; search: string }): Route {
   const [segment = "", id = ""] = pathname.split("/").filter(Boolean);
-  const run = new URLSearchParams(search).get("run");
-  return { tab: tabs.find((tab) => segments[tab] === segment) ?? "tasks", id: id === "" ? null : decodeURIComponent(id), run: run ? run.split(",") : [] };
+  const query = new URLSearchParams(search);
+  const run = query.get("run");
+  return { tab: tabs.find((tab) => segments[tab] === segment) ?? "tasks", id: id === "" ? null : decodeURIComponent(id), run: run ? run.split(",") : [], edit: run === null && query.has("edit") };
 }
 
-function pathOf({ tab, id, run = [] }: Route): string {
-  return "/" + segments[tab] + (id === null ? "" : "/" + encodeURIComponent(id)) + (run.length === 0 ? "" : "?run=" + run.join(","));
+function pathOf({ tab, id, run = [], edit = false }: Route): string {
+  const query = run.length > 0 ? "?run=" + run.join(",") : edit ? "?edit" : "";
+  return "/" + segments[tab] + (id === null ? "" : "/" + encodeURIComponent(id)) + query;
 }
 
 let current = routeOf(window.location);
