@@ -29,7 +29,7 @@
   --accent: #356b52;
   --hairline: #dfe5e2;
   --chip-bg: #356b5224;
-  --saved: #356b5255;
+  --saved: #356b523d;
   --tag: #68726f;
   --scrim: rgba(27, 33, 32, 0.16);
   --warn: #b46a5f;
@@ -80,7 +80,7 @@
     --accent: #7fb996;
     --hairline: #2c2a2e;
     --chip-bg: #7fb99629;
-    --saved: #7fb99666;
+    --saved: #7fb9963d;
     --tag: #857f7a;
     --scrim: rgba(0, 0, 0, 0.5);
     --warn: #c9736c;
