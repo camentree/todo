@@ -174,6 +174,10 @@ describe("serializeTask", () => {
     expect(parseTask({ text, today })?.note).toBe("Keep hips level.\n\nStop if it pinches.");
   });
 
+  it("leaves the group off a subtask, which only ever carries its host's", () => {
+    expect(serializeTask({ task: subtaskRow({ id: "s2", title: "cat cow", type: "count", target: 10, numericalValue: 4 }), every: null, today })).toBe("cat cow #count 10 = 4");
+  });
+
   it("writes a schedule instance without a date and a plain done one-off with its state", () => {
     expect(serializeTask({ task: { ...task, subtasks: [], note: "", dueTime: null, finalizedAt: "2026-09-15T08:00:00", scheduleId: "s" }, every: "1d", today })).toBe("Morning stretch /exercise #every 1d #rest 30s = done");
     expect(serializeTask({ task: { ...task, subtasks: [], note: "", dueTime: null, dueDate: "2026-09-16", type: "count", target: 8, numericalValue: 3, restSeconds: null }, every: null, today })).toBe("Morning stretch /exercise #count 8 tomorrow = 3");

@@ -327,7 +327,7 @@ function noteLines(note: string): string {
 }
 
 export function serializeTask({ task, every, today }: { task: Task; every: string | null; today: string }): string {
-  let text = task.group ? task.title + " /" + task.group : task.title;
+  let text = task.group && task.parentId === null ? task.title + " /" + task.group : task.title;
   if (every) text += " #every " + every;
   if (task.subtasks.length === 0) text += typeTokens(task);
   if (task.restSeconds) text += " #rest " + durationToken(task.restSeconds);

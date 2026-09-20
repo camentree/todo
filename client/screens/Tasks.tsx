@@ -173,7 +173,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
             {preview && parsed ? (
               <TaskRow
                 task={preview}
-                chips={[preview.group, parsed.restSeconds ? "rest " + formatDuration(parsed.restSeconds) : ""].filter(Boolean)}
+                chips={[preview.parentId === null ? preview.group : "", parsed.restSeconds ? "rest " + formatDuration(parsed.restSeconds) : ""].filter(Boolean)}
                 every={parsed.every}
                 select={null}
                 onHold={null}
@@ -347,7 +347,8 @@ export function Tasks() {
 
   const reveal = (task: Task) => {
     const parent = hostOf(task);
-    const shown = parent ? { ...parent.host, subtasks: parent.host.subtasks.map((each) => (each.id === task.id ? task : each)) } : task;
+    const saved = parent ? { ...task, group: parent.host.group } : task;
+    const shown = parent ? { ...parent.host, subtasks: parent.host.subtasks.map((each) => (each.id === saved.id ? saved : each)) } : saved;
     store.putTask(shown);
     setList(shown.dueDate !== null && shown.dueDate <= store.today ? "today" : "backlog");
     folds.set({ key: "today:" + shown.group, open: true });
