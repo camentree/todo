@@ -537,6 +537,11 @@ textarea {
     var(--ground) calc(env(safe-area-inset-top) + 1.2rem),
     var(--scrim) calc(env(safe-area-inset-top) + 6.2rem)
   );
+  transition: opacity 0.45s ease;
+}
+
+.overlay:has(.composer.closing) .scrim {
+  opacity: 0;
 }
 
 .overlay:has(.composer) {
@@ -555,13 +560,29 @@ textarea {
   display: flex;
   flex-direction: column;
   height: 100%;
+  transition: opacity 0.25s ease;
+}
+
+@starting-style {
+  .composer {
+    opacity: 0;
+  }
+}
+
+.composer.closing {
+  opacity: 0;
+}
+
+.composer .screen-head {
+  padding-inline: var(--gutter);
+  justify-content: flex-end;
 }
 
 .preview {
   --title: var(--body);
   --tick: 1.25rem;
   --row-padding: 0.2rem 0.25rem;
-  padding: calc(env(safe-area-inset-top) + 1.4rem) var(--gutter) 0.5rem;
+  padding: 0.6rem var(--gutter) 0.5rem;
   overflow-y: auto;
   scrollbar-width: none;
   flex: 1 1 0;
@@ -1464,34 +1485,34 @@ textarea {
     padding-left: calc(var(--indent) / 2 + 0.9rem);
   }
 
-  .composer {
-    height: calc(100% - var(--top));
-    border-radius: 1rem 1rem 0 0;
-    transition: transform 0.45s ease;
-  }
-
-  @starting-style {
-    .composer {
-      transform: translateY(100%);
-    }
-  }
-
-  .composer.closing {
-    transform: translateY(100%);
-  }
-
-  .scrim {
-    transition: opacity 0.45s ease;
-  }
-
   @starting-style {
     .scrim {
       opacity: 0;
     }
   }
 
-  .overlay:has(.composer.closing) .scrim {
-    opacity: 0;
+  @media (hover: hover) {
+    .composer {
+      height: calc(100% - var(--top));
+      border-radius: 1rem 1rem 0 0;
+      transition: transform 0.45s ease;
+    }
+
+    .composer .screen-head {
+      padding-top: 0.6rem;
+    }
+
+    @starting-style {
+      .composer {
+        opacity: 1;
+        transform: translateY(100%);
+      }
+    }
+
+    .composer.closing {
+      opacity: 1;
+      transform: translateY(100%);
+    }
   }
 
   .preview + .composer-field .cm-scroller {

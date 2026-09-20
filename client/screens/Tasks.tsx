@@ -61,9 +61,6 @@ const unfoldDelay = 480;
 const scrollEdge = 120;
 const scrollStep = 10;
 
-const sheetSlides = () => window.matchMedia("(min-width: 700px)").matches;
-
-
 function grammarHighlighting(today: string): Extension {
   const marks = (view: EditorView): DecorationSet =>
     Decoration.set(
@@ -91,7 +88,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
   const opened = useRef(draft.text);
   const [leaving, setLeaving] = useState(false);
   const [closing, setClosing] = useState(false);
-  const close = () => (sheetSlides() ? setClosing(true) : onClose());
+  const close = () => setClosing(true);
   const parsed = parseTask({ text: draft.text, today: store.today });
   const schedule = draft.editing?.scheduleId ? (store.schedules.find((each) => each.id === draft.editing?.scheduleId) ?? null) : null;
 
@@ -168,6 +165,11 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
     <Overlay>
       <div className="scrim" onClick={close} />
       <div className={closing ? "composer closing" : "composer"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
+        <div className="screen-head">
+          <RoundButton label="close" onSelect={close}>
+            <CrossGlyph />
+          </RoundButton>
+        </div>
         <div className="preview">
             {preview && parsed ? (
               <TaskRow
