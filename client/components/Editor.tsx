@@ -7,8 +7,12 @@ import type { Range } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, drawSelection, keymap } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import type { SyntaxNode } from "@lezer/common";
+import { Autolink } from "@lezer/markdown";
 
-const markerNodes = new Set(["EmphasisMark", "CodeMark", "QuoteMark"]);
+const markerNodes = new Set(["EmphasisMark", "CodeMark", "QuoteMark", "LinkMark"]);
+const spaceSwallowingMarkers = new Set(["QuoteMark"]);
+const linkNodes = new Set(["Link", "Autolink", "URL"]);
 const toneByNode: Record<string, string> = {
   StrongEmphasis: "cm-strong",
   Emphasis: "cm-em",
@@ -19,6 +23,9 @@ const toneByNode: Record<string, string> = {
   Blockquote: "cm-quote",
   ListMark: "cm-bullet",
   HeaderMark: "cm-marker",
+  Link: "cm-link",
+  Autolink: "cm-link",
+  URL: "cm-link",
 };
 
 function decorate(view: EditorView): DecorationSet {
@@ -38,12 +45,13 @@ function decorate(view: EditorView): DecorationSet {
             if (line.number === doc.lines) break;
           }
         }
-        if (!markerNodes.has(node.name)) return;
+        const insideLink = node.name === "URL" && node.node.parent?.name === "Link";
+        if (!markerNodes.has(node.name) && !insideLink) return;
         if (doc.lineAt(node.from).number === caretLine) {
           ranges.push(Decoration.mark({ class: "cm-marker" }).range(node.from, node.to));
           return;
         }
-        const trailingSpace = doc.sliceString(node.to, node.to + 1) === " " && node.name !== "EmphasisMark" && node.name !== "CodeMark";
+        const trailingSpace = doc.sliceString(node.to, node.to + 1) === " " && spaceSwallowingMarkers.has(node.name);
         ranges.push(Decoration.replace({}).range(node.from, trailingSpace ? node.to + 1 : node.to));
       },
     });
@@ -64,6 +72,30 @@ const livePreview = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations },
 );
 
+function enclosingLink(node: SyntaxNode | null): SyntaxNode | null {
+  for (let found = node; found; found = found.parent) if (linkNodes.has(found.name)) return found;
+  return null;
+}
+
+function addressOf({ view, node }: { view: EditorView; node: SyntaxNode }): string {
+  const url = node.name === "URL" ? node : (node.getChild("URL") ?? node);
+  const written = view.state.doc.sliceString(url.from, url.to);
+  if (/^[a-z][a-z0-9+.-]*:/i.test(written)) return written;
+  return written.includes("@") ? `mailto:${written}` : `https://${written}`;
+}
+
+function openLink({ view, event }: { view: EditorView; event: MouseEvent }): boolean {
+  if (!(event.target as HTMLElement).closest(".cm-link")) return false;
+  const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
+  if (position === null) return false;
+  const { doc, selection } = view.state;
+  if (view.hasFocus && doc.lineAt(position).number === doc.lineAt(selection.main.head).number) return false;
+  const link = enclosingLink(syntaxTree(view.state).resolveInner(position, 1));
+  if (!link) return false;
+  window.open(addressOf({ view, node: link }), "_blank", "noopener");
+  return true;
+}
+
 export function Editor({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const host = useRef<HTMLDivElement>(null);
   const latestChange = useRef(onChange);
@@ -76,12 +108,13 @@ export function Editor({ value, onChange }: { value: string; onChange: (value: s
       state: EditorState.create({
         doc: value,
         extensions: [
-          markdown(),
+          markdown({ extensions: Autolink }),
           history(),
           drawSelection(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           livePreview,
+          EditorView.domEventHandlers({ mousedown: (event, view) => openLink({ view, event }) }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) latestChange.current(update.state.doc.toString());
           }),

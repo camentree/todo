@@ -926,6 +926,12 @@ textarea {
   color: var(--faint);
 }
 
+.editor .cm-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .editor .cm-attribute {
   color: var(--accent);
 }
@@ -1344,6 +1350,10 @@ textarea {
 .entry-body code {
   font-family: var(--mono);
   font-size: 0.9em;
+}
+
+.entry-body .link {
+  color: var(--accent);
 }
 
 .lifting {
