@@ -2,12 +2,12 @@ import { entryFrom, entryTags, entryText, entryTitle, parseMarkdown, readableTit
 import type { JournalEntry } from "@shared/model.ts";
 
 const entries: JournalEntry[] = [
-  { sectionTitle: "2026-09-13T08:15:00", at: "2026-09-13T08:15:00", body: "Quiet morning.\n\nCoffee on the step.", metadata: { tag: "personal" } },
+  { sectionTitle: "2026-09-13T08:15:00", at: "2026-09-13T08:15:00", body: "Quiet morning.\n\nCoffee on the step.", metadata: { tag: ["personal"] } },
   {
     sectionTitle: "2026-09-14T21:40:00",
     at: "2026-09-14T21:40:00",
     body: "Talked about the thing.\n\n### homework\n\n- one\n- two",
-    metadata: { displayTitle: "after the session", tag: "therapy, personal" },
+    metadata: { displayTitle: "after the session", tag: ["therapy", "personal"] },
   },
 ];
 
@@ -82,7 +82,7 @@ describe("editor text", () => {
     expect(entryFrom({ entry: entries[0]!, text: "## blue v4\n\n#climbing\n\nHeel hook first.\n" })).toEqual({
       ...entries[0]!,
       body: "Heel hook first.",
-      metadata: { displayTitle: "blue v4", tag: "climbing" },
+      metadata: { displayTitle: "blue v4", tag: ["climbing"] },
     });
   });
 

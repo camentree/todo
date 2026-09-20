@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { isDue } from "../shared/schedule.ts";
-import { serializeMarkdown } from "../shared/journal.ts";
+import { serializeMarkdown, tagsFrom } from "../shared/journal.ts";
 import { isNumericType } from "../shared/model.ts";
 import type { Comment, JournalEntry, Schedule, SubtaskSpec, Task } from "../shared/model.ts";
 
@@ -254,7 +254,8 @@ const comments: Comment[] = [
 ];
 
 function entry({ at, title, tag, body }: { at: string; title?: string; tag: string; body: string }): JournalEntry {
-  return { sectionTitle: at, at, body, metadata: title ? { displayTitle: title, tag } : { tag } };
+  const tags = tagsFrom(tag);
+  return { sectionTitle: at, at, body, metadata: title ? { displayTitle: title, tag: tags } : { tag: tags } };
 }
 
 const journal: JournalEntry[] = [

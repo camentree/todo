@@ -21,13 +21,14 @@ export function parseMarkdown(markdown: string): JournalEntry[] {
     }
     while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
     const at = fields.at ?? heading;
+    const tags = tagsFrom(fields.tag);
     return {
       sectionTitle: at,
       at,
       body: lines.slice(index).join("\n"),
       metadata: {
         ...(timestampShape.test(heading) ? {} : { displayTitle: heading }),
-        ...(fields.tag ? { tag: fields.tag } : {}),
+        ...(tags.length ? { tag: tags } : {}),
         ...(fields.author ? { author: fields.author } : {}),
       },
     };
@@ -37,7 +38,7 @@ export function parseMarkdown(markdown: string): JournalEntry[] {
 export function serializeMarkdown(entries: JournalEntry[]): string {
   return entries
     .map((entry) => {
-      const metadata = [`at: ${entry.at}`, entry.metadata.tag ? `tag: ${entry.metadata.tag}` : "", entry.metadata.author ? `author: ${entry.metadata.author}` : ""]
+      const metadata = [`at: ${entry.at}`, entry.metadata.tag?.length ? `tag: ${entry.metadata.tag.join(", ")}` : "", entry.metadata.author ? `author: ${entry.metadata.author}` : ""]
         .filter(Boolean)
         .join("\n");
       return `## ${entryTitle(entry)}\n\n${metadata}\n\n${entry.body}\n`;
@@ -46,10 +47,7 @@ export function serializeMarkdown(entries: JournalEntry[]): string {
 }
 
 export function entryTags(entry: JournalEntry): string[] {
-  return (entry.metadata.tag ?? "")
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  return entry.metadata.tag ?? [];
 }
 
 export function tagCounts(entries: JournalEntry[]): { tag: string; count: number }[] {
@@ -92,10 +90,17 @@ export function entryFrom({ entry, text }: { entry: JournalEntry; text: string }
     body,
     metadata: {
       ...(displayTitle ? { displayTitle } : {}),
-      ...(tags.length ? { tag: tags.join(", ") } : {}),
+      ...(tags.length ? { tag: tags } : {}),
       ...(entry.metadata.author ? { author: entry.metadata.author } : {}),
     },
   };
+}
+
+export function tagsFrom(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function isTagLine(line: string): boolean {

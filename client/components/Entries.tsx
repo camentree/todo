@@ -20,7 +20,7 @@ const headings: Record<JournalName, string> = { journal: "Journal", notebook: "N
 
 export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
   const at = nowStamp();
-  return { sectionTitle: at, at, body: "", metadata: tag ? { tag } : {} };
+  return { sectionTitle: at, at, body: "", metadata: tag ? { tag: [tag] } : {} };
 }
 
 function Filters({ counts, active, total, onSelect }: { counts: { tag: string; count: number }[]; active: string | null; total: number; onSelect: (tag: string | null) => void }) {
