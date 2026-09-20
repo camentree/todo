@@ -58,6 +58,7 @@ interface Drag {
 
 const nestDistance = 40;
 const unfoldDelay = 480;
+const highlightDuration = 2000;
 const scrollEdge = 120;
 const scrollStep = 10;
 
@@ -179,6 +180,7 @@ function Composer({ draft, onChange, onCommit, onClose, onDelete }: { draft: Dra
                 focused={null}
                 onTick={() => null}
                 onTitle={() => null}
+                onTitleSubtask={null}
                 todaySwipe={null}
                 onDelete={null}
                 onDeleteSubtask={null}
@@ -234,6 +236,7 @@ export function Tasks() {
   const [helping, setHelping] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
+  const highlighting = useRef<number | null>(null);
   const pointerWas = useRef({ x: 0, y: 0 });
   if (focused) lastFocused.current = focused;
   const folds = useFolds();
@@ -284,6 +287,18 @@ export function Tasks() {
     setDraft({ text: serializeTask({ task, every: schedule ? everyToken(schedule) : null, today: store.today }), editing: task });
   };
 
+  const editSubtask = ({ host, index }: { host: Task; index: number }) => {
+    const subtask = host.subtasks[index];
+    if (!subtask) return;
+    setDraft({ text: serializeTask({ task: subtask, every: null, today: store.today }), editing: subtask });
+  };
+
+  const hostOf = (subtask: Task): { host: Task; index: number } | null => {
+    const host = subtask.parentId ? (store.tasks.find((each) => each.id === subtask.parentId) ?? null) : null;
+    const index = host ? host.subtasks.findIndex((each) => each.id === subtask.id) : -1;
+    return host && index !== -1 ? { host, index } : null;
+  };
+
   const askDelete = (task: Task) => {
     const schedule = scheduleOf(task);
     const finish = () => {
@@ -303,11 +318,16 @@ export function Tasks() {
     }
   };
 
+  const askDeleteDraft = (editing: Task) => {
+    const parent = hostOf(editing);
+    return parent ? askDeleteSubtask({ task: parent.host, index: parent.index }) : askDelete(editing);
+  };
+
   const askDeleteComment = (comment: Comment) =>
     setAsking({ question: "delete this comment?", choices: [{ label: "delete", onChoose: () => { store.deleteComment(comment.id); setAsking(null); } }] });
 
   const askDeleteSubtask = ({ task, index }: { task: Task; index: number }) =>
-    setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); } }] });
+    setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); setDraft(null); } }] });
 
   const sendToBacklog = (task: Task): Swipe => {
     if (task.scheduleId) return { word: isSkipped(task) ? "unskip" : "skip", onSwipe: () => store.putTask(skipToggled(task)) };
@@ -319,12 +339,21 @@ export function Tasks() {
   const addComment = ({ task, body }: { task: Task; body: string }) =>
     store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() });
 
+  const highlight = (id: string) => {
+    if (highlighting.current !== null) window.clearTimeout(highlighting.current);
+    setFocused(id);
+    highlighting.current = window.setTimeout(() => setFocused((current) => (current === id ? null : current)), highlightDuration);
+  };
+
   const reveal = (task: Task) => {
-    store.putTask(task);
-    setList(task.dueDate !== null && task.dueDate <= store.today ? "today" : "backlog");
-    folds.set({ key: "today:" + task.group, open: true });
-    folds.set({ key: subtasksKey(task.id), open: true });
-    setLanded(task.id);
+    const parent = hostOf(task);
+    const shown = parent ? { ...parent.host, subtasks: parent.host.subtasks.map((each) => (each.id === task.id ? task : each)) } : task;
+    store.putTask(shown);
+    setList(shown.dueDate !== null && shown.dueDate <= store.today ? "today" : "backlog");
+    folds.set({ key: "today:" + shown.group, open: true });
+    folds.set({ key: subtasksKey(shown.id), open: true });
+    setLanded(shown.id);
+    highlight(parent ? shown.id + ":" + parent.index : shown.id);
   };
 
   const todayGroups = grouped(onToday);
@@ -526,6 +555,7 @@ export function Tasks() {
           focused={focused}
           onTick={onTick}
           onTitle={() => edit(task)}
+          onTitleSubtask={(index) => editSubtask({ host: task, index })}
           todaySwipe={todaySwipe}
           onDelete={() => (task.scheduleId ? askDelete(task) : store.deleteTask(task.id))}
           onDeleteSubtask={(index) => store.putTask(withoutSubtask({ host: task, index }))}
@@ -584,7 +614,7 @@ export function Tasks() {
     if (action === "fold") return toggleSubtasks({ folds, task: host });
     if (action === "select") return selection ? toggleSelected([focused]) : setSelection(new Set([focused]));
     if (action === "complete") return index === null ? tick(host) : store.putTask(subtaskToggled({ task: host, index, now: nowStamp() }));
-    if (action === "edit") return edit(host);
+    if (action === "edit") return index === null ? edit(host) : editSubtask({ host, index });
     if (action === "delete") return index === null ? askDelete(host) : askDeleteSubtask({ task: host, index });
     if (action === "today") {
       if (host.scheduleId) return store.putTask(skipToggled(host));
@@ -659,7 +689,7 @@ export function Tasks() {
           }}
         />
       )}
-      {draft && <Composer draft={draft} onChange={setDraft} onCommit={reveal} onClose={() => setDraft(null)} onDelete={() => draft.editing && askDelete(draft.editing)} />}
+      {draft && <Composer draft={draft} onChange={setDraft} onCommit={reveal} onClose={() => setDraft(null)} onDelete={() => draft.editing && askDeleteDraft(draft.editing)} />}
       {asking && <Confirm question={asking.question} choices={asking.choices} onCancel={() => setAsking(null)} />}
       {helping && <ShortcutsSheet onClose={() => setHelping(false)} />}
     </>

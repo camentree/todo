@@ -69,6 +69,7 @@ export function TaskRow({
   focused,
   onTick,
   onTitle,
+  onTitleSubtask,
   todaySwipe,
   onDelete,
   onDeleteSubtask,
@@ -85,6 +86,7 @@ export function TaskRow({
   focused: string | null;
   onTick: () => void;
   onTitle: () => void;
+  onTitleSubtask: ((index: number) => void) | null;
   todaySwipe: Swipe | null;
   onDelete: (() => void) | null;
   onDeleteSubtask: ((index: number) => void) | null;
@@ -207,7 +209,8 @@ export function TaskRow({
                       onHold={onHold}
                       focused={focused}
                       onTick={() => (fixedOpen ? null : store.putTask(subtaskToggled({ task, index, now })))}
-                      onTitle={onTitle}
+                      onTitle={onTitleSubtask ? () => onTitleSubtask(index) : onTitle}
+                      onTitleSubtask={null}
                       todaySwipe={null}
                       onDelete={onDeleteSubtask ? () => onDeleteSubtask(index) : null}
                       onDeleteSubtask={null}

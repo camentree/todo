@@ -676,6 +676,12 @@ textarea {
   background: var(--raised);
 }
 
+@starting-style {
+  .row.focused {
+    background: transparent;
+  }
+}
+
 .group-head.focused {
   background: var(--raised);
 }

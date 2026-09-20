@@ -49,6 +49,12 @@ describe("parseTask", () => {
     expect(parseTask({ text: "/exercise", today })).toBeNull();
   });
 
+  it("keeps the blank lines inside a note and drops the ones framing it", () => {
+    const parsed = parseTask({ text: "Pack\n\n  passport\n\n  and the tickets\n\n- charger\n\n  the short one\n\n", today });
+    expect(parsed?.note).toBe("passport\n\nand the tickets");
+    expect(parsed?.subtasks[0]).toMatchObject({ title: "charger", note: "the short one" });
+  });
+
   it("keeps a word that only looks like a token in the title", () => {
     expect(parseTask({ text: "Read #chapter 3 of the manual", today })?.title).toBe("Read #chapter 3 of the manual");
   });
@@ -157,6 +163,15 @@ describe("serializeTask", () => {
     const parsed = parseTask({ text, today });
     expect(parsed).toMatchObject({ title: "Morning stretch", group: "exercise", restSeconds: 30, date: today, time: "15:00", note: "Keep hips level." });
     expect(parsed?.subtasks.map((subtask) => [subtask.done, subtask.current])).toEqual([[true, null], [null, 4], [null, null]]);
+  });
+
+  it("separates the sections with a blank line and round-trips a note of several paragraphs", () => {
+    expect(serializeTask({ task: { ...task, note: "", dueTime: null, dueDate: null, restSeconds: null }, every: null, today })).toBe(
+      "Morning stretch /exercise\n\n- neck rolls #timer 30s = done\n- cat cow #count 10 = 4\n  breathe out\n- plank #timer 45s",
+    );
+    const text = serializeTask({ task: { ...task, subtasks: [], note: "Keep hips level.\n\nStop if it pinches." }, every: null, today });
+    expect(text).toBe("Morning stretch /exercise #rest 30s today 15:00\n\n  Keep hips level.\n\n  Stop if it pinches.");
+    expect(parseTask({ text, today })?.note).toBe("Keep hips level.\n\nStop if it pinches.");
   });
 
   it("writes a schedule instance without a date and a plain done one-off with its state", () => {

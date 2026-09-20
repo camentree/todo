@@ -259,7 +259,7 @@ function subtaskFrom({ line, notes }: { line: Line; notes: string[] }): ParsedSu
     title: line.words.join(" "),
     type,
     target: type === "count" ? (line.target ?? 1) : type === "timer_seconds" ? (line.target ?? 0) : null,
-    note: notes.join("\n"),
+    note: notes.join("\n").replace(/^\n+|\n+$/g, ""),
     current: null,
     value: null,
     done: null,
@@ -286,7 +286,7 @@ export function parseTask({ text, today }: { text: string; today: string }): Par
     if (line.role === "subtask") {
       current = { line: parseLine({ text: line.text, today, from: line.from }), notes: [] };
       subtaskLines.push(current);
-    } else if (line.role === "note") {
+    } else if (line.role === "note" || line.role === "blank") {
       (current ? current.notes : rootNotes).push(line.text);
     }
   }
@@ -323,7 +323,7 @@ function valueTokens(task: Task): string {
 }
 
 function noteLines(note: string): string {
-  return note ? "\n" + note.split("\n").map((line) => "  " + line).join("\n") : "";
+  return note ? "\n" + note.split("\n").map((line) => (line ? "  " + line : "")).join("\n") : "";
 }
 
 export function serializeTask({ task, every, today }: { task: Task; every: string | null; today: string }): string {
@@ -336,7 +336,7 @@ export function serializeTask({ task, every, today }: { task: Task; every: strin
   if (task.subtasks.length === 0) text += valueTokens(task);
   else if (task.finalizedAt) text += " = done";
   if (task.note) text += "\n" + noteLines(task.note);
-  if (task.note && task.subtasks.length > 0) text += "\n";
+  if (task.subtasks.length > 0) text += "\n";
   for (const subtask of task.subtasks) text += "\n- " + subtask.title + typeTokens(subtask) + valueTokens(subtask) + noteLines(subtask.note);
   return text;
 }
