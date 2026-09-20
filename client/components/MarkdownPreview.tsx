@@ -18,7 +18,6 @@ function rendered({ text, node }: { text: string; node: SyntaxNode }): ReactNode
     if (child.name === "StrongEmphasis") parts.push(<strong key={child.from}>{inside}</strong>);
     else if (child.name === "Emphasis") parts.push(<em key={child.from}>{inside}</em>);
     else if (child.name === "InlineCode") parts.push(<code key={child.from}>{inside}</code>);
-    else if (child.name === "Link" || child.name === "URL") parts.push(<span className="link" key={child.from}>{inside}</span>);
     else parts.push(...inside);
   }
   if (at < node.to) parts.push(text.slice(at, node.to));

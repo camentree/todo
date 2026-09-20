@@ -92,7 +92,9 @@ function openLink({ view, event }: { view: EditorView; event: MouseEvent }): boo
   if (view.hasFocus && doc.lineAt(position).number === doc.lineAt(selection.main.head).number) return false;
   const link = enclosingLink(syntaxTree(view.state).resolveInner(position, 1));
   if (!link) return false;
-  window.open(addressOf({ view, node: link }), "_blank", "noopener");
+  const address = addressOf({ view, node: link });
+  if (address.startsWith("mailto:")) window.location.href = address;
+  else window.open(address, "_blank", "noopener");
   return true;
 }
 

@@ -1352,10 +1352,6 @@ textarea {
   font-size: 0.9em;
 }
 
-.entry-body .link {
-  color: var(--accent);
-}
-
 .lifting {
   opacity: 0.35;
 }

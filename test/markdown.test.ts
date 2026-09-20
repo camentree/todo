@@ -42,12 +42,12 @@ describe("the preview of a body", () => {
   });
 
   it("shows a link by its words and drops the address", () => {
-    expect(shown("read [the docs](https://example.com/x) first")).toBe('<div>read <span class="link">the docs</span> first</div>');
+    expect(shown("read [the docs](https://example.com/x) first")).toBe("<div>read the docs first</div>");
   });
 
-  it("marks a bare address and an angled one as a link", () => {
-    expect(shown("read https://example.com/x first")).toBe('<div>read <span class="link">https://example.com/x</span> first</div>');
-    expect(shown("<https://example.com>")).toBe('<div><span class="link">https://example.com</span></div>');
+  it("keeps a bare address and drops the angle brackets around one", () => {
+    expect(shown("read https://example.com/x first")).toBe("<div>read https://example.com/x first</div>");
+    expect(shown("<https://example.com>")).toBe("<div>https://example.com</div>");
   });
 
   it("drops blank lines and fences so three lines of preview are three lines of writing", () => {
