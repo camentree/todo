@@ -679,18 +679,11 @@ textarea {
 }
 
 .row.saved {
-  animation: saved 3s ease forwards;
+  background: var(--saved);
 }
 
-@keyframes saved {
-  0% {
-    background: transparent;
-  }
-  10%,
-  33% {
-    background: var(--saved);
-  }
-  100% {
+@starting-style {
+  .row.saved {
     background: transparent;
   }
 }
