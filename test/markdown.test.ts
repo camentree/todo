@@ -41,6 +41,15 @@ describe("the preview of a body", () => {
     expect(shown("_soft_ and `parallax_reader`")).toBe("<div><em>soft</em> and <code>parallax_reader</code></div>");
   });
 
+  it("shows a link by its words and drops the address", () => {
+    expect(shown("read [the docs](https://example.com/x) first")).toBe("<div>read the docs first</div>");
+  });
+
+  it("keeps a bare address and drops the angle brackets around one", () => {
+    expect(shown("read https://example.com/x first")).toBe("<div>read https://example.com/x first</div>");
+    expect(shown("<https://example.com>")).toBe("<div>https://example.com</div>");
+  });
+
   it("drops blank lines and fences so three lines of preview are three lines of writing", () => {
     expect(shown("first\n\n```js\nsecond\n```\n\nthird")).toBe("<div>first</div><div>second</div><div>third</div>");
   });
