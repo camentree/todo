@@ -456,6 +456,7 @@ textarea {
   color: var(--ground);
   white-space: nowrap;
   border-radius: 0.75rem;
+  will-change: transform;
 }
 
 .reveal.right {
