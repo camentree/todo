@@ -58,7 +58,7 @@ interface Drag {
 
 const nestDistance = 40;
 const unfoldDelay = 480;
-const savedDuration = 2000;
+const savedDuration = 3000;
 const scrollEdge = 120;
 const scrollStep = 10;
 
