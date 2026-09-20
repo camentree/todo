@@ -20,7 +20,7 @@ const headings: Record<JournalName, string> = { journal: "Journal", notebook: "N
 
 export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
   const at = nowStamp();
-  return { sectionTitle: at, at, body: "", metadata: tag ? { tag } : {} };
+  return { sectionTitle: at, at, body: "", metadata: tag ? { tag: [tag] } : {} };
 }
 
 function Filters({ counts, active, total, onSelect }: { counts: { tag: string; count: number }[]; active: string | null; total: number; onSelect: (tag: string | null) => void }) {
@@ -106,11 +106,12 @@ export function Entries({ name }: { name: JournalName }) {
       {editing && (
         <EditorScreen
           heading={headings[name]}
-          subheading={[formatWhen(editing.at), entryTags(editing).join(", ")].filter(Boolean).join(" · ")}
+          subheading={formatWhen(editing.at)}
           initial={entryText(editing)}
+          initialTags={entryTags(editing)}
           onCancel={close}
-          onSave={(text) => {
-            store.putEntry({ name, entry: entryFrom({ entry: editing, text }) });
+          onSave={({ text, tags }) => {
+            store.putEntry({ name, entry: entryFrom({ entry: editing, text, tags }) });
             close();
           }}
         />
