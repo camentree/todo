@@ -551,13 +551,13 @@ textarea {
 
 .composer {
   width: 100%;
+  padding-top: var(--top);
   display: flex;
   flex-direction: column;
 }
 
-.composer .screen-head {
-  padding: 0.6rem 0 0.2rem;
-  justify-content: flex-end;
+.page:has(> .composer) > .topbar {
+  display: none;
 }
 
 .preview {
@@ -1474,16 +1474,13 @@ textarea {
       align-self: center;
       background: var(--ground);
       height: calc(100% - var(--top));
+      padding-top: 0;
       border-radius: 1rem 1rem 0 0;
       transition: transform 0.45s ease;
     }
 
-    .composer .screen-head,
     .preview {
-      padding-inline: var(--gutter);
-    }
-
-    .preview {
+      padding: 1.4rem var(--gutter) 0.5rem;
       overflow-y: auto;
       flex: 1 1 0;
       min-height: 0;

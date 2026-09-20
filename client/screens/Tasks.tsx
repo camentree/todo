@@ -166,11 +166,6 @@ function Composer({ task, sheet, onCommit, onClose, onDelete }: { task: Task | n
 
   const composer = (
       <div className={closing ? "composer closing" : "composer"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
-        <div className="screen-head">
-          <RoundButton label="close" onSelect={close}>
-            <CrossGlyph />
-          </RoundButton>
-        </div>
         <div className="preview">
             {preview && parsed ? (
               <TaskRow

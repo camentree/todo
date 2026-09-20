@@ -13,8 +13,9 @@ Structure page is earlier thinking, right on behaviour, wrong on skin).
 Three tabs in the top bar, Tasks, Journal, Notebook, plus a floating `+` that
 follows the tab. The date line under the tab words stays on every tab. Runner
 and entry editor are full-screen overlays. The composer is a screen of its own
-on a phone, in the page under the top bar with nothing held behind it, and a
-sheet sliding over the list where there is a mouse and room for one. Comments
+on a phone — the preview, then the text field, and nothing else: it takes the
+top bar's place rather than sitting under it, and holds nothing behind it. Where
+there is a mouse and room it is a sheet sliding over the list instead. Comments
 are neither: they are written in place, under the thread.
 
 **Routes**: the address bar says which tab is up — `/tasks`, `/journals`,
