@@ -255,7 +255,7 @@ const comments: Comment[] = [
 
 function entry({ at, title, tag, body }: { at: string; title?: string; tag: string; body: string }): JournalEntry {
   const tags = tagsFrom(tag);
-  return { sectionTitle: at, at, body, metadata: title ? { displayTitle: title, tag: tags } : { tag: tags } };
+  return { sectionTitle: at, at, body, metadata: title ? { displayTitle: title, tags } : { tags } };
 }
 
 const journal: JournalEntry[] = [

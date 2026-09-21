@@ -22,25 +22,33 @@ back through `everyToken` in `shared/grammar.ts`.
 
 Entries split on H2. An entry is a section title, an `at` timestamp, a body
 and metadata; the section title is always the `at` timestamp written
-`YYYY-MM-DDTHH:MM:SS`. The H2 carries the display title when there is one and
-the section title otherwise, then a blank line, then plain `key: value` lines,
-then a blank line, then the body:
+`YYYY-MM-DDTHH:MM:SS`, and so is the H2. Under it comes a blank line, the
+metadata fenced between `---` lines as `key: value`, a blank line, then the
+body:
 
 ```
-## what I read this week
+## 2026-09-16T21:05:00
 
-at: 2026-09-16T21:05:00
-tag: books
+---
+display_title: what I read this week
+tags: books
+---
 
 body…
 ```
 
+The fence is the only place metadata is read from — bare `key: value` lines
+outside it are body text, which is how Parallax reads them too. Its three keys
+are `display_title`, `tags` and `author`, each written only when set, and the
+fence is left out altogether when none are. On the wire those same three are
+camelCase: `displayTitle`, `tags`, `author`. `tags` may repeat or carry a
+comma list and reads the same either way; it is written as one comma list on
+disk and read as a list of strings.
+
 An entry has no id: `at` identifies it, so two entries never share a
-timestamp. `tag` may repeat or carry a comma list and reads the same either
-way; it is written as one comma list. `tag` and `author` are written only when
-set. The H2 is read back as the display title unless it is timestamp-shaped;
-editing that line in the editor writes the display title, and typing it back
-to the timestamp clears it.
+timestamp. The display title is what the entry shows anywhere it has one, and
+the section title otherwise; editing the H2 line in the editor writes the
+display title, and typing it back to the timestamp clears it.
 
 Endpoints, all JSON:
 

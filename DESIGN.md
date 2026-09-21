@@ -97,13 +97,13 @@ index answers every one of these paths.
 
 **Journal**: a view over the one `journal.md` Parallax already splits on H2.
 Each H2 is an entry: its section title, the moment it was written as
-`YYYY-MM-DDTHH:MM:SS`, and under it a blank line, plain `key: value` lines,
-`at` and the metadata, `tag` repeated or as a comma list and `author`, then a
-blank line and the body, which may carry its own deeper subheadings. The
-entry has no id; `at` is what identifies it. A new entry has no display
-title, so its H2 is the section title; once it has one the H2 is the display
-title instead, and the title an entry shows anywhere is the display title
-when there is one and the section title otherwise. Entries newest first, and
+`YYYY-MM-DDTHH:MM:SS`, and under it a blank line, the metadata fenced between
+`---` lines as `key: value` — `display_title`, `tags` repeated or as a comma
+list, and `author` — then a blank line and the body, which may carry its own
+deeper subheadings. The entry has no id; `at` is what identifies it, and the
+H2 is always that timestamp. A new entry has no display title, and the title
+an entry shows anywhere is the display title when there is one and the
+section title otherwise. Entries newest first, and
 every one shows its title: the title on its own line at the task-title size
 and weight in text colour, a raw timestamp reading `2026-09-15 07:40` with
 the seconds dropped for the eye only, then the attribute line, the date, the
