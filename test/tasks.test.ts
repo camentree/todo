@@ -1,5 +1,5 @@
 import type { Task } from "@shared/model.ts";
-import { grouped, isBacklog, isDone, isOnToday, isSkipped, kindHint, skipToggled, subtaskCount, subtaskToggled, toggled, whenHint } from "@shared/tasks.ts";
+import { grouped, isBacklog, isDone, isOnToday, isRecentlyCompleted, isSkipped, kindHint, skipToggled, subtaskCount, subtaskToggled, toggled, whenHint } from "@shared/tasks.ts";
 
 const today = "2026-09-15";
 const now = "2026-09-15T10:00:00";
@@ -26,6 +26,7 @@ function task(id: string, overrides: Partial<Task>): Task {
     subtasks: [],
     comments: [],
     createdAt: "2026-09-01T00:00:00+00:00",
+    deletedAt: null,
     ...overrides,
   };
 }
@@ -118,6 +119,17 @@ describe("placing rows", () => {
     expect([backlog, backlogDoneToday, backlogDoneYesterday, commented, habitToday].map(inBacklog)).toEqual([true, true, false, false, false]);
     expect([soon, later, habitYesterday, overdue].map(inBacklog)).toEqual([true, true, false, false]);
     expect(inBacklog(task("h3", { scheduleId: "d" }))).toBe(true);
+  });
+
+  it("counts a task as recently completed on the day it was finished, and not the morning after", () => {
+    const recently = (finalizedAt: string) => isRecentlyCompleted({ task: task("b5", { finalizedAt }), today, entries: [] });
+    expect(recently(now)).toBe(true);
+    expect(["2026-09-14T10:00:00", "2026-09-13T10:00:00", "2026-09-01T10:00:00"].map(recently)).toEqual([false, false, false]);
+  });
+
+  it("leaves a task that is not done out of the recently completed list", () => {
+    expect(isRecentlyCompleted({ task: backlog, today, entries: [] })).toBe(false);
+    expect(isRecentlyCompleted({ task: task("b6", { finalizedAt: now, isSkipped: true }), today, entries: [] })).toBe(false);
   });
 
   it("orders groups habits, exercise, personal, then the rest alphabetically, ungrouped last, rows by sort order then creation", () => {

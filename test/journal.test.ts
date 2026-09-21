@@ -33,6 +33,19 @@ describe("journal markdown", () => {
     expect(serializeMarkdown([entry])).toBe("## 2026-09-01T10:00:00\n\nplain\n");
   });
 
+  it("carries a deleted entry in the fence so the file keeps it", () => {
+    const entry: JournalEntry = { ...entries[0]!, metadata: { tags: ["personal"], deletedAt: "2026-09-20T10:00:00.000Z" } };
+    expect(serializeMarkdown([entry])).toBe(
+      "## 2026-09-13T08:15:00\n\n---\ntags: personal\ndeleted_at_utc: 2026-09-20T10:00:00.000Z\n---\n\nQuiet morning.\n\nCoffee on the step.\n",
+    );
+    expect(parseMarkdown(serializeMarkdown([entry]))).toEqual([entry]);
+  });
+
+  it("keeps an entry deleted when it is written back through the editor", () => {
+    const entry: JournalEntry = { ...entries[0]!, metadata: { deletedAt: "2026-09-20T10:00:00.000Z" } };
+    expect(entryFrom({ entry, text: entryText(entry) }).metadata.deletedAt).toBe("2026-09-20T10:00:00.000Z");
+  });
+
   it("reads a tag line written as a comma list or repeated", () => {
     const written = "## 2026-09-01T10:00:00\n\n---\ntags: books\ntags: house, garden\n---\n\nplain\n";
     expect(entryTags(parseMarkdown(written)[0]!)).toEqual(["books", "house", "garden"]);
@@ -83,25 +96,38 @@ describe("the title an entry shows", () => {
 });
 
 describe("editor text", () => {
-  it("writes the title and the body, leaving tags to their own field", () => {
-    expect(entryText(entries[1]!)).toBe("## after the session\n\nTalked about the thing.\n\n### homework\n\n- one\n- two");
+  it("writes the metadata fence under the title, above the body", () => {
+    expect(entryText(entries[1]!)).toBe("## after the session\n\n---\ntags: therapy, personal\n---\n\nTalked about the thing.\n\n### homework\n\n- one\n- two");
   });
 
-  it("leaves a line to write on when the body is empty", () => {
-    expect(entryText({ ...entries[0]!, body: "", metadata: {} })).toBe("## 2026-09-13T08:15:00\n\n");
+  it("offers an empty tag line to write on when an entry has no metadata", () => {
+    expect(entryText({ ...entries[0]!, body: "", metadata: {} })).toBe("## 2026-09-13T08:15:00\n\n---\ntags:\n---\n\n");
+  });
+
+  it("shows the author in the fence alongside the tags", () => {
+    const entry: JournalEntry = { ...entries[0]!, metadata: { tags: ["books"], author: "parallax" } };
+    expect(entryText(entry)).toBe("## 2026-09-13T08:15:00\n\n---\ntags: books\nauthor: parallax\n---\n\nQuiet morning.\n\nCoffee on the step.");
   });
 
   it("round-trips through the editor", () => {
-    expect(entryFrom({ entry: entries[1]!, text: entryText(entries[1]!), tags: entryTags(entries[1]!) })).toEqual(entries[1]);
-    expect(entryFrom({ entry: entries[0]!, text: entryText(entries[0]!), tags: entryTags(entries[0]!) })).toEqual(entries[0]);
+    expect(entryFrom({ entry: entries[1]!, text: entryText(entries[1]!) })).toEqual(entries[1]);
+    expect(entryFrom({ entry: entries[0]!, text: entryText(entries[0]!) })).toEqual(entries[0]);
+  });
+
+  it("reads tags the writer typed into the fence", () => {
+    expect(entryTags(entryFrom({ entry: entries[0]!, text: "## 2026-09-13T08:15:00\n\n---\ntags: climbing, books\n---\n\nplain" }))).toEqual(["climbing", "books"]);
+  });
+
+  it("drops a tag the writer deleted from the fence", () => {
+    expect(entryFrom({ entry: entries[0]!, text: "## 2026-09-13T08:15:00\n\n---\ntags:\n---\n\nplain" }).metadata.tags).toBe(undefined);
   });
 
   it("keeps a body line that starts with a hash as body", () => {
-    expect(entryFrom({ entry: entries[0]!, text: "## 2026-09-13T08:15:00\n\n#1 on the list", tags: [] }).body).toBe("#1 on the list");
+    expect(entryFrom({ entry: entries[0]!, text: "## 2026-09-13T08:15:00\n\n#1 on the list" }).body).toBe("#1 on the list");
   });
 
   it("writes a display title and leaves the section title alone", () => {
-    expect(entryFrom({ entry: entries[0]!, text: "## blue v4\n\nHeel hook first.\n", tags: ["climbing"] })).toEqual({
+    expect(entryFrom({ entry: entries[0]!, text: "## blue v4\n\n---\ntags: climbing\n---\n\nHeel hook first.\n" })).toEqual({
       ...entries[0]!,
       body: "Heel hook first.",
       metadata: { displayTitle: "blue v4", tags: ["climbing"] },
@@ -109,19 +135,19 @@ describe("editor text", () => {
   });
 
   it("drops the display title when the title is typed back to the section title", () => {
-    expect(entryFrom({ entry: entries[1]!, text: "## 2026-09-14T21:40:00\n\nstill here.", tags: [] }).metadata.displayTitle).toBe(undefined);
+    expect(entryFrom({ entry: entries[1]!, text: "## 2026-09-14T21:40:00\n\nstill here." }).metadata.displayTitle).toBe(undefined);
   });
 
-  it("keeps an author nobody typed", () => {
+  it("keeps an author nobody typed away", () => {
     const entry: JournalEntry = { ...entries[0]!, metadata: { author: "parallax" } };
-    expect(entryFrom({ entry, text: "## blue v4\n\nHeel hook first.", tags: [] }).metadata).toEqual({ displayTitle: "blue v4", author: "parallax" });
+    expect(entryFrom({ entry, text: "## blue v4\n\n---\nauthor: parallax\n---\n\nHeel hook first." }).metadata).toEqual({ displayTitle: "blue v4", author: "parallax" });
   });
 
   it("keeps the title when the line is gone, and reads deeper headings as body", () => {
-    expect(entryFrom({ entry: entries[1]!, text: "### tempering\n\ncumin in ghee", tags: [] })).toEqual({
+    expect(entryFrom({ entry: entries[1]!, text: "### tempering\n\ncumin in ghee" })).toEqual({
       ...entries[1]!,
       body: "### tempering\n\ncumin in ghee",
-      metadata: { displayTitle: "after the session" },
+      metadata: { displayTitle: "after the session", tags: ["therapy", "personal"] },
     });
   });
 });

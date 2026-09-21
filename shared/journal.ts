@@ -6,41 +6,46 @@ const timestampShape = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/;
 // so an entry written here round-trips through the real backend unchanged.
 const fence = "---";
 
+function readFence({ lines, from }: { lines: string[]; from: number }): { fields: Record<string, string>; fenced: boolean; next: number } {
+  const fields: Record<string, string> = {};
+  let index = from;
+  while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
+  if ((lines[index] ?? "").trim() !== fence) return { fields, fenced: false, next: index };
+  index += 1;
+  while (index < lines.length && (lines[index] ?? "").trim() !== fence) {
+    const line = lines[index] ?? "";
+    const colon = line.indexOf(":");
+    if (colon > 0) {
+      const key = line.slice(0, colon).trim();
+      const value = line.slice(colon + 1).trim();
+      if (key === "tags" && fields.tags) fields.tags = `${fields.tags}, ${value}`;
+      else fields[key] = value;
+    }
+    index += 1;
+  }
+  index += 1;
+  while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
+  return { fields, fenced: true, next: index };
+}
+
 export function parseMarkdown(markdown: string): JournalEntry[] {
   const blocks = markdown.split(/^## /m).slice(1);
   return blocks.map((block) => {
     const lines = block.replace(/\n+$/, "").split("\n");
     const heading = (lines[0] ?? "").trim();
-    const fields: Record<string, string> = {};
-    let index = 1;
-    while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
-    if ((lines[index] ?? "").trim() === fence) {
-      index += 1;
-      while (index < lines.length && (lines[index] ?? "").trim() !== fence) {
-        const line = lines[index] ?? "";
-        const colon = line.indexOf(":");
-        if (colon > 0) {
-          const key = line.slice(0, colon).trim();
-          const value = line.slice(colon + 1).trim();
-          if (key === "tags" && fields.tags) fields.tags = `${fields.tags}, ${value}`;
-          else fields[key] = value;
-        }
-        index += 1;
-      }
-      index += 1;
-    }
-    while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
+    const { fields, next } = readFence({ lines, from: 1 });
     const at = fields.at ?? heading;
     const tags = tagsFrom(fields.tags);
     const displayTitle = fields.display_title ?? (timestampShape.test(heading) ? "" : heading);
     return {
       sectionTitle: at,
       at,
-      body: lines.slice(index).join("\n"),
+      body: lines.slice(next).join("\n"),
       metadata: {
         ...(displayTitle ? { displayTitle } : {}),
         ...(tags.length ? { tags } : {}),
         ...(fields.author ? { author: fields.author } : {}),
+        ...(fields.deleted_at_utc ? { deletedAt: fields.deleted_at_utc } : {}),
       },
     };
   });
@@ -53,6 +58,7 @@ export function serializeMarkdown(entries: JournalEntry[]): string {
         entry.metadata.displayTitle ? `display_title: ${entry.metadata.displayTitle}` : "",
         entry.metadata.tags?.length ? `tags: ${entry.metadata.tags.join(", ")}` : "",
         entry.metadata.author ? `author: ${entry.metadata.author}` : "",
+        entry.metadata.deletedAt ? `deleted_at_utc: ${entry.metadata.deletedAt}` : "",
       ].filter(Boolean);
       const parts = [`## ${entry.at}`];
       if (metadata.length) parts.push(`${fence}\n${metadata.join("\n")}\n${fence}`);
@@ -81,25 +87,28 @@ export function readableTitle(entry: JournalEntry): string {
 }
 
 export function entryText(entry: JournalEntry): string {
-  return [`## ${entryTitle(entry)}`, entry.body].join("\n\n");
+  const tags = entry.metadata.tags ?? [];
+  const metadata = [`tags: ${tags.join(", ")}`.trimEnd(), entry.metadata.author ? `author: ${entry.metadata.author}` : ""].filter(Boolean);
+  return [`## ${entryTitle(entry)}`, `${fence}\n${metadata.join("\n")}\n${fence}`, entry.body].join("\n\n");
 }
 
-export function entryFrom({ entry, text, tags }: { entry: JournalEntry; text: string; tags: string[] }): JournalEntry {
+export function entryFrom({ entry, text }: { entry: JournalEntry; text: string }): JournalEntry {
   const lines = text.split("\n");
-  let index = 0;
-  const titled = (lines[index] ?? "").startsWith("## ");
-  const heading = titled ? (lines[index] ?? "").slice(3).trim() : "";
-  if (titled) index += 1;
-  while (index < lines.length && (lines[index] ?? "").trim() === "") index += 1;
-  const body = lines.slice(index).join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
+  const titled = (lines[0] ?? "").startsWith("## ");
+  const heading = titled ? (lines[0] ?? "").slice(3).trim() : "";
+  const { fields, fenced, next } = readFence({ lines, from: titled ? 1 : 0 });
+  const body = lines.slice(next).join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
   const displayTitle = titled ? (heading === entry.sectionTitle ? "" : heading) : (entry.metadata.displayTitle ?? "");
+  const tags = fenced ? tagsFrom(fields.tags) : (entry.metadata.tags ?? []);
+  const author = fenced ? fields.author : entry.metadata.author;
   return {
     ...entry,
     body,
     metadata: {
       ...(displayTitle ? { displayTitle } : {}),
       ...(tags.length ? { tags } : {}),
-      ...(entry.metadata.author ? { author: entry.metadata.author } : {}),
+      ...(author ? { author } : {}),
+      ...(entry.metadata.deletedAt ? { deletedAt: entry.metadata.deletedAt } : {}),
     },
   };
 }

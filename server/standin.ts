@@ -1,6 +1,9 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 
+import { shiftDate } from "@shared/format.ts";
+import { deletedDays } from "@shared/tasks.ts";
+
 import { Store } from "./store.ts";
 
 const store = new Store(process.env.DATA_DIR ?? "data/dev");
@@ -32,6 +35,11 @@ app.delete("/api/schedules/:id", (context) => {
 });
 
 app.get("/api/tasks", (context) => context.json(store.tasks({ today: today(), through: context.req.query("through") ?? null })));
+app.get("/api/tasks/deleted", (context) => {
+  const days = Number(context.req.query("days") ?? deletedDays);
+  if (!Number.isFinite(days) || days < 0) throw new Error("days must be a positive number");
+  return context.json(store.deletedTasks({ since: shiftDate({ key: today(), days: -days }) }));
+});
 app.post("/api/tasks", async (context) => context.json(store.putTask(await context.req.json()), 201));
 app.put("/api/tasks/:id", async (context) =>
   context.json(store.putTask({ ...(await context.req.json()), id: context.req.param("id") })),

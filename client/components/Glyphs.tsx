@@ -46,6 +46,14 @@ export function CrossGlyph() {
   );
 }
 
+export function TrashGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.8 4.3h10.4M6.4 4.3V2.9h3.2v1.4M4.2 4.3l0.6 8.2h6.4l0.6-8.2M6.7 6.6v3.6M9.3 6.6v3.6" />
+    </svg>
+  );
+}
+
 export function SpeechGlyph() {
   return (
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">

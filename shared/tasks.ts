@@ -1,4 +1,4 @@
-import { formatDuration, relativeDate, timeOfDay } from "./format.ts";
+import { daysBetween, formatDuration, relativeDate, timeOfDay } from "./format.ts";
 import type { Comment, JournalEntry, Task } from "./model.ts";
 import { groupOrder, isNumericType } from "./model.ts";
 
@@ -103,11 +103,22 @@ export function isOnToday({ task, today, entries }: { task: Task; today: string;
   return false;
 }
 
+export const recentDays = 1;
+export const deletedDays = 5;
+
+export function isRecentlyCompleted({ task, today, entries }: { task: Task; today: string; entries: JournalEntry[] }): boolean {
+  if (!isDone({ task, entries })) return false;
+  const finished = (task.finalizedAt ?? "").slice(0, 10);
+  if (finished === "") return false;
+  const since = daysBetween({ from: finished, to: today });
+  return since >= 0 && since < recentDays;
+}
+
 export function isBacklog({ task, today, entries }: { task: Task; today: string; entries: JournalEntry[] }): boolean {
   if (isOnToday({ task, today, entries })) return false;
   if (task.dueDate !== null) return task.dueDate > today;
   if (!isDone({ task, entries })) return true;
-  return (task.finalizedAt ?? "").slice(0, 10) === today;
+  return isRecentlyCompleted({ task, today, entries });
 }
 
 export function kindHint(task: Pick<Task, "type" | "target" | "numericalValue" | "stringValue">): string {

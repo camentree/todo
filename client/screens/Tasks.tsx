@@ -13,11 +13,11 @@ import { everyToken, parseTask, serializeTask, tokenSpans } from "@shared/gramma
 import type { Comment, Schedule, Task } from "@shared/model.ts";
 import { changedOnly, placed, regrouped, subtaskAsTask, taskAsSubtasks, withSubtasksInserted, withoutSubtask } from "@shared/move.ts";
 import type { Container, Target } from "@shared/move.ts";
-import { byPosition, grouped, groupLabel, isBacklog, isOnToday, isSkipped, skipToggled, subtaskToggled, toggled } from "@shared/tasks.ts";
+import { byPosition, grouped, groupLabel, isBacklog, isOnToday, isRecentlyCompleted, isSkipped, skipToggled, subtaskToggled, toggled } from "@shared/tasks.ts";
 
 import { Confirm } from "../components/Confirm.tsx";
 import type { Choice } from "../components/Confirm.tsx";
-import { CrossGlyph, GripGlyph, PlayGlyph, PlusGlyph, TickGlyph } from "../components/Glyphs.tsx";
+import { CrossGlyph, GripGlyph, PlayGlyph, PlusGlyph, TickGlyph, TrashGlyph } from "../components/Glyphs.tsx";
 import { Group } from "../components/Group.tsx";
 import { Overlay } from "../components/Overlay.tsx";
 import { RoundButton } from "../components/RoundButton.tsx";
@@ -284,10 +284,12 @@ export function Tasks() {
 
   const placing = { today: store.today, entries: store.journal };
   const onToday = store.tasks.filter((task) => isOnToday({ task, ...placing }));
-  const backlog = store.tasks
+  const inBacklog = store.tasks
     .filter((task) => isBacklog({ task, ...placing }))
     .sort((a, b) => (a.dueDate === null ? 1 : 0) - (b.dueDate === null ? 1 : 0) || (a.dueDate ?? "").localeCompare(b.dueDate ?? "") || byPosition(a, b))
     .filter((task, index, all) => task.scheduleId === null || all.findIndex((each) => each.scheduleId === task.scheduleId) === index);
+  const backlog = inBacklog.filter((task) => !isRecentlyCompleted({ task, ...placing }));
+  const completed = inBacklog.filter((task) => isRecentlyCompleted({ task, ...placing })).sort((a, b) => (b.finalizedAt ?? "").localeCompare(a.finalizedAt ?? ""));
 
   const scheduleOf = (task: Task): Schedule | null => (task.scheduleId ? (store.schedules.find((each) => each.id === task.scheduleId) ?? null) : null);
 
@@ -335,6 +337,36 @@ export function Tasks() {
 
   const askDeleteSubtask = ({ task, index }: { task: Task; index: number }) =>
     setAsking({ question: `delete ${task.subtasks[index]?.title ?? ""}?`, choices: [{ label: "delete", onChoose: () => { store.putTask(withoutSubtask({ host: task, index })); setAsking(null); if (route.edit) close(); } }] });
+
+  const deleteSelected = (ids: string[]) => {
+    const rows = ids.map(rowAt).filter((row): row is { host: Task; index: number } => row !== null && row.index !== null);
+    for (const hostId of new Set(rows.map((row) => row.host.id))) {
+      const indices = rows.filter((row) => row.host.id === hostId).map((row) => row.index).sort((a, b) => b - a);
+      let host = store.tasks.find((each) => each.id === hostId);
+      if (!host) continue;
+      for (const index of indices) host = withoutSubtask({ host, index });
+      store.putTask(host);
+    }
+    for (const id of ids) if (store.tasks.some((each) => each.id === id)) store.deleteTask(id);
+  };
+
+  const askDeleteSelected = () => {
+    const ids = [...(selection ?? [])];
+    if (ids.length === 0) return;
+    setAsking({
+      question: ids.length === 1 ? "delete this task?" : `delete ${ids.length} tasks?`,
+      choices: [
+        {
+          label: "delete",
+          onChoose: () => {
+            deleteSelected(ids);
+            setSelection(null);
+            setAsking(null);
+          },
+        },
+      ],
+    });
+  };
 
   const sendToBacklog = (task: Task): Swipe => {
     if (task.scheduleId) return { word: isSkipped(task) ? "unskip" : "skip", onSwipe: () => store.putTask(skipToggled(task)) };
@@ -421,6 +453,7 @@ export function Tasks() {
         return y >= rect.top && y <= rect.bottom;
       }) ??
       null;
+    if (taskElement?.closest(".completed-section")) return { target: null, line: null, hovered: null };
     const nesting = x - current.startX > nestDistance;
     const leaving = current.fromSubtask !== null && x - current.startX < -nestDistance;
     if (subtaskElement && taskElement && !leaving) {
@@ -611,6 +644,7 @@ export function Tasks() {
       setFocused(null);
       return (document.activeElement as HTMLElement | null)?.blur();
     }
+    if (action === "delete" && selection) return askDeleteSelected();
     if (focused?.startsWith("group:")) {
       const key = focused.slice(6);
       if (action === "fold") folds.set({ key, open: !folds.isOpen({ key, fallback: true }) });
@@ -656,9 +690,63 @@ export function Tasks() {
             </div>
           ))
         ) : (
-          <div data-container="backlog" data-group="">
-            {backlog.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
-          </div>
+          <>
+            <div data-container="backlog" data-group="">
+              {backlog.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
+            </div>
+            {completed.length > 0 && (
+              <div className="completed-section">
+                <Group
+                  storageKey="backlog:completed"
+                  label="recently completed"
+                  count={completed.length}
+                  defaultOpen={false}
+                  select={null}
+                  press={null}
+                  focused={focused === "group:backlog:completed"}
+                >
+                  {completed.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
+                </Group>
+              </div>
+            )}
+            {store.deleted.length > 0 && (
+              <div className="completed-section">
+                <Group
+                  storageKey="backlog:deleted"
+                  label="recently deleted"
+                  count={store.deleted.length}
+                  defaultOpen={false}
+                  select={null}
+                  press={null}
+                  focused={focused === "group:backlog:deleted"}
+                >
+                  {store.deleted.map((task) => (
+                    <div key={task.id} className="deleted-row">
+                      <TaskRow
+                        task={task}
+                        chips={task.group === "" ? [] : [task.group]}
+                        every={null}
+                        select={null}
+                        onHold={null}
+                        focused={null}
+                        saved={null}
+                        onTick={() => null}
+                        onTitle={() => null}
+                        onTitleSubtask={null}
+                        todaySwipe={null}
+                        onDelete={null}
+                        onDeleteSubtask={null}
+                        onAddComment={() => null}
+                        onDeleteComment={() => null}
+                        fixedOpen={false}
+                        unfoldSubtasks={false}
+                      />
+                    </div>
+                  ))}
+                </Group>
+              </div>
+            )}
+          </>
         )}
       </div>
       {drag && drag.line && <div className="drop-line" style={{ top: drag.line.top, left: drag.line.left, width: drag.line.width }} />}
@@ -677,6 +765,9 @@ export function Tasks() {
       )}
       {selection ? (
         <div className="floating select-bar">
+          <RoundButton label="delete selected" onSelect={askDeleteSelected}>
+            <TrashGlyph />
+          </RoundButton>
           <RoundButton label="leave select mode" onSelect={() => setSelection(null)}>
             <CrossGlyph />
           </RoundButton>

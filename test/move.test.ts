@@ -25,6 +25,7 @@ function task(id: string, overrides: Partial<Task>): Task {
     subtasks: [],
     comments: [],
     createdAt: "2026-09-01T00:00:00+00:00",
+    deletedAt: null,
     ...overrides,
   };
 }

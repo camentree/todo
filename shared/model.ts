@@ -68,12 +68,14 @@ export interface Task {
   subtasks: Task[];
   comments: Comment[];
   createdAt: string;
+  deletedAt: string | null;
 }
 
 export interface JournalMetadata {
   displayTitle?: string;
   tags?: string[];
   author?: string;
+  deletedAt?: string;
 }
 
 export interface JournalEntry {

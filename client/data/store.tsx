@@ -3,12 +3,14 @@ import type { ReactNode } from "react";
 
 import { dateKey } from "@shared/format.ts";
 import type { Comment, JournalEntry, Schedule, Task } from "@shared/model.ts";
+import { deletedDays } from "@shared/tasks.ts";
 
 import { ApiError, get, post, put, remove } from "./api.ts";
 
 export interface Memory {
   schedules: Schedule[];
   tasks: Task[];
+  deleted: Task[];
   journal: JournalEntry[];
   notebook: JournalEntry[];
 }
@@ -61,14 +63,17 @@ function normalized(task: Task): Task {
   };
 }
 
+const deletedPath = `/api/tasks/deleted?days=${deletedDays}`;
+
 async function load(): Promise<Memory> {
-  const [schedules, tasks, journal, notebook] = await Promise.all([
+  const [schedules, tasks, deleted, journal, notebook] = await Promise.all([
     get<Schedule[]>("/api/schedules"),
     get<Task[]>("/api/tasks"),
+    get<Task[]>(deletedPath),
     get<JournalEntry[]>("/api/journal"),
     get<JournalEntry[]>("/api/notebook"),
   ]);
-  return { schedules, tasks: tasks.map(normalized), journal, notebook };
+  return { schedules, tasks: tasks.map(normalized), deleted: deleted.map(normalized), journal, notebook };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -104,9 +109,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   if (!memory) {
     return error ? (
-      <button className="error-sprite" onClick={start}>
-        {error}
-      </button>
+      <div className="error-report">
+        <button className="error-sprite" onClick={start}>
+          error
+        </button>
+        <div className="error-detail">{error}</div>
+      </div>
     ) : null;
   }
 
@@ -121,6 +129,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const refreshTasks = () =>
     get<Task[]>("/api/tasks")
       .then((tasks) => update((current) => ({ ...current, tasks: tasks.map(normalized) })))
+      .catch(() => null);
+
+  const refreshDeleted = () =>
+    get<Task[]>(deletedPath)
+      .then((deleted) => update((current) => ({ ...current, deleted: deleted.map(normalized) })))
       .catch(() => null);
 
   const findComment = (id: string): { task: Task; comment: Comment } | null => {
@@ -149,7 +162,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, tasks: without({ list: current.tasks, id }) }),
         undo: (current) => ({ ...current, tasks: restored({ list: current.tasks, id, previous }) }),
-        request: () => remove(`/api/tasks/${id}`),
+        request: () => remove(`/api/tasks/${id}`).then(refreshDeleted),
       });
     },
     putSchedule: (schedule) => {

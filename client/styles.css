@@ -29,7 +29,6 @@
   --accent: #356b52;
   --hairline: #dfe5e2;
   --chip-bg: #356b5224;
-  --saved: #356b523d;
   --tag: #68726f;
   --scrim: rgba(27, 33, 32, 0.16);
   --warn: #b46a5f;
@@ -80,7 +79,6 @@
     --accent: #7fb996;
     --hairline: #2c2a2e;
     --chip-bg: #7fb99629;
-    --saved: #7fb9963d;
     --tag: #857f7a;
     --scrim: rgba(0, 0, 0, 0.5);
     --warn: #c9736c;
@@ -546,9 +544,11 @@ textarea {
   opacity: 0;
 }
 
-.overlay:has(.composer) {
-  background: none;
-  overflow: visible;
+@media (min-width: 700px) and (hover: hover) {
+  .overlay:has(.composer) {
+    background: none;
+    overflow: visible;
+  }
 }
 
 .composer {
@@ -558,6 +558,7 @@ textarea {
   background: var(--ground);
   display: flex;
   flex-direction: column;
+  overscroll-behavior: contain;
 }
 
 .preview {
@@ -566,6 +567,7 @@ textarea {
   --row-padding: 0.2rem 0.25rem;
   padding: 0.6rem var(--gutter) 0.5rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
   flex: 1 1 0;
   min-height: 0;
@@ -611,6 +613,7 @@ textarea {
 
 .composer-field .cm-scroller {
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 
@@ -679,17 +682,35 @@ textarea {
 }
 
 .row.saved {
-  background: var(--saved);
+  background: var(--raised);
+  box-shadow: inset 0.16rem 0 0 var(--accent);
+  transition: box-shadow 0.4s ease;
 }
 
 @starting-style {
   .row.saved {
     background: transparent;
+    box-shadow: inset 0 0 0 var(--accent);
   }
 }
 
 .group-head.focused {
   background: var(--raised);
+}
+
+/* Dimmed and unchangeable, but the chevron and marks still work so the notes,
+   comments and subtasks of a deleted task can be read. */
+.deleted-row {
+  opacity: 0.55;
+}
+
+.deleted-row .tick,
+.deleted-row .text {
+  pointer-events: none;
+}
+
+.deleted-row .field {
+  display: none;
 }
 
 .shortcuts {
@@ -734,21 +755,35 @@ textarea {
   color: var(--accent);
 }
 
-.error-sprite {
+.error-report {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--bottom) + 4.4rem);
+  bottom: calc(var(--bottom) + 9.4rem);
   z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 22rem;
+}
+
+.error-sprite {
   background: var(--warn);
   color: var(--ground);
   padding: 0.7rem 1rem;
   border-radius: var(--card-radius);
   font-size: var(--body);
   font-weight: 500;
-  max-width: 22rem;
   text-align: center;
   box-shadow: 0 8px 24px var(--shadow);
+}
+
+.error-detail {
+  font-size: var(--meta);
+  line-height: 1.4;
+  color: var(--dim);
+  text-align: center;
 }
 
 .card {
@@ -778,7 +813,7 @@ textarea {
 }
 
 .bubble {
-  max-width: 88%;
+  max-width: 74%;
   flex: none;
 }
 
@@ -787,9 +822,17 @@ textarea {
   margin-left: 0.6rem;
 }
 
+.bubble.user .card {
+  border-bottom-left-radius: 0.2rem;
+}
+
 .bubble.agent {
   align-self: flex-end;
   margin-right: 0.6rem;
+}
+
+.bubble.agent .card {
+  border-bottom-right-radius: 0.2rem;
 }
 
 .card-body {
@@ -803,11 +846,21 @@ textarea {
   color: var(--faint);
 }
 
+/* The thread sits centred under the whole row, so it pulls back out of the
+   indent that lines notes and subtasks up with the tick. */
 .comment-list {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.3rem 0.25rem 0.5rem;
+  width: calc(100% + var(--indent));
+  margin-left: calc(var(--indent) * -1);
+}
+
+.comment-list .thread,
+.comment-list .field {
+  width: min(100%, 30rem);
 }
 
 .comment-list .swipeable {
@@ -1017,11 +1070,15 @@ textarea {
   padding-left: calc(var(--indent) * 2);
 }
 
-.select-bar .round:first-child {
+.select-bar .round:not(:last-child) {
   width: var(--round-small);
   height: var(--round-small);
   background: var(--raised);
   color: var(--dim);
+}
+
+.select-bar .round:first-child {
+  color: var(--warn);
 }
 
 .runner {

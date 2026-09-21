@@ -108,10 +108,9 @@ export function Entries({ name }: { name: JournalName }) {
           heading={headings[name]}
           subheading={formatWhen(editing.at)}
           initial={entryText(editing)}
-          initialTags={entryTags(editing)}
           onCancel={close}
-          onSave={({ text, tags }) => {
-            store.putEntry({ name, entry: entryFrom({ entry: editing, text, tags }) });
+          onSave={(text) => {
+            store.putEntry({ name, entry: entryFrom({ entry: editing, text }) });
             close();
           }}
         />

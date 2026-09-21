@@ -128,6 +128,7 @@ function instantiate({ from, date }: { from: Schedule; date: string }): { parent
     note: from.note,
     sortOrder: from.sortOrder,
     createdAt: `${date}T05:00:00+00:00`,
+    deletedAt: null,
   };
   const children = from.subtasks.map(
     (piece): Row => ({
@@ -149,6 +150,7 @@ function instantiate({ from, date }: { from: Schedule; date: string }): { parent
       note: piece.note,
       sortOrder: piece.sortOrder,
       createdAt: `${date}T05:00:00+00:00`,
+      deletedAt: null,
     }),
   );
   return { parent, children };
@@ -199,6 +201,7 @@ function oneOff(fields: Partial<Row> & { title: string; group: string }): Row {
     note: "",
     sortOrder: 0,
     createdAt: created(-15),
+    deletedAt: null,
     ...fields,
   };
 }

@@ -27,6 +27,9 @@ export class Store {
     } catch {
       this.data = structuredClone(empty);
     }
+    // A file written before soft deletes has no deletedAt at all, and undefined would
+    // fail every `deletedAt === null` test and hide the whole list.
+    this.data.tasks = this.data.tasks.map((row) => ({ ...row, deletedAt: row.deletedAt ?? null }));
   }
 
   private save(): void {
@@ -68,21 +71,33 @@ export class Store {
     const last = through ?? shiftDate({ key: today, days: 6 });
     for (let date = today; date <= last; date = shiftDate({ key: date, days: 1 })) this.instantiate(date);
     const top = this.data.tasks
-      .filter((row) => row.parentId === null)
+      .filter((row) => row.parentId === null && row.deletedAt === null)
       .sort((a, b) => ((a.dueDate === null ? 1 : 0) - (b.dueDate === null ? 1 : 0)) || (a.dueDate ?? "").localeCompare(b.dueDate ?? "") || a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
     return top.map((row) => this.assemble(row));
   }
 
-  private assemble(row: Row): Task {
+  // A deleted parent keeps its deleted children, so a row in the recently deleted
+  // list still reads as the task that was thrown away rather than an empty shell.
+  deletedTasks({ since }: { since: string }): Task[] {
+    return this.data.tasks
+      .filter((row) => row.parentId === null && row.deletedAt !== null && row.deletedAt >= since)
+      .sort((a, b) => (b.deletedAt ?? "").localeCompare(a.deletedAt ?? "") || a.id.localeCompare(b.id))
+      .map((row) => this.assemble(row, { deleted: true }));
+  }
+
+  private assemble(row: Row, { deleted }: { deleted: boolean } = { deleted: false }): Task {
     const subtasks = this.data.tasks
-      .filter((each) => each.parentId === row.id)
+      .filter((each) => each.parentId === row.id && (deleted || each.deletedAt === null))
       .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
       .map((each) => ({ ...each, subtasks: [], comments: [] }));
     return { ...row, subtasks, comments: this.commentsFor(row) };
   }
 
   private commentsFor(row: Row): Comment[] {
-    const owners = row.scheduleId === null ? new Set([row.id]) : new Set(this.data.tasks.filter((each) => each.scheduleId === row.scheduleId).map((each) => each.id));
+    const owners =
+      row.scheduleId === null
+        ? new Set([row.id])
+        : new Set(this.data.tasks.filter((each) => each.scheduleId === row.scheduleId && each.deletedAt === null).map((each) => each.id));
     return this.data.comments.filter((comment) => owners.has(comment.taskId)).sort((a, b) => a.writtenAt.localeCompare(b.writtenAt) || a.id.localeCompare(b.id));
   }
 
@@ -117,6 +132,7 @@ export class Store {
       note: schedule.note,
       sortOrder: schedule.sortOrder,
       createdAt: new Date().toISOString(),
+      deletedAt: null,
     };
     this.data.tasks.push(parent);
     schedule.subtasks.forEach((spec: SubtaskSpec, index: number) => {
@@ -139,6 +155,7 @@ export class Store {
         note: spec.note,
         sortOrder: spec.sortOrder ?? index,
         createdAt: new Date().toISOString(),
+        deletedAt: null,
       });
     });
   }
@@ -166,7 +183,7 @@ export class Store {
 
   private replaceSubtasks({ parent, subtasks }: { parent: Row; subtasks: Task[] }): void {
     const kept = subtasks.map((subtask) => subtask.id ?? identifier());
-    this.data.tasks = this.data.tasks.filter((row) => row.parentId !== parent.id || kept.includes(row.id));
+    this.markDeleted((row) => row.parentId === parent.id && !kept.includes(row.id));
     subtasks.forEach((subtask, index) => {
       const existing = this.data.tasks.find((each) => each.id === kept[index]);
       this.upsert({
@@ -186,13 +203,23 @@ export class Store {
     else this.data.tasks[index] = row;
   }
 
+  // removeRows drops rows the user never asked to delete: unreached recurrences of an
+  // edited schedule, and duplicate instances. markDeleted is the one the user sees.
   private removeRows(matches: (row: Row) => boolean): void {
     const removed = new Set(this.data.tasks.filter(matches).map((row) => row.id));
     this.data.tasks = this.data.tasks.filter((row) => !removed.has(row.id) && !(row.parentId !== null && removed.has(row.parentId)));
   }
 
+  private markDeleted(matches: (row: Row) => boolean): void {
+    const deletedAt = new Date().toISOString();
+    const gone = new Set(this.data.tasks.filter((row) => row.deletedAt === null && matches(row)).map((row) => row.id));
+    this.data.tasks = this.data.tasks.map((row) =>
+      row.deletedAt === null && (gone.has(row.id) || (row.parentId !== null && gone.has(row.parentId))) ? { ...row, deletedAt } : row,
+    );
+  }
+
   deleteTask(id: string): void {
-    this.removeRows((row) => row.id === id);
+    this.markDeleted((row) => row.id === id);
     this.save();
   }
 
@@ -239,11 +266,17 @@ export class Store {
   }
 
   entries(name: string): JournalEntry[] {
+    return this.allEntries(name).filter((entry) => entry.metadata.deletedAt === undefined);
+  }
+
+  // Writes work off every entry in the file, deleted ones included, so rewriting the
+  // markdown after an edit does not quietly drop the entries that were thrown away.
+  private allEntries(name: string): JournalEntry[] {
     return parseMarkdown(this.readMarkdown(name));
   }
 
   putEntry({ name, entry }: { name: string; entry: JournalEntry }): JournalEntry {
-    const entries = this.entries(name).filter((each) => each.at !== entry.at);
+    const entries = this.allEntries(name).filter((each) => each.at !== entry.at);
     entries.push(entry);
     entries.sort((a, b) => a.at.localeCompare(b.at));
     this.writeMarkdown({ name, entries });
@@ -251,7 +284,11 @@ export class Store {
   }
 
   deleteEntry({ name, at }: { name: string; at: string }): void {
-    this.writeMarkdown({ name, entries: this.entries(name).filter((each) => each.at !== at) });
+    const deletedAt = new Date().toISOString();
+    const entries = this.allEntries(name).map((each) =>
+      each.at === at && each.metadata.deletedAt === undefined ? { ...each, metadata: { ...each.metadata, deletedAt } } : each,
+    );
+    this.writeMarkdown({ name, entries });
   }
 
   private readMarkdown(name: string): string {
@@ -292,6 +329,7 @@ function rowOf(task: Task): Row {
     note: task.note ?? "",
     sortOrder: task.sortOrder ?? 0,
     createdAt: task.createdAt,
+    deletedAt: task.deletedAt ?? null,
   };
 }
 

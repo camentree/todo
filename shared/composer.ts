@@ -48,6 +48,7 @@ function subtasksFrom({ parsed, previous, hostId, group, now, newId }: { parsed:
       subtasks: [],
       comments: before?.comments ?? [],
       createdAt: before?.createdAt ?? now,
+      deletedAt: null,
     };
   });
 }
@@ -76,6 +77,7 @@ export function taskFromParsed({ parsed, existing, id, today, now, schedule, new
     subtasks: subtasksFrom({ parsed: parsed.subtasks, previous: existing?.subtasks ?? [], hostId: id, group, now, newId }),
     comments: existing?.comments ?? [],
     createdAt: existing?.createdAt ?? now,
+    deletedAt: null,
   };
 }
 

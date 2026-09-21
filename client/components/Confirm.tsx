@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { TextButton } from "./TextButton.tsx";
 
 export interface Choice {
@@ -6,6 +8,18 @@ export interface Choice {
 }
 
 export function Confirm({ question, choices, onCancel }: { question: string; choices: Choice[]; onCancel: () => void }) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Escape") return onCancel();
+      choices[choices.length - 1]?.onChoose();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [choices, onCancel]);
+
   return (
     <div className="scrim" onClick={onCancel}>
       <div className="confirm" onClick={(event) => event.stopPropagation()}>

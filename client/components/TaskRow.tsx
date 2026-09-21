@@ -113,7 +113,9 @@ export function TaskRow({
     if (!commentsShowing) return;
     const ordered = [...comments].sort((a, b) => a.writtenAt.localeCompare(b.writtenAt));
     setFirstUnseen(ordered.find((comment) => comment.seenAt === null)?.id ?? null);
-    if (!unseen) return;
+    // Reading a deleted task must not mark its comments seen, and must not pull it
+    // back onto today the way an unseen comment does for a live one.
+    if (!unseen || task.deletedAt !== null) return;
     for (const comment of comments) if (comment.seenAt === null) store.putComment({ ...comment, seenAt: now });
     if (task.dueDate === null) store.putTask({ ...task, dueDate: store.today });
   }, [commentsShowing]);
@@ -188,6 +190,13 @@ export function TaskRow({
           )}
         </div>
       </Swipeable>
+      {task.note && (
+        <Roll open={subtasksOpen}>
+          <div className="unfolded">
+            <div className="note">{task.note}</div>
+          </div>
+        </Roll>
+      )}
       {comments.length > 0 && (
         <Roll open={commentsShowing}>
           <div className="unfolded">
@@ -195,37 +204,34 @@ export function TaskRow({
           </div>
         </Roll>
       )}
-      {hasSubtasks && (
+      {task.subtasks.length > 0 && (
         <Roll open={subtasksOpen}>
           <div className="unfolded">
-            {task.note && <div className="note">{task.note}</div>}
-            {task.subtasks.length > 0 && (
-              <div className="subtasks">
-                {task.subtasks.map((subtask, index) => (
-                  <div key={subtask.id} data-subtask={task.id + ":" + index}>
-                    <TaskRow
-                      task={{ ...subtask, id: task.id + ":" + index, dueDate: null }}
-                      chips={[]}
-                      every={null}
-                      select={select}
-                      onHold={onHold}
-                      focused={focused}
-                      saved={saved}
-                      onTick={() => (fixedOpen ? null : store.putTask(subtaskToggled({ task, index, now })))}
-                      onTitle={onTitleSubtask ? () => onTitleSubtask(index) : onTitle}
-                      onTitleSubtask={null}
-                      todaySwipe={null}
-                      onDelete={onDeleteSubtask ? () => onDeleteSubtask(index) : null}
-                      onDeleteSubtask={null}
-                      onAddComment={() => null}
-                      onDeleteComment={() => null}
-                      fixedOpen={fixedOpen}
-                      unfoldSubtasks={false}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="subtasks">
+              {task.subtasks.map((subtask, index) => (
+                <div key={subtask.id} data-subtask={task.id + ":" + index}>
+                  <TaskRow
+                    task={{ ...subtask, id: task.id + ":" + index, dueDate: null }}
+                    chips={[]}
+                    every={null}
+                    select={select}
+                    onHold={onHold}
+                    focused={focused}
+                    saved={saved}
+                    onTick={() => (fixedOpen ? null : store.putTask(subtaskToggled({ task, index, now })))}
+                    onTitle={onTitleSubtask ? () => onTitleSubtask(index) : onTitle}
+                    onTitleSubtask={null}
+                    todaySwipe={null}
+                    onDelete={onDeleteSubtask ? () => onDeleteSubtask(index) : null}
+                    onDeleteSubtask={null}
+                    onAddComment={() => null}
+                    onDeleteComment={() => null}
+                    fixedOpen={fixedOpen}
+                    unfoldSubtasks={false}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </Roll>
       )}

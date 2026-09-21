@@ -130,6 +130,7 @@ function subtaskRow(fields: Partial<Task> & { id: string; title: string }): Task
     subtasks: [],
     comments: [],
     createdAt: "2026-09-01T00:00:00+00:00",
+    deletedAt: null,
     ...fields,
   };
 }
@@ -159,6 +160,7 @@ const task: Task = {
   ],
   comments: [],
   createdAt: "2026-09-01T00:00:00+00:00",
+  deletedAt: null,
 };
 
 describe("serializeTask", () => {

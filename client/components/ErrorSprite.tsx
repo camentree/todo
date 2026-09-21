@@ -4,8 +4,11 @@ export function ErrorSprite() {
   const store = useStore();
   if (!store.error) return null;
   return (
-    <button className="error-sprite" onClick={store.dismissError}>
-      {store.error}
-    </button>
+    <div className="error-report">
+      <button className="error-sprite" onClick={store.dismissError}>
+        error
+      </button>
+      <div className="error-detail">{store.error}</div>
+    </div>
   );
 }
