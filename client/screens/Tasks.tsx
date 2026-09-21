@@ -245,6 +245,7 @@ export function Tasks() {
   const [focused, setFocused] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
+  const lastSelected = useRef<string | null>(null);
   const savedTimer = useRef<number | null>(null);
   const pointerWas = useRef({ x: 0, y: 0 });
   if (focused) lastFocused.current = focused;
@@ -407,7 +408,8 @@ export function Tasks() {
     return host && indexText !== "" ? { host, index: Number(indexText) } : null;
   };
 
-  const toggleSelected = (ids: string[]) =>
+  const toggleSelected = (ids: string[]) => {
+    lastSelected.current = ids[ids.length - 1] ?? lastSelected.current;
     setSelection((current) => {
       const next = new Set(current);
       const allOn = ids.every((id) => next.has(id));
@@ -415,6 +417,17 @@ export function Tasks() {
       else next.add(id);
       return next;
     });
+  };
+
+  const selectThrough = (id: string) => {
+    const order = focusOrder().filter((each) => !each.startsWith("group:"));
+    const from = order.indexOf(lastSelected.current ?? "");
+    const to = order.indexOf(id);
+    if (from === -1 || to === -1) return toggleSelected([id]);
+    const through = order.slice(Math.min(from, to), Math.max(from, to) + 1);
+    lastSelected.current = id;
+    setSelection((current) => new Set([...(current ?? []), ...through]));
+  };
 
   const groupSelect = (tasks: Task[]) =>
     selection ? { on: tasks.length > 0 && tasks.every((task) => selection.has(task.id)), onToggle: () => toggleSelected(tasks.map((task) => task.id)) } : null;
@@ -568,7 +581,7 @@ export function Tasks() {
   const select: Select | null = selection
     ? {
         selected: (id) => selection.has(id),
-        onToggle: (id) => toggleSelected([id]),
+        onToggle: ({ id, extend }) => (extend ? selectThrough(id) : toggleSelected([id])),
         onHandle: ({ event, id }) => {
           const dragged = rowAt(id);
           if (!dragged) return;
@@ -584,7 +597,10 @@ export function Tasks() {
       }
     : null;
 
-  const holdToSelect = (id: string) => setSelection((current) => new Set(current).add(id));
+  const holdToSelect = (id: string) => {
+    lastSelected.current = id;
+    setSelection((current) => new Set(current).add(id));
+  };
 
   const row = ({ task, chips, todaySwipe, onTick }: { task: Task; chips: string[]; todaySwipe: Swipe | null; onTick: () => void }) => {
     const schedule = scheduleOf(task);

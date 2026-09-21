@@ -21,7 +21,7 @@ import type { Swipe } from "./Swipeable.tsx";
 
 export interface Select {
   selected: (id: string) => boolean;
-  onToggle: (id: string) => void;
+  onToggle: ({ id, extend }: { id: string; extend: boolean }) => void;
   onHandle: ({ event, id }: { event: PointerEvent<HTMLButtonElement>; id: string }) => void;
 }
 
@@ -126,7 +126,7 @@ export function TaskRow({
 
   const onRow = (event: MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest("button")) return;
-    if (select) return select.onToggle(task.id);
+    if (select) return select.onToggle({ id: task.id, extend: event.shiftKey });
     onTitle();
   };
 
@@ -144,7 +144,7 @@ export function TaskRow({
             {select ? (
               <>
                 <Handle onPointerDown={(event) => select.onHandle({ event, id: task.id })} />
-                <SquareTick on={select.selected(task.id)} onToggle={() => select.onToggle(task.id)} />
+                <SquareTick on={select.selected(task.id)} onToggle={(event) => select.onToggle({ id: task.id, extend: event.shiftKey })} />
               </>
             ) : (
               <CircleTick done={done} skipped={skipped} onToggle={onTick} />
