@@ -43,7 +43,10 @@ padding, card radius. Values are the ones on the canvas frames.
 - **Editor**: CodeMirror markdown with markers hidden off the caret line.
 - **Overlay**: full-screen surface over Tasks that holds the screen behind it
   still while it is up and returns it to where it was. Runner, Composer and
-  EditorScreen sit in one.
+  EditorScreen sit in one. On the phone the Composer is the only thing on
+  screen: Tasks renders it in place of the list and the top bar is left out,
+  so there is no page behind it to scroll and nothing for the address bar to
+  uncover. Tasks remembers where the list was and puts it back on close.
 - **Glyphs**: every icon in one file: plus, tick, chevron, play, arrows, ×,
   speech mark, subtasks, grip. Nothing draws its own.
 
@@ -96,6 +99,8 @@ ErrorSprite. Nothing else talks to the API.
 
 - **useLongPress**: one duration, one slop. Hold a tick, hold a group label,
   pause over a folded task while dragging.
+- **useSheet**: true where the composer is a bottom sheet over the list rather
+  than a screen of its own. App and Tasks read the same one.
 - **useShortcuts**: the desktop key bindings, in `interaction/shortcuts.tsx`
   with the list they come from and the ShortcutsSheet that shows it. Tasks
   owns the focus ring and what each action does.

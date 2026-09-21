@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 
-const keyboardHeight = 120;
+const panSettle = 150;
 
 let overlaysOpen = 0;
 let scrolledTo = 0;
@@ -37,23 +37,18 @@ export function Overlay({ children }: { children: ReactNode }) {
     const element = host.current;
     if (!viewport || !element) return;
     let frame = 0;
-    let applied = "";
+    let settling = 0;
     const fit = () => {
       frame = 0;
-      const covered = document.documentElement.clientHeight - viewport.height;
-      const next = covered > keyboardHeight ? `${Math.round(viewport.offsetTop)}:${Math.round(viewport.height)}` : "";
-      if (next === applied) return;
-      applied = next;
-      if (next === "") {
-        element.style.top = "";
-        element.style.height = "";
-        return;
-      }
-      element.style.top = `${Math.round(viewport.offsetTop)}px`;
       element.style.height = `${Math.round(viewport.height)}px`;
+    };
+    const unpan = () => {
+      if (viewport.offsetTop !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
     };
     const schedule = () => {
       if (frame === 0) frame = window.requestAnimationFrame(fit);
+      window.clearTimeout(settling);
+      settling = window.setTimeout(unpan, panSettle);
     };
     viewport.addEventListener("resize", schedule);
     viewport.addEventListener("scroll", schedule);
@@ -61,6 +56,7 @@ export function Overlay({ children }: { children: ReactNode }) {
     return () => {
       viewport.removeEventListener("resize", schedule);
       viewport.removeEventListener("scroll", schedule);
+      window.clearTimeout(settling);
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, []);
