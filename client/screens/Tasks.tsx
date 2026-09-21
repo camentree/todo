@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
@@ -30,6 +30,7 @@ import { useFolds } from "../components/Foldable.tsx";
 import { closeTask, showing, subtasksKey, toggleComments, toggleSubtasks } from "../components/TaskRow.tsx";
 import { longPress } from "../interaction/longPress.ts";
 import { useRoute } from "../interaction/route.ts";
+import { useSheet } from "../interaction/sheet.ts";
 import { ShortcutsSheet, useShortcuts } from "../interaction/shortcuts.tsx";
 import type { ShortcutAction } from "../interaction/shortcuts.tsx";
 import { Runner } from "./Runner.tsx";
@@ -56,15 +57,6 @@ const unfoldDelay = 480;
 const savedDuration = 3000;
 const scrollEdge = 120;
 const scrollStep = 10;
-
-const sheetQuery = window.matchMedia("(min-width: 700px) and (hover: hover)");
-
-function useSheet(): boolean {
-  return useSyncExternalStore((listener) => {
-    sheetQuery.addEventListener("change", listener);
-    return () => sheetQuery.removeEventListener("change", listener);
-  }, () => sheetQuery.matches);
-}
 
 function grammarHighlighting({ today, subtasks }: { today: string; subtasks: boolean }): Extension {
   const marks = (view: EditorView): DecorationSet =>
@@ -248,6 +240,7 @@ export function Tasks() {
   const lastSelected = useRef<string | null>(null);
   const savedTimer = useRef<number | null>(null);
   const pointerWas = useRef({ x: 0, y: 0 });
+  const listScrolledTo = useRef(0);
   if (focused) lastFocused.current = focused;
   const folds = useFolds();
   const [selection, setSelection] = useState<Set<string> | null>(null);
@@ -294,13 +287,18 @@ export function Tasks() {
 
   const scheduleOf = (task: Task): Schedule | null => (task.scheduleId ? (store.schedules.find((each) => each.id === task.scheduleId) ?? null) : null);
 
-  const edit = (task: Task) => go({ tab: "tasks", id: task.id, edit: true });
+  const compose = (id: string | null) => {
+    listScrolledTo.current = window.scrollY;
+    go({ tab: "tasks", id, edit: true });
+  };
 
-  const add = () => go({ tab: "tasks", id: null, edit: true });
+  const edit = (task: Task) => compose(task.id);
+
+  const add = () => compose(null);
 
   const editSubtask = ({ host, index }: { host: Task; index: number }) => {
     const subtask = host.subtasks[index];
-    if (subtask) go({ tab: "tasks", id: subtask.id, edit: true });
+    if (subtask) compose(subtask.id);
   };
 
   const hostOf = (subtask: Task): { host: Task; index: number } | null => {
@@ -450,6 +448,12 @@ export function Tasks() {
   const editingTask =
     route.id === null ? null : (store.tasks.find((task) => task.id === route.id) ?? store.tasks.flatMap((task) => task.subtasks).find((subtask) => subtask.id === route.id) ?? null);
   const editing = route.edit === true && (route.id === null || editingTask !== null);
+  const composerScreen = editing && !sheet;
+
+  useEffect(() => {
+    if (composerScreen) return;
+    window.scrollTo(0, listScrolledTo.current);
+  }, [composerScreen]);
 
   const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] =>
     container === "backlog" ? backlog : (todayGroups.find((each) => each.group === group)?.tasks ?? []);
@@ -686,6 +690,19 @@ export function Tasks() {
 
   useShortcuts(shortcut);
 
+  const composer = editing ? (
+    <Composer key={route.id ?? "new"} task={editingTask} sheet={sheet} onCommit={reveal} onClose={close} onDelete={() => editingTask && askDeleteEditing(editingTask)} />
+  ) : null;
+  const confirm = asking ? <Confirm question={asking.question} choices={asking.choices} onCancel={() => setAsking(null)} /> : null;
+
+  if (composerScreen)
+    return (
+      <>
+        {composer}
+        {confirm}
+      </>
+    );
+
   return (
     <>
       <div className="filters">
@@ -807,8 +824,8 @@ export function Tasks() {
           }}
         />
       )}
-      {editing && <Composer key={route.id ?? "new"} task={editingTask} sheet={sheet} onCommit={reveal} onClose={close} onDelete={() => editingTask && askDeleteEditing(editingTask)} />}
-      {asking && <Confirm question={asking.question} choices={asking.choices} onCancel={() => setAsking(null)} />}
+      {composer}
+      {confirm}
       {helping && <ShortcutsSheet onClose={() => setHelping(false)} />}
     </>
   );
