@@ -45,7 +45,7 @@ export function parseMarkdown(markdown: string): JournalEntry[] {
         ...(displayTitle ? { displayTitle } : {}),
         ...(tags.length ? { tags } : {}),
         ...(fields.author ? { author: fields.author } : {}),
-        ...(fields.deleted_at_utc ? { deletedAt: fields.deleted_at_utc } : {}),
+        ...(fields.deleted_at ? { deletedAt: fields.deleted_at } : {}),
       },
     };
   });
@@ -58,7 +58,7 @@ export function serializeMarkdown(entries: JournalEntry[]): string {
         entry.metadata.displayTitle ? `display_title: ${entry.metadata.displayTitle}` : "",
         entry.metadata.tags?.length ? `tags: ${entry.metadata.tags.join(", ")}` : "",
         entry.metadata.author ? `author: ${entry.metadata.author}` : "",
-        entry.metadata.deletedAt ? `deleted_at_utc: ${entry.metadata.deletedAt}` : "",
+        entry.metadata.deletedAt ? `deleted_at: ${entry.metadata.deletedAt}` : "",
       ].filter(Boolean);
       const parts = [`## ${entry.at}`];
       if (metadata.length) parts.push(`${fence}\n${metadata.join("\n")}\n${fence}`);

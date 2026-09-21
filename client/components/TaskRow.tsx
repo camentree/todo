@@ -115,7 +115,7 @@ export function TaskRow({
     setFirstUnseen(ordered.find((comment) => comment.seenAt === null)?.id ?? null);
     // Reading a deleted task must not mark its comments seen, and must not pull it
     // back onto today the way an unseen comment does for a live one.
-    if (!unseen || task.deletedAt !== null) return;
+    if (!unseen || task.deletedAt) return;
     for (const comment of comments) if (comment.seenAt === null) store.putComment({ ...comment, seenAt: now });
     if (task.dueDate === null) store.putTask({ ...task, dueDate: store.today });
   }, [commentsShowing]);

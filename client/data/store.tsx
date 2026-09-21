@@ -63,7 +63,7 @@ function normalized(task: Task): Task {
   };
 }
 
-const deletedPath = `/api/tasks/deleted?days=${deletedDays}`;
+const deletedPath = `/api/tasks/recently-deleted?days=${deletedDays}`;
 
 async function load(): Promise<Memory> {
   const [schedules, tasks, deleted, journal, notebook] = await Promise.all([

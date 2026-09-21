@@ -35,6 +35,7 @@ export interface Schedule {
   note: string;
   sortOrder: number;
   createdAt: string;
+  deletedAt?: string | null;
 }
 
 export interface Comment {
@@ -45,6 +46,7 @@ export interface Comment {
   writtenAt: string;
   seenAt: string | null;
   createdAt: string;
+  deletedAt?: string | null;
 }
 
 export interface Task {
@@ -68,7 +70,9 @@ export interface Task {
   subtasks: Task[];
   comments: Comment[];
   createdAt: string;
-  deletedAt: string | null;
+  // Parallax leaves deletedAt off a live task entirely; only the recently deleted
+  // list carries it, so read it as "deleted if truthy" rather than testing for null.
+  deletedAt?: string | null;
 }
 
 export interface JournalMetadata {

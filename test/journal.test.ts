@@ -34,16 +34,16 @@ describe("journal markdown", () => {
   });
 
   it("carries a deleted entry in the fence so the file keeps it", () => {
-    const entry: JournalEntry = { ...entries[0]!, metadata: { tags: ["personal"], deletedAt: "2026-09-20T10:00:00.000Z" } };
+    const entry: JournalEntry = { ...entries[0]!, metadata: { tags: ["personal"], deletedAt: "2026-09-20T10:00:00" } };
     expect(serializeMarkdown([entry])).toBe(
-      "## 2026-09-13T08:15:00\n\n---\ntags: personal\ndeleted_at_utc: 2026-09-20T10:00:00.000Z\n---\n\nQuiet morning.\n\nCoffee on the step.\n",
+      "## 2026-09-13T08:15:00\n\n---\ntags: personal\ndeleted_at: 2026-09-20T10:00:00\n---\n\nQuiet morning.\n\nCoffee on the step.\n",
     );
     expect(parseMarkdown(serializeMarkdown([entry]))).toEqual([entry]);
   });
 
   it("keeps an entry deleted when it is written back through the editor", () => {
-    const entry: JournalEntry = { ...entries[0]!, metadata: { deletedAt: "2026-09-20T10:00:00.000Z" } };
-    expect(entryFrom({ entry, text: entryText(entry) }).metadata.deletedAt).toBe("2026-09-20T10:00:00.000Z");
+    const entry: JournalEntry = { ...entries[0]!, metadata: { deletedAt: "2026-09-20T10:00:00" } };
+    expect(entryFrom({ entry, text: entryText(entry) }).metadata.deletedAt).toBe("2026-09-20T10:00:00");
   });
 
   it("reads a tag line written as a comma list or repeated", () => {

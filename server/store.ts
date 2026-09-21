@@ -30,6 +30,8 @@ export class Store {
     // A file written before soft deletes has no deletedAt at all, and undefined would
     // fail every `deletedAt === null` test and hide the whole list.
     this.data.tasks = this.data.tasks.map((row) => ({ ...row, deletedAt: row.deletedAt ?? null }));
+    this.data.comments = this.data.comments.map((comment) => ({ ...comment, deletedAt: comment.deletedAt ?? null }));
+    this.data.schedules = this.data.schedules.map((schedule) => ({ ...schedule, deletedAt: schedule.deletedAt ?? null }));
   }
 
   private save(): void {
@@ -40,14 +42,14 @@ export class Store {
   }
 
   schedules(): Schedule[] {
-    return [...this.data.schedules].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
+    return this.data.schedules.filter((each) => !each.deletedAt).sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
   }
 
   putSchedule({ schedule, today }: { schedule: Schedule; today: string }): Schedule {
     validateShape({ type: schedule.type, target: schedule.target, numericalValue: null, stringValue: null, restSeconds: schedule.restSeconds });
     for (const spec of schedule.subtasks ?? []) validateShape({ type: spec.type, target: spec.target, numericalValue: null, stringValue: null, restSeconds: spec.restSeconds });
     const existing = this.data.schedules.find((each) => each.id === schedule.id);
-    const stored = { ...schedule, id: schedule.id ?? identifier(), createdAt: existing?.createdAt ?? new Date().toISOString() };
+    const stored = { ...schedule, id: schedule.id ?? identifier(), createdAt: existing?.createdAt ?? new Date().toISOString(), deletedAt: null };
     const index = this.data.schedules.findIndex((each) => each.id === stored.id);
     if (index === -1) this.data.schedules.push(stored);
     else this.data.schedules[index] = stored;
@@ -62,8 +64,9 @@ export class Store {
   }
 
   deleteSchedule({ id, today }: { id: string; today: string }): void {
-    this.removeRows((row) => row.scheduleId === id && row.dueDate !== null && row.dueDate >= today);
-    this.data.schedules = this.data.schedules.filter((each) => each.id !== id);
+    const deletedAt = new Date().toISOString();
+    this.markDeleted((row) => row.scheduleId === id && row.dueDate !== null && row.dueDate >= today);
+    this.data.schedules = this.data.schedules.map((each) => (each.id === id && !each.deletedAt ? { ...each, deletedAt } : each));
     this.save();
   }
 
@@ -71,7 +74,7 @@ export class Store {
     const last = through ?? shiftDate({ key: today, days: 6 });
     for (let date = today; date <= last; date = shiftDate({ key: date, days: 1 })) this.instantiate(date);
     const top = this.data.tasks
-      .filter((row) => row.parentId === null && row.deletedAt === null)
+      .filter((row) => row.parentId === null && !row.deletedAt)
       .sort((a, b) => ((a.dueDate === null ? 1 : 0) - (b.dueDate === null ? 1 : 0)) || (a.dueDate ?? "").localeCompare(b.dueDate ?? "") || a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
     return top.map((row) => this.assemble(row));
   }
@@ -80,14 +83,14 @@ export class Store {
   // list still reads as the task that was thrown away rather than an empty shell.
   deletedTasks({ since }: { since: string }): Task[] {
     return this.data.tasks
-      .filter((row) => row.parentId === null && row.deletedAt !== null && row.deletedAt >= since)
+      .filter((row) => row.parentId === null && row.deletedAt && row.deletedAt >= since)
       .sort((a, b) => (b.deletedAt ?? "").localeCompare(a.deletedAt ?? "") || a.id.localeCompare(b.id))
       .map((row) => this.assemble(row, { deleted: true }));
   }
 
   private assemble(row: Row, { deleted }: { deleted: boolean } = { deleted: false }): Task {
     const subtasks = this.data.tasks
-      .filter((each) => each.parentId === row.id && (deleted || each.deletedAt === null))
+      .filter((each) => each.parentId === row.id && (deleted || !each.deletedAt))
       .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
       .map((each) => ({ ...each, subtasks: [], comments: [] }));
     return { ...row, subtasks, comments: this.commentsFor(row) };
@@ -97,13 +100,16 @@ export class Store {
     const owners =
       row.scheduleId === null
         ? new Set([row.id])
-        : new Set(this.data.tasks.filter((each) => each.scheduleId === row.scheduleId && each.deletedAt === null).map((each) => each.id));
-    return this.data.comments.filter((comment) => owners.has(comment.taskId)).sort((a, b) => a.writtenAt.localeCompare(b.writtenAt) || a.id.localeCompare(b.id));
+        : new Set(this.data.tasks.filter((each) => each.scheduleId === row.scheduleId && !each.deletedAt).map((each) => each.id));
+    return this.data.comments
+      .filter((comment) => owners.has(comment.taskId) && !comment.deletedAt)
+      .sort((a, b) => a.writtenAt.localeCompare(b.writtenAt) || a.id.localeCompare(b.id));
   }
 
   private instantiate(date: string): void {
     if (this.data.instantiated.includes(date)) return;
     for (const schedule of this.data.schedules) {
+      if (schedule.deletedAt) continue;
       if (this.data.tasks.some((row) => row.scheduleId === schedule.id && row.dueDate === date)) continue;
       if (!isDue({ schedule, date })) continue;
       this.createInstance({ schedule, date });
@@ -161,7 +167,7 @@ export class Store {
   }
 
   getTask(id: string): Task {
-    const row = this.data.tasks.find((each) => each.id === id);
+    const row = this.data.tasks.find((each) => each.id === id && !each.deletedAt);
     if (!row) throw new Error(`no task with id ${id}`);
     return this.assemble(row);
   }
@@ -212,9 +218,9 @@ export class Store {
 
   private markDeleted(matches: (row: Row) => boolean): void {
     const deletedAt = new Date().toISOString();
-    const gone = new Set(this.data.tasks.filter((row) => row.deletedAt === null && matches(row)).map((row) => row.id));
+    const gone = new Set(this.data.tasks.filter((row) => !row.deletedAt && matches(row)).map((row) => row.id));
     this.data.tasks = this.data.tasks.map((row) =>
-      row.deletedAt === null && (gone.has(row.id) || (row.parentId !== null && gone.has(row.parentId))) ? { ...row, deletedAt } : row,
+      !row.deletedAt && (gone.has(row.id) || (row.parentId !== null && gone.has(row.parentId))) ? { ...row, deletedAt } : row,
     );
   }
 
@@ -224,13 +230,13 @@ export class Store {
   }
 
   taskComments(taskId: string): Comment[] {
-    const row = this.data.tasks.find((each) => each.id === taskId);
+    const row = this.data.tasks.find((each) => each.id === taskId && !each.deletedAt);
     if (!row) throw new Error(`no task with id ${taskId}`);
     return this.commentsFor(row);
   }
 
   createComment({ taskId, comment }: { taskId: string; comment: Partial<Comment> }): Comment {
-    if (!this.data.tasks.some((each) => each.id === taskId)) throw new Error(`no task with id ${taskId}`);
+    if (!this.data.tasks.some((each) => each.id === taskId && !each.deletedAt)) throw new Error(`no task with id ${taskId}`);
     const stored: Comment = {
       id: comment.id ?? identifier(),
       taskId,
@@ -239,6 +245,7 @@ export class Store {
       writtenAt: comment.writtenAt ?? new Date().toISOString().slice(0, 19),
       seenAt: comment.seenAt ?? null,
       createdAt: new Date().toISOString(),
+      deletedAt: null,
     };
     this.data.comments.push(stored);
     this.save();
@@ -246,7 +253,7 @@ export class Store {
   }
 
   updateComment({ id, comment }: { id: string; comment: Partial<Comment> }): Comment {
-    const index = this.data.comments.findIndex((each) => each.id === id);
+    const index = this.data.comments.findIndex((each) => each.id === id && !each.deletedAt);
     const existing = this.data.comments[index];
     if (!existing) throw new Error(`no comment with id ${id}`);
     const stored: Comment = {
@@ -261,7 +268,8 @@ export class Store {
   }
 
   deleteComment(id: string): void {
-    this.data.comments = this.data.comments.filter((each) => each.id !== id);
+    const deletedAt = new Date().toISOString();
+    this.data.comments = this.data.comments.map((each) => (each.id === id && !each.deletedAt ? { ...each, deletedAt } : each));
     this.save();
   }
 
@@ -284,7 +292,9 @@ export class Store {
   }
 
   deleteEntry({ name, at }: { name: string; at: string }): void {
-    const deletedAt = new Date().toISOString();
+    // Parallax stamps the fence with a local timestamp to the second, unlike the
+    // deleted_at_utc columns behind tasks, schedules and comments.
+    const deletedAt = new Date().toLocaleDateString("sv-SE") + "T" + new Date().toTimeString().slice(0, 8);
     const entries = this.allEntries(name).map((each) =>
       each.at === at && each.metadata.deletedAt === undefined ? { ...each, metadata: { ...each.metadata, deletedAt } } : each,
     );
