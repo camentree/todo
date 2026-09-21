@@ -253,67 +253,66 @@ const comments: Comment[] = [
   { id: identifier("cmt"), taskId: oneOffRow("Plan the trip to Portland").id, body: "Flights are cheapest the second week of October.", author: "user", writtenAt: stamp(-4, "20:10:00"), seenAt: stamp(-4, "20:10:00"), createdAt: created(-4) },
 ];
 
-function entry({ at, title, tag, body }: { at: string; title?: string; tag: string; body: string }): JournalEntry {
-  const tags = tagsFrom(tag);
-  return { sectionTitle: at, at, body, metadata: title ? { displayTitle: title, tag: tags } : { tag: tags } };
+function entry({ at, title, tags, body }: { at: string; title?: string; tags: string; body: string }): JournalEntry {
+  return { sectionTitle: at, at, body, metadata: { ...(title ? { displayTitle: title } : {}), tags: tagsFrom(tags) } };
 }
 
 const journal: JournalEntry[] = [
-  entry({ at: stamp(-14, "08:15:00"), tag: "personal", body: "Quiet morning. Coffee on the step. The neighbour's cat came over and sat on the warm stone." }),
+  entry({ at: stamp(-14, "08:15:00"), tags: "personal", body: "Quiet morning. Coffee on the step. The neighbour's cat came over and sat on the warm stone." }),
   entry({
     at: stamp(-12, "21:40:00"),
     title: "after the session",
-    tag: "therapy",
+    tags: "therapy",
     body: "Talked about the thing from Tuesday. It is smaller when I say it out loud, more like a fact than a weather system.\n\n### homework\n\nNotice when I am bracing.",
   }),
-  entry({ at: stamp(-9, "19:30:00"), tag: "exercise, climbing", body: "Hangboard felt heavy. Kept the 60s rest and it was fine by the third set." }),
+  entry({ at: stamp(-9, "19:30:00"), tags: "exercise, climbing", body: "Hangboard felt heavy. Kept the 60s rest and it was fine by the third set." }),
   entry({
     at: stamp(-7, "07:42:00"),
     title: "slept badly",
-    tag: "personal",
+    tags: "personal",
     body: "Slept badly. Sat for twelve minutes anyway. The room was quiet by the end and I noticed I did not want it to end.",
   }),
-  entry({ at: stamp(-5, "18:05:00"), title: "blue v4", tag: "climbing", body: "Sent the blue V4 on the overhang. Heel hook first, then trust the left hand." }),
-  entry({ at: stamp(-3, "21:10:00"), tag: "therapy, personal", body: "Walked before dinner. Fewer tabs open in my head." }),
+  entry({ at: stamp(-5, "18:05:00"), title: "blue v4", tags: "climbing", body: "Sent the blue V4 on the overhang. Heel hook first, then trust the left hand." }),
+  entry({ at: stamp(-3, "21:10:00"), tags: "therapy, personal", body: "Walked before dinner. Fewer tabs open in my head." }),
   entry({
     at: stamp(-1, "07:40:00"),
-    tag: "personal",
+    tags: "personal",
     body: "Rain. Wrote three lines and that was enough.\n\n- call the pharmacy\n- water is running low, eight glasses is a lot",
   }),
 ];
 
 const notebook: JournalEntry[] = [
-  entry({ at: stamp(-20, "15:15:00"), title: "the overstory", tag: "books", body: "Sam recommended The Overstory. Library has it, hold placed." }),
+  entry({ at: stamp(-20, "15:15:00"), title: "the overstory", tags: "books", body: "Sam recommended The Overstory. Library has it, hold placed." }),
   entry({
     at: stamp(-18, "22:05:00"),
     title: "the dawn of everything",
-    tag: "books",
+    tags: "books",
     body: "Two hundred pages in and the argument is that the question itself is wrong. Worth finishing before the hold on The Overstory comes in.",
   }),
   entry({
     at: stamp(-11, "20:40:00"),
     title: "dal",
-    tag: "recipes",
+    tags: "recipes",
     body: "**Dal**: 1 cup red lentils, 3 cups water, turmeric, salt. 25 minutes.\n\n### tempering\n\nCumin, garlic and chilli in ghee at the end, poured over.",
   }),
   entry({
     at: stamp(-8, "19:15:00"),
-    tag: "recipes",
+    tags: "recipes",
     body: "Roast tomatoes at 200 for forty minutes with garlic and thyme, then blend with the stock. Cream is optional and the bread is not.",
   }),
   entry({
     at: stamp(-6, "11:02:00"),
-    tag: "programming",
+    tags: "programming",
     body: "Parallax read-only role is `parallax_reader`. The todo schema is granted at migration time, so a new table needs a grant in the same migration.",
   }),
-  entry({ at: stamp(-4, "13:30:00"), title: "books to find", tag: "books", body: "Anything else by Powers. The Le Guin essays. The short one about walking that Ana mentioned." }),
+  entry({ at: stamp(-4, "13:30:00"), title: "books to find", tags: "books", body: "Anything else by Powers. The Le Guin essays. The short one about walking that Ana mentioned." }),
   entry({
     at: stamp(-2, "18:20:00"),
     title: "water filter",
-    tag: "house",
+    tags: "house",
     body: "The filter is the 3-pack, model on the inside of the fridge door. Change it the first of every month.",
   }),
-  entry({ at: stamp(0, "09:30:00"), title: "rosemary", tag: "garden", body: "The rosemary wants the sunny bed by the fence. Move it before the frost." }),
+  entry({ at: stamp(0, "09:30:00"), title: "rosemary", tags: "garden", body: "The rosemary wants the sunny bed by the fence. Move it before the frost." }),
 ];
 
 function seeded(seed: number): () => number {

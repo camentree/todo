@@ -2,45 +2,63 @@ import { entryFrom, entryTags, entryText, entryTitle, parseMarkdown, readableTit
 import type { JournalEntry } from "@shared/model.ts";
 
 const entries: JournalEntry[] = [
-  { sectionTitle: "2026-09-13T08:15:00", at: "2026-09-13T08:15:00", body: "Quiet morning.\n\nCoffee on the step.", metadata: { tag: ["personal"] } },
+  { sectionTitle: "2026-09-13T08:15:00", at: "2026-09-13T08:15:00", body: "Quiet morning.\n\nCoffee on the step.", metadata: { tags: ["personal"] } },
   {
     sectionTitle: "2026-09-14T21:40:00",
     at: "2026-09-14T21:40:00",
     body: "Talked about the thing.\n\n### homework\n\n- one\n- two",
-    metadata: { displayTitle: "after the session", tag: ["therapy", "personal"] },
+    metadata: { displayTitle: "after the session", tags: ["therapy", "personal"] },
   },
 ];
 
 describe("journal markdown", () => {
-  it("heads each entry with its display title, else the section title, and writes the metadata after a blank line", () => {
+  it("heads every entry with its timestamp and fences the display title, tags and author under it", () => {
     expect(serializeMarkdown(entries)).toBe(
-      "## 2026-09-13T08:15:00\n\nat: 2026-09-13T08:15:00\ntag: personal\n\nQuiet morning.\n\nCoffee on the step.\n\n## after the session\n\nat: 2026-09-14T21:40:00\ntag: therapy, personal\n\nTalked about the thing.\n\n### homework\n\n- one\n- two\n",
+      "## 2026-09-13T08:15:00\n\n---\ntags: personal\n---\n\nQuiet morning.\n\nCoffee on the step.\n\n## 2026-09-14T21:40:00\n\n---\ndisplay_title: after the session\ntags: therapy, personal\n---\n\nTalked about the thing.\n\n### homework\n\n- one\n- two\n",
     );
   });
 
-  it("round-trips a timestamp heading, a display-title heading and a body with its own deeper subheadings", () => {
+  it("round-trips a plain entry, a display-titled one and a body with its own deeper subheadings", () => {
     expect(parseMarkdown(serializeMarkdown(entries))).toEqual(entries);
   });
 
   it("writes an author only when there is one, and reads it back", () => {
     const entry: JournalEntry = { sectionTitle: "2026-09-01T10:00:00", at: "2026-09-01T10:00:00", body: "plain", metadata: { author: "parallax" } };
-    expect(serializeMarkdown([entry])).toBe("## 2026-09-01T10:00:00\n\nat: 2026-09-01T10:00:00\nauthor: parallax\n\nplain\n");
+    expect(serializeMarkdown([entry])).toBe("## 2026-09-01T10:00:00\n\n---\nauthor: parallax\n---\n\nplain\n");
     expect(parseMarkdown(serializeMarkdown([entry]))).toEqual([entry]);
   });
 
+  it("leaves out the fence entirely when an entry has no metadata", () => {
+    const entry: JournalEntry = { sectionTitle: "2026-09-01T10:00:00", at: "2026-09-01T10:00:00", body: "plain", metadata: {} };
+    expect(serializeMarkdown([entry])).toBe("## 2026-09-01T10:00:00\n\nplain\n");
+  });
+
   it("reads a tag line written as a comma list or repeated", () => {
-    const written = "## 2026-09-01T10:00:00\n\nat: 2026-09-01T10:00:00\ntag: books\ntag: house, garden\n\nplain\n";
+    const written = "## 2026-09-01T10:00:00\n\n---\ntags: books\ntags: house, garden\n---\n\nplain\n";
     expect(entryTags(parseMarkdown(written)[0]!)).toEqual(["books", "house", "garden"]);
   });
 
+  it("still reads the display title from the heading an older file carries", () => {
+    const written = "## after the session\n\n---\nat: 2026-09-14T21:40:00\n---\n\nplain\n";
+    expect(parseMarkdown(written)).toEqual([
+      { sectionTitle: "2026-09-14T21:40:00", at: "2026-09-14T21:40:00", body: "plain", metadata: { displayTitle: "after the session" } },
+    ]);
+  });
+
   it("drops the id and task lines an older file carries", () => {
-    const written = "## 2026-09-01T10:00:00\n\nid: abc123\nat: 2026-09-01T10:00:00\ntask: Journal\n\nplain\n";
+    const written = "## 2026-09-01T10:00:00\n\n---\nid: abc123\nat: 2026-09-01T10:00:00\ntask: Journal\n---\n\nplain\n";
     expect(parseMarkdown(written)).toEqual([{ sectionTitle: "2026-09-01T10:00:00", at: "2026-09-01T10:00:00", body: "plain", metadata: {} }]);
   });
 
-  it("takes the section title from a bare heading when there is no metadata", () => {
+  it("takes the section title from a bare heading when there is no fence", () => {
     expect(parseMarkdown("## 2026-09-01T10:00:00\n\nplain\n")).toEqual([
       { sectionTitle: "2026-09-01T10:00:00", at: "2026-09-01T10:00:00", body: "plain", metadata: {} },
+    ]);
+  });
+
+  it("keeps an unfenced key line as body, the way parallax reads it", () => {
+    expect(parseMarkdown("## 2026-09-01T10:00:00\n\nauthor: parallax\n\nplain\n")).toEqual([
+      { sectionTitle: "2026-09-01T10:00:00", at: "2026-09-01T10:00:00", body: "author: parallax\n\nplain", metadata: {} },
     ]);
   });
 
@@ -86,7 +104,7 @@ describe("editor text", () => {
     expect(entryFrom({ entry: entries[0]!, text: "## blue v4\n\nHeel hook first.\n", tags: ["climbing"] })).toEqual({
       ...entries[0]!,
       body: "Heel hook first.",
-      metadata: { displayTitle: "blue v4", tag: ["climbing"] },
+      metadata: { displayTitle: "blue v4", tags: ["climbing"] },
     });
   });
 
