@@ -24,7 +24,7 @@ export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
 
 function Filters({ counts, active, total, onSelect }: { counts: { tag: string; count: number }[]; active: string | null; total: number; onSelect: (tag: string | null) => void }) {
   return (
-    <div className="filters">
+    <div className="flex flex-wrap gap-x-4 gap-y-0 pt-[0.3rem] pb-[0.2rem]">
       <TextButton className={"min-h-touch py-2 text-meta " + (active === null ? "text-text" : "text-faint hover:text-dim")} onSelect={() => onSelect(null)}>
         all ({total})
       </TextButton>
@@ -42,16 +42,16 @@ function EntryRow({ entry, filter, onOpen, onDelete }: { entry: JournalEntry; fi
   const words = wordCount(entry.body);
   return (
     <Swipeable right={null} left={{ word: "delete", onSwipe: onDelete }}>
-      <button className="entry" onClick={onOpen}>
-        <div className="entry-title">{readableTitle(entry)}</div>
-        <div className="entry-head">
+      <button className="entry flex w-full flex-col rounded-lg px-1 py-[0.7rem] transition-[background] duration-[450ms] ease-[ease] hover:bg-raised wide:px-[0.9rem]" onClick={onOpen}>
+        <div className="text-title leading-[1.35] text-text">{readableTitle(entry)}</div>
+        <div className="entry-head mt-[0.15rem] flex gap-[0.4rem] text-meta text-text">
           <span>{formatWhen(entry.at)}</span>
           {tags.length > 0 && <span>{tags.join(", ")}</span>}
-          <span className="entry-words">
+          <span className="text-dim">
             {words} {words === 1 ? "word" : "words"}
           </span>
         </div>
-        <div className="entry-body">
+        <div className="mt-[0.45rem] line-clamp-3 text-body leading-[1.45] text-dim [&_code]:font-mono [&_code]:text-[0.9em]">
           <MarkdownPreview text={entry.body} />
         </div>
       </button>
@@ -97,7 +97,7 @@ export function Journals({ name }: { name: JournalName }) {
           onCancel={() => setDeleting(null)}
         />
       )}
-      <div className="floating">
+      <div className="fixed right-[max(var(--gutter),calc(50%-var(--column)/2+var(--gutter)))] bottom-bottom z-[5] flex items-center gap-[0.6rem]">
         <RoundButton label="add" onSelect={() => write(blankEntry({ tag: filter }))}>
           <PlusGlyph />
         </RoundButton>

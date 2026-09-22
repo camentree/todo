@@ -549,7 +549,7 @@ export function Tasks() {
 
   return (
     <>
-      <div className="filters">
+      <div className="flex flex-wrap gap-x-4 gap-y-0 pt-[0.3rem] pb-[0.2rem]">
         <TextButton className={"min-h-touch py-2 text-meta " + (list === "today" ? "text-text" : "text-faint hover:text-dim")} onSelect={() => setList("today")}>
           today ({onToday.length})
         </TextButton>
@@ -653,7 +653,7 @@ export function Tasks() {
           </RoundButton>
         </div>
       ) : (
-        <div className="floating">
+        <div className="fixed right-[max(var(--gutter),calc(50%-var(--column)/2+var(--gutter)))] bottom-bottom z-[5] flex items-center gap-[0.6rem]">
           <RoundButton label="add" onSelect={add}>
             <PlusGlyph />
           </RoundButton>
