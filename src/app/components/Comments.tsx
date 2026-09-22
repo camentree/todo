@@ -37,7 +37,7 @@ function CommentField({ onAdd }: { onAdd: (body: string) => void }) {
   };
 
   return (
-    <div className="field flex items-end gap-2 rounded-card bg-raised px-4 py-[0.7rem]">
+    <div className="field flex w-[min(100%,30rem)] items-end gap-2 rounded-card bg-raised px-4 py-[0.7rem]">
       <textarea
         className="min-w-0 flex-1 overflow-hidden text-body leading-[1.45] text-text [caret-color:var(--accent)] placeholder:text-faint"
         ref={field}
@@ -80,8 +80,8 @@ export function Comments({
   }, [comments.length]);
 
   return (
-    <div className="comment-list ml-[calc(var(--indent)*-1)] flex w-[calc(100%+var(--indent))] flex-col items-center gap-2 px-1 pt-[0.3rem] pb-2">
-      <div className="thread flex max-h-[18rem] flex-col gap-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" ref={thread}>
+    <div className="comment-list [&_.swipeable]:rounded-card ml-[calc(var(--indent)*-1)] flex w-[calc(100%+var(--indent))] flex-col items-center gap-2 px-1 pt-[0.3rem] pb-2">
+      <div className="thread flex w-[min(100%,30rem)] max-h-[18rem] flex-col gap-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" ref={thread}>
         {ordered.map((comment) => (
           <Comment key={comment.id} comment={comment} onDelete={() => onDelete(comment)} />
         ))}

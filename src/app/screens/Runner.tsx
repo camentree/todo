@@ -102,7 +102,15 @@ function Queue({ direction, items }: { direction: "across" | "down"; items: { ke
     element?.scrollIntoView(direction === "across" ? { block: "nearest", inline: "center", behavior: "smooth" } : { block: "center", inline: "nearest", behavior: "smooth" });
   }, [currentKey]);
   return (
-    <div ref={host} className={direction === "across" ? "queue across" : "queue down"}>
+    <div
+      ref={host}
+      className={
+        "relative flex flex-none font-medium text-faint [scrollbar-width:none] [&::-webkit-scrollbar]:hidden " +
+        (direction === "across"
+          ? "gap-4 overflow-x-auto pr-12 text-title whitespace-nowrap [mask-image:linear-gradient(to_right,black_calc(100%-3rem),transparent)]"
+          : "max-h-[6.2rem] flex-col gap-0 overflow-y-auto pt-[0.3rem] pb-[2.2rem] pl-[1.2rem] text-body [mask-image:linear-gradient(to_bottom,black_calc(100%-1.4rem),transparent)]")
+      }
+    >
       {items.map((item) => (
         <TextButton
           key={item.key}
@@ -123,11 +131,11 @@ function Queue({ direction, items }: { direction: "across" | "down"; items: { ke
 function Ring({ fraction, onTap, onHold, children }: { fraction: number; onTap: (() => void) | null; onHold: (() => void) | null; children: ReactNode }) {
   const press = onHold ? longPress(onHold) : null;
   return (
-    <div className="ring" onClick={onTap ?? undefined} {...press}>
-      <svg className="arc" width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}>
-        <circle cx={ringSize / 2} cy={ringSize / 2} r={ringRadius} fill="none" stroke="var(--accent)" strokeWidth="3" strokeDasharray={ringLength} strokeDashoffset={ringLength * (1 - Math.max(0, Math.min(1, fraction)))} />
+    <div className="relative flex size-ring flex-none items-center justify-center rounded-full border-[3px] border-raised select-none" onClick={onTap ?? undefined} {...press}>
+      <svg className="pointer-events-none absolute -inset-[3px] -rotate-90" width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}>
+        <circle className="transition-[stroke-dashoffset] duration-300 ease-linear" cx={ringSize / 2} cy={ringSize / 2} r={ringRadius} fill="none" stroke="var(--accent)" strokeWidth="3" strokeDasharray={ringLength} strokeDashoffset={ringLength * (1 - Math.max(0, Math.min(1, fraction)))} />
       </svg>
-      <div className="ring-inside">{children}</div>
+      <div className="relative flex max-w-[200px] flex-col items-center justify-center gap-[0.2rem] text-center">{children}</div>
     </div>
   );
 }
@@ -145,7 +153,7 @@ function Slide({ done, onComplete }: { done: boolean; onComplete: () => void }) 
   return (
     <div
       ref={track}
-      className={dragging ? "slide dragging" : "slide"}
+      className="relative mt-[0.8rem] h-12 w-[190px] touch-none overflow-hidden rounded-[24px] bg-raised"
       onPointerDown={(event) => {
         if (done) return;
         event.stopPropagation();
@@ -166,11 +174,11 @@ function Slide({ done, onComplete }: { done: boolean; onComplete: () => void }) 
       }}
       onClick={(event) => event.stopPropagation()}
     >
-      <span className="slide-fill" style={{ width: `calc(${shown * 100}% )` }} />
-      <span className="slide-knob" style={{ left: `calc(${shown} * (100% - 48px))` }}>
+      <span className={"absolute inset-y-0 left-0 bg-chip " + (dragging ? "" : "transition-[width] duration-200 ease-[ease]")} style={{ width: `calc(${shown * 100}% )` }} />
+      <span className={"absolute top-0 flex size-12 items-center justify-center rounded-full bg-accent text-ground " + (dragging ? "" : "transition-[left] duration-200 ease-[ease]")} style={{ left: `calc(${shown} * (100% - 48px))` }}>
         <TickGlyph size={18} />
       </span>
-      <span className="slide-label">{done ? "done" : "slide to complete"}</span>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center pl-[30px] text-meta text-dim">{done ? "done" : "slide to complete"}</span>
     </div>
   );
 }
@@ -281,7 +289,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
   }, [task?.id, comments.length]);
 
   const ringContent = (): { fraction: number; onTap: (() => void) | null; onHold: (() => void) | null; inside: ReactNode } => {
-    if (state.phase === "end") return { fraction: 1, onTap: null, onHold: null, inside: <div className="ring-subtask">done</div> };
+    if (state.phase === "end") return { fraction: 1, onTap: null, onHold: null, inside: <div className="max-w-[190px] pt-[0.4rem] text-title leading-[1.2] font-bold tracking-[-0.02em] [overflow-wrap:anywhere]">done</div> };
     if (state.phase === "rest") {
       const nextItem = state.queue[state.index + 1];
       const nextStep = nextItem ? stepOf({ item: nextItem, tasks: tasksInOrder }) : null;
@@ -292,9 +300,9 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
         onHold: null,
         inside: (
           <>
-            <div className="ring-big">{formatClock(state.rest)}</div>
-            <div className="ring-hint">rest</div>
-            <div className="ring-subtask">{nextStep?.subtask.title}</div>
+            <div className="text-big leading-none tracking-[-0.03em] tabular-nums">{formatClock(state.rest)}</div>
+            <div className="text-meta text-dim">rest</div>
+            <div className="max-w-[190px] pt-[0.4rem] text-title leading-[1.2] font-bold tracking-[-0.02em] [overflow-wrap:anywhere]">{nextStep?.subtask.title}</div>
             <TextButton className="min-h-touch px-4 py-2 text-meta text-dim hover:text-text" onSelect={() => move(advance(state))}>
               skip
             </TextButton>
@@ -312,9 +320,9 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
         onHold: null,
         inside: (
           <>
-            <div className="ring-big">{formatClock(remaining)}</div>
-            <div className="ring-hint">{subtaskIsDone ? "done" : state.running ? "tap to pause" : elapsed > 0 ? "paused" : "tap to start"}</div>
-            <div className="ring-subtask">{subtask.title}</div>
+            <div className="text-big leading-none tracking-[-0.03em] tabular-nums">{formatClock(remaining)}</div>
+            <div className="text-meta text-dim">{subtaskIsDone ? "done" : state.running ? "tap to pause" : elapsed > 0 ? "paused" : "tap to start"}</div>
+            <div className="max-w-[190px] pt-[0.4rem] text-title leading-[1.2] font-bold tracking-[-0.02em] [overflow-wrap:anywhere]">{subtask.title}</div>
           </>
         ),
       };
@@ -332,9 +340,9 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
         onHold: () => write((each) => ({ numericalValue: Math.max(0, (each.numericalValue ?? 0) - 1), finalizedAt: null })),
         inside: (
           <>
-            <div className="ring-big">{current}</div>
-            <div className="ring-hint">of {target}</div>
-            <div className="ring-subtask">{subtask.title}</div>
+            <div className="text-big leading-none tracking-[-0.03em] tabular-nums">{current}</div>
+            <div className="text-meta text-dim">of {target}</div>
+            <div className="max-w-[190px] pt-[0.4rem] text-title leading-[1.2] font-bold tracking-[-0.02em] [overflow-wrap:anywhere]">{subtask.title}</div>
           </>
         ),
       };
@@ -346,7 +354,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
       onHold: null,
       inside: (
         <>
-          <div className="ring-subtask">{subtask.title}</div>
+          <div className="max-w-[190px] pt-[0.4rem] text-title leading-[1.2] font-bold tracking-[-0.02em] [overflow-wrap:anywhere]">{subtask.title}</div>
           {journalTask && !subtaskIsDone ? (
             <TextButton className="min-h-touch px-4 py-2 text-body font-medium text-accent" onSelect={() => setWriting(blankEntry({ tag: null }))}>
               write
@@ -405,7 +413,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
         <div className="flex items-center justify-between pt-top pb-[0.2rem]">
           <span className="text-heading font-bold tracking-[-0.02em]">
             {(task ?? tasksInOrder[0])?.group}
-            {tasksInOrder.length > 1 && task && <span className="position">{tasksInOrder.indexOf(task) + 1} of {tasksInOrder.length}</span>}
+            {tasksInOrder.length > 1 && task && <span className="ml-[0.6rem] text-meta font-normal tracking-normal text-dim">{tasksInOrder.indexOf(task) + 1} of {tasksInOrder.length}</span>}
           </span>
           <RoundButton className="size-round-small bg-raised text-dim hover:text-text" label="close" onSelect={exit}>
             <CrossGlyph />
@@ -413,12 +421,15 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
         </div>
         {acrossItems.length > 1 && <Queue direction="across" items={acrossItems} />}
         {downItems.length > 0 && <Queue direction="down" items={downItems} />}
-        <div className="runner-middle">
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-[0.6rem] overflow-hidden pt-[2.4rem]">
           <Ring fraction={ring.fraction} onTap={ring.onTap} onHold={ring.onHold}>
             {ring.inside}
           </Ring>
           {task && state.phase !== "rest" && (
-            <div ref={commentBox} className="runner-comments">
+            <div
+              ref={commentBox}
+              className="flex min-h-0 w-full max-w-[320px] flex-1 flex-col items-center justify-start gap-[0.2rem] overflow-y-auto pt-[0.6rem] [scrollbar-width:none] [&_.card]:w-full [&_.card]:flex-none [&_.comment-list]:w-full [&_.comment-list]:flex-none [&_.thread]:max-h-none [&_.thread]:overflow-visible"
+            >
               <Comments
                 comments={comments}
                 scrollTo={null}
