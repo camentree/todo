@@ -18,7 +18,7 @@ export function Modal({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <dialog ref={host} className="overlay" tabIndex={-1}>
+    <dialog ref={host} className="overlay fixed inset-0 m-0 flex h-auto max-h-none w-auto max-w-none flex-col overflow-hidden border-0 bg-none p-0 text-inherit not-open:hidden backdrop:bg-none" tabIndex={-1}>
       {children}
     </dialog>
   );

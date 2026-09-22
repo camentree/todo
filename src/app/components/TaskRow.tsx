@@ -159,7 +159,7 @@ export function TaskRow({
 
   return (
     <div className="task flex flex-col">
-      <Swipeable right={select ? null : todaySwipe} left={select || !onDelete ? null : { word: "delete", onSwipe: onDelete }}>
+      <Swipeable className="wide:-mx-[0.65rem]" right={select ? null : todaySwipe} left={select || !onDelete ? null : { word: "delete", onSwipe: onDelete }}>
         <div
           className={
             "row flex cursor-pointer flex-col gap-[var(--row-gap)] rounded-lg [padding:var(--row-padding)] transition-[background] duration-[450ms] ease-[ease] wide:flex-row wide:items-center wide:gap-[var(--tick-gap)] wide:px-[0.9rem]" +

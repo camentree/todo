@@ -41,10 +41,10 @@ function EntryRow({ entry, filter, onOpen, onDelete }: { entry: JournalEntry; fi
   const tags = entryTags(entry).filter((tag) => tag !== filter);
   const words = wordCount(entry.body);
   return (
-    <Swipeable right={null} left={{ word: "delete", onSwipe: onDelete }}>
+    <Swipeable className="mt-[var(--entry-gap)] first:mt-0 wide:-mx-[0.65rem]" right={null} left={{ word: "delete", onSwipe: onDelete }}>
       <button className="entry flex w-full flex-col rounded-lg px-1 py-[0.7rem] transition-[background] duration-[450ms] ease-[ease] hover:bg-raised wide:px-[0.9rem]" onClick={onOpen}>
         <div className="text-title leading-[1.35] text-text">{readableTitle(entry)}</div>
-        <div className="entry-head mt-[0.15rem] flex gap-[0.4rem] text-meta text-text">
+        <div className="mt-[0.15rem] flex gap-[0.4rem] text-meta text-text [&>span+span]:before:pr-[0.4rem] [&>span+span]:before:text-faint [&>span+span]:before:content-['·']">
           <span>{formatWhen(entry.at)}</span>
           {tags.length > 0 && <span>{tags.join(", ")}</span>}
           <span className="text-dim">

@@ -452,7 +452,7 @@ export function Tasks() {
   const row = ({ task, chips, todaySwipe, onTick }: { task: Task; chips: string[]; todaySwipe: Swipe | null; onTick: () => void }) => {
     const schedule = scheduleOf(task);
     return (
-      <div key={task.id} className={drag?.ids.includes(task.id) ? "lifting" : undefined} data-task={task.id}>
+      <div key={task.id} className={drag?.ids.includes(task.id) ? "opacity-35" : undefined} data-task={task.id}>
         <TaskRow
           task={task}
           chips={chips}
@@ -597,8 +597,10 @@ export function Tasks() {
                   press={null}
                   focused={focused === "group:backlog:deleted"}
                 >
+                  {/* Dimmed and unchangeable, but the chevron and marks still work so the notes,
+                      comments and subtasks of a deleted task can be read. */}
                   {store.deleted.map((task) => (
-                    <div key={task.id} className="deleted-row">
+                    <div key={task.id} className="opacity-55 [&_.field]:hidden [&_.text]:pointer-events-none [&_.tick]:pointer-events-none">
                       <TaskRow
                         task={task}
                         chips={task.group === "" ? [] : [task.group]}
@@ -626,18 +628,20 @@ export function Tasks() {
           </>
         )}
       </div>
-      {drag && drag.line && <div className="drop-line" style={{ top: drag.line.top, left: drag.line.left, width: drag.line.width }} />}
+      {drag && drag.line && (
+        <div className="pointer-events-none fixed z-[8] h-[2px] rounded-[1px] bg-accent" style={{ top: drag.line.top, left: drag.line.left, width: drag.line.width }}>
+          <span className="absolute -top-[3px] -left-[4px] size-2 rounded-full bg-accent" />
+        </div>
+      )}
       {drag && (
-        <div className="drag-ghost" style={{ top: drag.y - 24, left: listRef.current?.getBoundingClientRect().left ?? 0, width: listRef.current?.getBoundingClientRect().width ?? 0 }}>
-          <span className="handle">
+        <div className="pointer-events-none fixed z-[9] flex items-center gap-[var(--tick-gap)] rounded-lg bg-raised px-2 py-[0.6rem] text-title shadow-[0_8px_24px_var(--shadow)] [transform:rotate(-1deg)_translateX(0.6rem)]" style={{ top: drag.y - 24, left: listRef.current?.getBoundingClientRect().left ?? 0, width: listRef.current?.getBoundingClientRect().width ?? 0 }}>
+          <span className="flex size-tick flex-none items-center justify-center text-faint">
             <GripGlyph />
           </span>
-          <span className="square on">
-            <span>
-              <TickGlyph size={12} />
-            </span>
+          <span className="flex size-tick flex-none items-center justify-center rounded-[28%] border-[1.5px] border-accent bg-accent text-ground">
+            <TickGlyph size={12} />
           </span>
-          <span className="text">{drag.title}</span>
+          <span>{drag.title}</span>
         </div>
       )}
       {selection ? (

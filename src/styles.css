@@ -71,35 +71,6 @@
   margin-top: var(--group-gap);
 }
 
-.swipeable button:not(.handle) {
-  touch-action: pan-y;
-}
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  max-width: none;
-  max-height: none;
-  width: auto;
-  height: auto;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  color: inherit;
-  background: none;
-  display: flex;
-  flex-direction: column;
-}
-
-.overlay:not([open]) {
-  display: none;
-}
-
-.overlay::backdrop {
-  background: none;
-}
-
 .page:has(> .overlay > .page) > :not(.overlay) {
   visibility: hidden;
 }
@@ -156,25 +127,6 @@
   }
 }
 
-.group-head.focused {
-  background: var(--raised);
-}
-
-/* Dimmed and unchangeable, but the chevron and marks still work so the notes,
-   comments and subtasks of a deleted task can be read. */
-.deleted-row {
-  opacity: 0.55;
-}
-
-.deleted-row .tick,
-.deleted-row .text {
-  pointer-events: none;
-}
-
-.deleted-row .field {
-  display: none;
-}
-
 .group-head:has(.square) {
   padding-left: calc(var(--indent) / 2 + 0.25rem);
 }
@@ -185,62 +137,6 @@
 
 .task:has(> .swipeable .handle) > .roll > div > .unfolded {
   padding-left: calc(var(--indent) * 2);
-}
-
-.list > .swipeable + .swipeable {
-  margin-top: var(--entry-gap);
-}
-
-.entry-head > span + span::before {
-  content: "·";
-  padding-right: 0.4rem;
-  color: var(--faint);
-}
-
-.lifting {
-  opacity: 0.35;
-}
-
-.drop-line {
-  position: fixed;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--accent);
-  z-index: 8;
-  pointer-events: none;
-}
-
-.drop-line::before {
-  content: "";
-  position: absolute;
-  left: -4px;
-  top: -3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.drag-ghost {
-  position: fixed;
-  z-index: 9;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  gap: var(--tick-gap);
-  padding: 0.6rem 0.5rem;
-  background: var(--raised);
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 24px var(--shadow);
-  transform: rotate(-1deg) translateX(0.6rem);
-  font-size: var(--title);
-}
-
-.drag-ghost .handle,
-.drag-ghost .square {
-  margin: 0;
-  width: var(--tick);
-  height: var(--tick);
 }
 
 @media (min-width: 700px) {
@@ -260,11 +156,6 @@
 
   body {
     font-size: 16px;
-  }
-
-  .task > .swipeable,
-  .list > .swipeable {
-    margin-inline: -0.65rem;
   }
 
   .group-head:has(.square) {

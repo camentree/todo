@@ -33,7 +33,7 @@ export function TaskGroup({
           <div
             className={
               "group-head flex items-center gap-[0.4rem] rounded-lg pt-[0.35rem] pr-1 pb-[0.1rem] pl-1 text-dim transition-[background] duration-[450ms] ease-[ease] wide:-mx-[0.65rem] wide:px-[0.9rem]" +
-              (focused ? " focused" : "")
+              (focused ? " bg-raised" : "")
             }
             data-focus={"group:" + storageKey}
           >
