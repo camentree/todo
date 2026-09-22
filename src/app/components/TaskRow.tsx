@@ -162,9 +162,9 @@ export function TaskRow({
             ) : (
               <CircleTick done={done} skipped={skipped} onToggle={onTick} />
             )}
-            <span className="text">
+            <span className={"text my-[-0.35rem] min-w-0 py-[0.65rem] text-title leading-[1.35] " + (done ? "text-dim line-through" : skipped ? "text-dim" : "text-text")}>
               {task.title}
-              {hint && <span className="hint">{hint}</span>}
+              {hint && <span className="hint ml-[0.6rem] whitespace-nowrap">{hint}</span>}
             </span>
             <div className="marks">
               {comments.length > 0 && (

@@ -98,14 +98,22 @@ function Queue({ direction, items }: { direction: "across" | "down"; items: { ke
   const host = useRef<HTMLDivElement>(null);
   const currentKey = items.find((item) => item.current)?.key;
   useEffect(() => {
-    const element = host.current?.querySelector<HTMLElement>(".text.active");
+    const element = host.current?.querySelector<HTMLElement>(".current");
     element?.scrollIntoView(direction === "across" ? { block: "nearest", inline: "center", behavior: "smooth" } : { block: "center", inline: "nearest", behavior: "smooth" });
   }, [currentKey]);
   return (
     <div ref={host} className={direction === "across" ? "queue across" : "queue down"}>
       {items.map((item) => (
-        <TextButton key={item.key} active={item.current} onSelect={item.onSelect}>
-          <span className={item.done ? "done" : ""}>{item.label}</span>
+        <TextButton
+          key={item.key}
+          className={
+            "flex items-center " +
+            (direction === "down" ? "min-h-[1.9rem] py-[0.15rem] " : "min-h-[2.4rem] py-[0.3rem] ") +
+            (item.current ? "current text-accent" : "text-faint hover:text-dim")
+          }
+          onSelect={item.onSelect}
+        >
+          <span className={item.done ? "line-through " + (item.current ? "text-accent" : "text-dim") : ""}>{item.label}</span>
         </TextButton>
       ))}
     </div>
@@ -287,7 +295,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
             <div className="ring-big">{formatClock(state.rest)}</div>
             <div className="ring-hint">rest</div>
             <div className="ring-subtask">{nextStep?.subtask.title}</div>
-            <TextButton active={false} onSelect={() => move(advance(state))}>
+            <TextButton className="min-h-touch px-4 py-2 text-meta text-dim hover:text-text" onSelect={() => move(advance(state))}>
               skip
             </TextButton>
           </>
@@ -340,7 +348,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
         <>
           <div className="ring-subtask">{subtask.title}</div>
           {journalTask && !subtaskIsDone ? (
-            <TextButton active onSelect={() => setWriting(blankEntry({ tag: null }))}>
+            <TextButton className="min-h-touch px-4 py-2 text-body font-medium text-accent" onSelect={() => setWriting(blankEntry({ tag: null }))}>
               write
             </TextButton>
           ) : (

@@ -86,19 +86,6 @@
   padding-bottom: 0.2rem;
 }
 
-.tabs .text {
-  font-size: var(--heading);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--faint);
-  padding: 0.5rem 0;
-  margin: -0.3rem 0;
-}
-
-.tabs .text.active {
-  color: var(--text);
-}
-
 .heading {
   font-size: var(--heading);
   font-weight: 700;
@@ -134,16 +121,6 @@
   color: var(--dim);
   border-radius: 0.5rem;
   transition: background 0.45s ease;
-}
-
-.group-head .text {
-  font-size: var(--label);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--dim);
-  padding: 0.6rem 0;
-  min-height: var(--touch);
 }
 
 .group-head .fold {
@@ -187,24 +164,6 @@
   align-items: center;
 }
 
-.main > .text {
-  font-size: var(--title);
-  line-height: 1.35;
-  min-width: 0;
-  padding: 0.65rem 0;
-  margin: -0.35rem 0;
-  color: var(--text);
-}
-
-.task.done > .swipeable .main > .text {
-  color: var(--dim);
-  text-decoration: line-through;
-}
-
-.task.skipped > .swipeable .main > .text {
-  color: var(--dim);
-}
-
 .hint,
 .when {
   display: inline-flex;
@@ -213,11 +172,6 @@
   font-size: var(--meta);
   color: var(--dim);
   flex: none;
-}
-
-.text > .hint {
-  margin-left: 0.6rem;
-  white-space: nowrap;
 }
 
 .marks {
@@ -473,22 +427,6 @@
   margin-right: auto;
 }
 
-.actions .text {
-  padding: 0.7rem 0.25rem;
-  min-height: var(--touch);
-  font-size: var(--body);
-  font-weight: 500;
-  color: var(--dim);
-}
-
-.actions .text.active {
-  color: var(--accent);
-}
-
-.actions .text.warn {
-  color: var(--warn);
-}
-
 .confirm {
   position: fixed;
   left: 0;
@@ -569,18 +507,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 1.6rem;
-}
-
-.confirm-choices .text {
-  padding: 0.7rem 0.25rem;
-  min-height: var(--touch);
-  font-size: var(--body);
-  font-weight: 500;
-  color: var(--dim);
-}
-
-.confirm-choices .text.active {
-  color: var(--accent);
 }
 
 .error-report {
@@ -686,22 +612,6 @@
 .field textarea::placeholder,
 .field input::placeholder {
   color: var(--faint);
-}
-
-.field .text {
-  flex: none;
-  font-size: var(--meta);
-  color: var(--accent);
-  padding: 0.85rem 0.3rem;
-  margin: -0.7rem -0.2rem;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.45s ease;
-}
-
-.field .text.active {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .screen-head {
@@ -867,27 +777,6 @@
   flex: none;
 }
 
-.queue .text {
-  color: var(--faint);
-  padding: 0.3rem 0;
-  min-height: 2.4rem;
-  display: flex;
-  align-items: center;
-}
-
-.queue .text.active {
-  color: var(--accent);
-}
-
-.queue .text .done {
-  text-decoration: line-through;
-  color: var(--dim);
-}
-
-.queue .text.active .done {
-  color: var(--accent);
-}
-
 .queue.across {
   overflow-x: auto;
   white-space: nowrap;
@@ -915,11 +804,6 @@
 
 .queue.down::-webkit-scrollbar {
   display: none;
-}
-
-.queue.down .text {
-  min-height: 1.9rem;
-  padding: 0.15rem 0;
 }
 
 .runner-middle {
@@ -989,19 +873,6 @@
   padding-top: 0.4rem;
   max-width: 190px;
   overflow-wrap: anywhere;
-}
-
-.ring-inside .text {
-  color: var(--dim);
-  font-size: var(--meta);
-  padding: 0.5rem 1rem;
-  min-height: var(--touch);
-}
-
-.ring-inside .text.active {
-  color: var(--accent);
-  font-size: var(--body);
-  font-weight: 500;
 }
 
 .slide {
@@ -1075,17 +946,6 @@
   flex: none;
 }
 
-.runner-comments > .text {
-  font-size: var(--meta);
-  color: var(--faint);
-  padding: 0.5rem 1rem;
-  min-height: var(--touch);
-}
-
-.runner-comments > .text.active {
-  color: var(--accent);
-}
-
 .runner-comments .comment-list {
   width: 100%;
   flex: none;
@@ -1119,17 +979,6 @@
   row-gap: 0;
   flex-wrap: wrap;
   padding: 0.3rem 0 0.2rem;
-}
-
-.filters .text {
-  font-size: var(--meta);
-  color: var(--faint);
-  padding: 0.5rem 0;
-  min-height: var(--touch);
-}
-
-.filters .text.active {
-  color: var(--text);
 }
 
 .list > .swipeable + .swipeable {
@@ -1333,42 +1182,18 @@
 }
 
 @media (hover: hover) {
-  .tabs .text:not(.active):hover,
-  .filters .text:not(.active):hover,
-  .queue .text:not(.active):hover,
-  .runner-comments > .text:not(.active):hover,
-  .fold:hover,
-  .handle:hover {
+  .fold:hover {
     color: var(--dim);
   }
 
-  .field .text.active:hover {
-    color: var(--accent-hover);
-  }
-
-  .actions .text:not(.active):hover,
-  .confirm-choices .text:not(.active):hover,
-  .ring-inside .text:not(.active):hover,
   .screen-head .round:hover,
   .mark:not(.on):not(:disabled):hover {
     color: var(--text);
-  }
-
-  .actions .text.active:hover {
-    color: var(--accent-hover);
-  }
-
-  .actions .text.warn:hover {
-    color: var(--warn-hover);
   }
 
   .entry:hover {
     background: var(--raised);
   }
 
-  .tick:hover span,
-  .square:hover span {
-    border-color: var(--dim);
-  }
 }
 

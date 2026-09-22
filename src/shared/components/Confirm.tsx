@@ -27,11 +27,11 @@ export function Confirm({ question, choices, onCancel }: { question: string; cho
         <div className="confirm" onClick={(event) => event.stopPropagation()}>
           <div className="confirm-question">{question}</div>
           <div className="confirm-choices">
-            <TextButton active={false} onSelect={onCancel}>
+            <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-dim hover:text-text" onSelect={onCancel}>
               cancel
             </TextButton>
             {choices.map((choice) => (
-              <TextButton key={choice.label} active onSelect={choice.onChoose}>
+              <TextButton key={choice.label} className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-accent hover:text-accent-hover" onSelect={choice.onChoose}>
                 {choice.label}
               </TextButton>
             ))}

@@ -35,7 +35,7 @@ export function TaskGroup({
             <button className="fold" aria-label={fold.open ? "fold" : "unfold"} onClick={fold.toggle}>
               {fold.chevron}
             </button>
-            <TextButton active={false} onSelect={fold.toggle} press={press}>
+            <TextButton className="min-h-touch py-[0.6rem] text-label font-semibold tracking-[0.06em] text-dim uppercase" onSelect={fold.toggle} press={press}>
               {label}
             </TextButton>
             <span className={fold.open ? "group-count" : "group-count shown"}>{count}</span>

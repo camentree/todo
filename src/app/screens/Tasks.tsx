@@ -550,10 +550,10 @@ export function Tasks() {
   return (
     <>
       <div className="filters">
-        <TextButton active={list === "today"} onSelect={() => setList("today")}>
+        <TextButton className={"min-h-touch py-2 text-meta " + (list === "today" ? "text-text" : "text-faint hover:text-dim")} onSelect={() => setList("today")}>
           today ({onToday.length})
         </TextButton>
-        <TextButton active={list === "backlog"} onSelect={() => setList("backlog")}>
+        <TextButton className={"min-h-touch py-2 text-meta " + (list === "backlog" ? "text-text" : "text-faint hover:text-dim")} onSelect={() => setList("backlog")}>
           backlog ({backlog.length})
         </TextButton>
       </div>

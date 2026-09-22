@@ -25,11 +25,11 @@ export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
 function Filters({ counts, active, total, onSelect }: { counts: { tag: string; count: number }[]; active: string | null; total: number; onSelect: (tag: string | null) => void }) {
   return (
     <div className="filters">
-      <TextButton active={active === null} onSelect={() => onSelect(null)}>
+      <TextButton className={"min-h-touch py-2 text-meta " + (active === null ? "text-text" : "text-faint hover:text-dim")} onSelect={() => onSelect(null)}>
         all ({total})
       </TextButton>
       {counts.map(({ tag, count }) => (
-        <TextButton key={tag} active={active === tag} onSelect={() => onSelect(active === tag ? null : tag)}>
+        <TextButton key={tag} className={"min-h-touch py-2 text-meta " + (active === tag ? "text-text" : "text-faint hover:text-dim")} onSelect={() => onSelect(active === tag ? null : tag)}>
           {tag} ({count})
         </TextButton>
       ))}

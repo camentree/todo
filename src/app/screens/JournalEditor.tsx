@@ -54,10 +54,13 @@ export function JournalEditor({
         </div>
         <div className="actions">
           <div className="actions-right">
-            <TextButton active={false} onSelect={onCancel}>
+            <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-dim hover:text-text" onSelect={onCancel}>
               cancel
             </TextButton>
-            <TextButton active={text.trim() !== ""} onSelect={save}>
+            <TextButton
+              className={"min-h-touch px-1 py-[0.7rem] text-body font-medium " + (text.trim() !== "" ? "text-accent hover:text-accent-hover" : "text-dim hover:text-text")}
+              onSelect={save}
+            >
               save
             </TextButton>
           </div>

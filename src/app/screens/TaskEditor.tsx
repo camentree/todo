@@ -43,16 +43,19 @@ export function TaskEditorFields({ editor }: { editor: TaskEditorState }) {
         <div className="actions">
           <div className="actions-left">
             {task && (
-              <TextButton active={false} warn onSelect={editor.onDelete}>
+              <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-warn hover:text-warn-hover" onSelect={editor.onDelete}>
                 delete
               </TextButton>
             )}
           </div>
           <div className="actions-right">
-            <TextButton active={false} onSelect={editor.close}>
+            <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-dim hover:text-text" onSelect={editor.close}>
               cancel
             </TextButton>
-            <TextButton active={parsed !== null} onSelect={editor.commit}>
+            <TextButton
+              className={"min-h-touch px-1 py-[0.7rem] text-body font-medium " + (parsed !== null ? "text-accent hover:text-accent-hover" : "text-dim hover:text-text")}
+              onSelect={editor.commit}
+            >
               {task ? "save" : "add"}
             </TextButton>
           </div>

@@ -39,7 +39,10 @@ function CommentField({ onAdd }: { onAdd: (body: string) => void }) {
   return (
     <div className="field">
       <textarea ref={field} rows={1} placeholder="add a comment" enterKeyHint="send" value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={onKeyDown} />
-      <TextButton active={body.trim() !== ""} onSelect={add}>
+      <TextButton
+        className={"mx-[-0.2rem] my-[-0.7rem] flex-none px-[0.3rem] py-[0.85rem] text-meta text-accent transition-opacity duration-[450ms] ease-[ease] " + (body.trim() === "" ? "pointer-events-none opacity-0" : "opacity-100 hover:text-accent-hover")}
+        onSelect={add}
+      >
         add
       </TextButton>
     </div>

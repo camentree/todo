@@ -1,8 +1,8 @@
-const ring = "block size-tick rounded-full border-[1.5px]";
+const ring = "block size-tick rounded-full border-[1.5px] group-hover:border-dim";
 
 export function CircleTick({ done, skipped, onToggle }: { done: boolean; skipped: boolean; onToggle: () => void }) {
   return (
-    <button className="tick m-[calc((var(--touch)-var(--tick))/-2)] flex size-touch flex-none items-center justify-center" aria-label={done ? "mark not done" : "mark done"} onClick={onToggle}>
+    <button className="tick group m-[calc((var(--touch)-var(--tick))/-2)] flex size-touch flex-none items-center justify-center" aria-label={done ? "mark not done" : "mark done"} onClick={onToggle}>
       {done ? (
         <span className={ring + " border-dim bg-dim"} />
       ) : skipped ? (

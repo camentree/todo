@@ -15,7 +15,11 @@ export function TopBar<Name extends string>({
     <div className="topbar">
       <div className="tabs">
         {sections.map((section) => (
-          <TextButton key={section.name} active={section.name === active} onSelect={() => onSelect(section.name)}>
+          <TextButton
+            key={section.name}
+            className={"my-[-0.3rem] py-2 text-heading font-bold tracking-[-0.02em] " + (section.name === active ? "text-text" : "text-faint hover:text-dim")}
+            onSelect={() => onSelect(section.name)}
+          >
             {section.label}
           </TextButton>
         ))}
