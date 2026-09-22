@@ -1,63 +1,68 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
 @import "./shared/ui/tokens.css";
 
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-  overscroll-behavior-y: none;
-}
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    overscroll-behavior-y: none;
+  }
 
-html {
-  scrollbar-gutter: stable;
-}
+  html {
+    scrollbar-gutter: stable;
+  }
 
-html:has(dialog[open]) {
-  overflow: hidden;
-}
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
 
-body {
-  background: var(--ground);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 17px;
-  -webkit-font-smoothing: antialiased;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  text-rendering: optimizeLegibility;
-}
+  body {
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    text-rendering: optimizeLegibility;
+  }
 
-button,
-input,
-textarea {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  margin: 0;
-}
+  button,
+  input,
+  textarea {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
 
-button {
-  cursor: pointer;
-  text-align: left;
-  touch-action: manipulation;
-}
+  button {
+    cursor: pointer;
+    text-align: left;
+    touch-action: manipulation;
+  }
 
-textarea {
-  -webkit-appearance: none;
-  appearance: none;
-  resize: none;
-  outline: none;
-  display: block;
-  -webkit-user-select: text;
-  user-select: text;
+  textarea {
+    -webkit-appearance: none;
+    appearance: none;
+    resize: none;
+    outline: none;
+    display: block;
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 .page {
@@ -402,18 +407,6 @@ textarea {
   gap: 0.6rem;
   align-items: center;
   z-index: 5;
-}
-
-.round {
-  width: var(--round);
-  height: var(--round);
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--ground);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
 }
 
 .overlay {

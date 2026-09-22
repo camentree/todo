@@ -68,6 +68,49 @@
   --touch: 2.75rem;
 }
 
+@theme inline {
+  --color-ground: var(--ground);
+  --color-raised: var(--raised);
+  --color-text: var(--text);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-hairline: var(--hairline);
+  --color-chip: var(--chip-bg);
+  --color-tag: var(--tag);
+  --color-scrim: var(--scrim);
+  --color-warn: var(--warn);
+  --color-warn-hover: var(--warn-hover);
+  --color-swipe-warn: var(--swipe-warn);
+  --color-swipe-accent: var(--swipe-accent);
+  --color-shadow: var(--shadow);
+
+  --font-body: var(--font);
+  --font-mono: var(--mono);
+
+  --text-heading: var(--heading);
+  --text-title: var(--title);
+  --text-body: var(--body);
+  --text-meta: var(--meta);
+  --text-label: var(--label);
+  --text-big: var(--big);
+
+  --spacing-gutter: var(--gutter);
+  --spacing-top: var(--top);
+  --spacing-bottom: var(--bottom);
+  --spacing-tick: var(--tick);
+  --spacing-glyph: var(--glyph);
+  --spacing-touch: var(--touch);
+  --spacing-round: var(--round);
+  --spacing-round-small: var(--round-small);
+  --spacing-ring: var(--ring);
+  --spacing-column: var(--column);
+  --spacing-indent: var(--indent);
+
+  --radius-card: var(--card-radius);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
