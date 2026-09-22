@@ -109,6 +109,8 @@
   --spacing-indent: var(--indent);
 
   --radius-card: var(--card-radius);
+
+  --breakpoint-wide: 700px;
 }
 
 @media (prefers-color-scheme: dark) {

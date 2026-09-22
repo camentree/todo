@@ -12,8 +12,8 @@ export function TopBar<Name extends string>({
   onSelect: (name: Name) => void;
 }) {
   return (
-    <div className="topbar">
-      <div className="tabs">
+    <div className="pt-top">
+      <div className="flex items-baseline gap-[1.1rem] pb-[0.2rem]">
         {sections.map((section) => (
           <TextButton
             key={section.name}
@@ -24,7 +24,7 @@ export function TopBar<Name extends string>({
           </TextButton>
         ))}
       </div>
-      <div className="dateline">{dateline}</div>
+      <div className="pb-[0.4rem] text-meta text-dim">{dateline}</div>
     </div>
   );
 }

@@ -77,7 +77,7 @@ export function Journals({ name }: { name: JournalName }) {
   return (
     <>
       <Filters counts={tagCounts(entries)} active={filter} total={entries.length} onSelect={setFilter} />
-      <div className="list">
+      <div className="list mt-[0.6rem] flex flex-col">
         {shown.map((entry) => (
           <EntryRow key={entry.at} entry={entry} filter={filter} onOpen={() => go({ tab: route.tab, id: entry.at })} onDelete={() => setDeleting(entry)} />
         ))}

@@ -35,7 +35,7 @@ export function TaskEditorFields({ editor }: { editor: TaskEditorState }) {
             unfoldSubtasks={false}
           />
         ) : (
-          <div className="dateline">type a task below to see it here</div>
+          <div className="pb-[0.2rem] text-meta text-dim">type a task below to see it here</div>
         )}
       </div>
       <div className="composer-field">

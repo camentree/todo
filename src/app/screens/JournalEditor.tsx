@@ -43,12 +43,12 @@ export function JournalEditor({
     <Modal>
       <div className="page">
         <div className="screen-head">
-          <span className="heading">{heading}</span>
+          <span className="text-heading font-bold tracking-[-0.02em]">{heading}</span>
           <RoundButton label="close" onSelect={onCancel}>
             <CrossGlyph />
           </RoundButton>
         </div>
-        <div className="dateline">{subheading}</div>
+        <div className="pb-[0.4rem] text-meta text-dim">{subheading}</div>
         <div className="editor-host">
           <MarkdownEditor value={text} onChange={setText} />
         </div>

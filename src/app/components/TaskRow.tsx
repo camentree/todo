@@ -21,7 +21,15 @@ import { Comments } from "./Comments.tsx";
 
 function Mark({ label, count, active, onSelect, children }: { label: string; count?: string; active: boolean; onSelect: (() => void) | null; children: ReactNode }) {
   return (
-    <button className={active ? "mark on" : "mark"} aria-label={label} disabled={onSelect === null} onClick={onSelect ?? undefined}>
+    <button
+      className={
+        "relative my-[-0.75rem] inline-flex items-center gap-1 px-[0.3rem] py-[0.85rem] text-meta [&_svg]:size-glyph " +
+        (active ? "text-accent" : "text-dim enabled:hover:text-text")
+      }
+      aria-label={label}
+      disabled={onSelect === null}
+      onClick={onSelect ?? undefined}
+    >
       {count}
       {children}
     </button>
@@ -29,7 +37,7 @@ function Mark({ label, count, active, onSelect, children }: { label: string; cou
 }
 
 function Meta({ children }: { children: ReactNode }) {
-  return <div className="meta">{children}</div>;
+  return <div className="meta flex min-h-[1.2rem] flex-wrap items-center gap-[var(--meta-gap)] pl-indent text-meta text-dim wide:contents">{children}</div>;
 }
 
 export interface Select {
@@ -150,10 +158,19 @@ export function TaskRow({
   const hint = kindHint(task);
 
   return (
-    <div className={done ? "task done" : skipped ? "task skipped" : "task"}>
+    <div className="task flex flex-col">
       <Swipeable right={select ? null : todaySwipe} left={select || !onDelete ? null : { word: "delete", onSwipe: onDelete }}>
-        <div className={"row" + (focused === task.id ? " focused" : "") + (saved === task.id ? " saved" : "")} data-focus={task.id} onClick={onRow} {...press}>
-          <div className="main">
+        <div
+          className={
+            "row flex cursor-pointer flex-col gap-[var(--row-gap)] rounded-lg [padding:var(--row-padding)] transition-[background] duration-[450ms] ease-[ease] wide:flex-row wide:items-center wide:gap-[var(--tick-gap)] wide:px-[0.9rem]" +
+            (focused === task.id ? " focused" : "") +
+            (saved === task.id ? " saved" : "")
+          }
+          data-focus={task.id}
+          onClick={onRow}
+          {...press}
+        >
+          <div className="main flex items-center gap-[var(--tick-gap)] wide:contents">
             {select ? (
               <>
                 <Handle onPointerDown={(event) => select.onHandle({ event, id: task.id })} />
@@ -164,13 +181,13 @@ export function TaskRow({
             )}
             <span className={"text my-[-0.35rem] min-w-0 py-[0.65rem] text-title leading-[1.35] " + (done ? "text-dim line-through" : skipped ? "text-dim" : "text-text")}>
               {task.title}
-              {hint && <span className="hint ml-[0.6rem] whitespace-nowrap">{hint}</span>}
+              {hint && <span className="ml-[0.6rem] inline-flex flex-none items-center gap-[0.3rem] text-meta whitespace-nowrap text-dim">{hint}</span>}
             </span>
-            <div className="marks">
+            <div className="ml-auto flex flex-none items-center justify-end wide:order-1">
               {comments.length > 0 && (
                 <Mark label="comments" active={commentsShowing} onSelect={onCommentGlyph}>
                   <SpeechGlyph />
-                  {agentUnseen && <span className="unseen" />}
+                  {agentUnseen && <span className="absolute top-[calc(50%-8px)] right-[0.15rem] size-[5px] rounded-full bg-warn" />}
                 </Mark>
               )}
               {hasSubtasks && (
@@ -179,7 +196,11 @@ export function TaskRow({
                 </Mark>
               )}
               {(hasSubtasks || comments.length > 0) && !fixedOpen && (
-                <button className="fold" aria-label={open ? "fold" : "unfold"} onClick={onChevron}>
+                <button
+                  className="flex h-11 w-8 flex-none items-center justify-center text-faint [margin:-0.725rem_-0.7rem_-0.725rem_0] hover:text-dim [&_svg]:size-glyph wide:[&_svg]:size-[0.875rem]"
+                  aria-label={open ? "fold" : "unfold"}
+                  onClick={onChevron}
+                >
                   <ChevronGlyph open={open} />
                 </button>
               )}
@@ -187,15 +208,15 @@ export function TaskRow({
           </div>
           {(when || schedule || chips.length > 0) && (
             <Meta>
-              {when && <span className="when">{when}</span>}
+              {when && <span className="inline-flex flex-none items-center gap-[0.3rem] text-meta text-dim">{when}</span>}
               {schedule && (
-                <span className="when">
+                <span className="inline-flex flex-none items-center gap-[0.3rem] text-meta text-dim">
                   <RepeatGlyph />
                   {schedule}
                 </span>
               )}
               {chips.map((chip) => (
-                <span key={chip} className="when">
+                <span key={chip} className="inline-flex flex-none items-center gap-[0.3rem] text-meta text-dim">
                   {chip}
                 </span>
               ))}
@@ -205,22 +226,22 @@ export function TaskRow({
       </Swipeable>
       {task.note && (
         <Roll open={subtasksOpen}>
-          <div className="unfolded">
-            <div className="note">{task.note}</div>
+          <div className="unfolded flex flex-col pl-indent">
+            <div className="px-1 pt-[0.35rem] pb-[0.1rem] text-body leading-[1.4] whitespace-pre-wrap text-dim wide:text-meta">{task.note}</div>
           </div>
         </Roll>
       )}
       {comments.length > 0 && (
         <Roll open={commentsShowing}>
-          <div className="unfolded">
+          <div className="unfolded flex flex-col pl-indent">
             <Comments comments={comments} scrollTo={firstUnseen} onAdd={onAddComment} onDelete={onDeleteComment} />
           </div>
         </Roll>
       )}
       {task.subtasks.length > 0 && (
         <Roll open={subtasksOpen}>
-          <div className="unfolded">
-            <div className="subtasks">
+          <div className="unfolded flex flex-col pl-indent">
+            <div className="subtasks flex flex-col pt-[0.3rem] pb-[0.2rem]">
               {task.subtasks.map((subtask, index) => (
                 <div key={subtask.id} data-subtask={task.id + ":" + index}>
                   <TaskRow

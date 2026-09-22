@@ -403,7 +403,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
     <Modal>
       <div className="page runner">
         <div className="screen-head">
-          <span className="heading">
+          <span className="text-heading font-bold tracking-[-0.02em]">
             {(task ?? tasksInOrder[0])?.group}
             {tasksInOrder.length > 1 && task && <span className="position">{tasksInOrder.indexOf(task) + 1} of {tasksInOrder.length}</span>}
           </span>
