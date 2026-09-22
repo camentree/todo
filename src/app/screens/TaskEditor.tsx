@@ -13,7 +13,7 @@ export function TaskEditorFields({ editor }: { editor: TaskEditorState }) {
   const { task, parsed, preview } = editor;
   return (
     <>
-      <div className="preview">
+      <div className="preview min-h-0 flex-[1_1_0] overflow-y-auto px-gutter pt-[0.6rem] pb-2 [--row-padding:0.2rem_0.25rem] [--tick:1.25rem] [--title:var(--body)] [overscroll-behavior:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&_.subtasks]:p-0 [&_.task]:pointer-events-none desktop:pt-[1.4rem]">
         {preview && parsed ? (
           <TaskRow
             task={preview}
@@ -38,17 +38,17 @@ export function TaskEditorFields({ editor }: { editor: TaskEditorState }) {
           <div className="pb-[0.2rem] text-meta text-dim">type a task below to see it here</div>
         )}
       </div>
-      <div className="composer-field">
-        <div className="editor" ref={editor.host} />
-        <div className="actions">
-          <div className="actions-left">
+      <div className="composer-field flex-none rounded-t-2xl bg-raised px-gutter pt-[1.6rem] pb-bottom pointer-coarse:focus-within:pb-[0.6rem]">
+        <div className="flex flex-1 flex-col text-title leading-[1.5]" ref={editor.host} />
+        <div className="mt-[0.2rem] flex items-center justify-end">
+          <div className="mr-auto flex gap-[1.2rem]">
             {task && (
               <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-warn hover:text-warn-hover" onSelect={editor.onDelete}>
                 delete
               </TextButton>
             )}
           </div>
-          <div className="actions-right">
+          <div className="flex gap-[1.2rem]">
             <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-dim hover:text-text" onSelect={editor.close}>
               cancel
             </TextButton>
@@ -86,7 +86,7 @@ export function TaskEditor({ task, onCommit, onClose, onDelete }: TaskEditing) {
     <>
       <Modal>
         <div className="scrim" onClick={editor.close} />
-        <div className={closing ? "composer closing" : "composer"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
+        <div className={closing ? "composer flex h-full w-full flex-col bg-ground pt-top [overscroll-behavior:contain] closing" : "composer flex h-full w-full flex-col bg-ground pt-top [overscroll-behavior:contain]"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
           <TaskEditorFields editor={editor} />
         </div>
       </Modal>

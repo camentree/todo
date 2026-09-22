@@ -49,11 +49,11 @@ export function JournalEditor({
           </RoundButton>
         </div>
         <div className="pb-[0.4rem] text-meta text-dim">{subheading}</div>
-        <div className="editor-host">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-[0.8rem] [overscroll-behavior:contain]">
           <MarkdownEditor value={text} onChange={setText} />
         </div>
-        <div className="actions">
-          <div className="actions-right">
+        <div className="flex items-center justify-end pt-[0.6rem] pb-bottom">
+          <div className="flex gap-[1.2rem]">
             <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-dim hover:text-text" onSelect={onCancel}>
               cancel
             </TextButton>

@@ -6,6 +6,8 @@ import type { Extension } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, drawSelection, keymap, placeholder } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 
+import { editorTheme } from "@shared/ui/editorTheme.ts";
+
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { dueToday, everyToken, scheduleFromParsed } from "../models/schedule.ts";
 import type { Task } from "../models/task.ts";
@@ -31,6 +33,15 @@ export interface TaskEditorState {
   close: () => void;
   onDelete: () => void;
 }
+
+const composerTheme = EditorView.theme({
+  ".cm-content": { padding: "0.8rem 0.25rem 0.4rem", minHeight: "3.1rem" },
+  ".cm-scroller": { overflowY: "auto", overscrollBehavior: "contain", scrollbarWidth: "none", height: "7.2rem" },
+  ".cm-scroller::-webkit-scrollbar": { display: "none" },
+  "@media (min-width: 700px)": { ".cm-scroller": { height: "12rem" } },
+  ".cm-bullet": { color: "var(--faint)" },
+  ".cm-attribute": { color: "var(--accent)" },
+});
 
 function grammarHighlighting({ today, subtasks }: { today: string; subtasks: boolean }): Extension {
   const marks = (view: EditorView): DecorationSet =>
@@ -98,6 +109,8 @@ export function useTaskEditor({ task, onCommit, onClose, onDelete }: TaskEditing
         extensions: [
           keymap.of([...defaultKeymap, ...historyKeymap]),
           history(),
+          editorTheme,
+          composerTheme,
           drawSelection(),
           EditorView.lineWrapping,
           grammarHighlighting({ today: store.today, subtasks }),

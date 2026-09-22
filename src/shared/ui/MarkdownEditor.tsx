@@ -10,6 +10,21 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import type { SyntaxNode } from "@lezer/common";
 import { Autolink } from "@lezer/markdown";
 
+import { editorTheme } from "./editorTheme.ts";
+
+const markdownTheme = EditorView.theme({
+  ".cm-strong": { fontWeight: "700", color: "var(--accent)" },
+  ".cm-em": { fontStyle: "italic", color: "var(--accent)" },
+  ".cm-code": { fontFamily: "var(--mono)", fontSize: "0.9em" },
+  ".cm-fenced": { fontFamily: "var(--mono)", fontSize: "0.9em", background: "var(--raised)", padding: "0 0.5rem" },
+  ".cm-heading": { fontWeight: "700" },
+  ".cm-quote": { color: "var(--dim)" },
+  ".cm-bullet": { color: "var(--faint)" },
+  ".cm-marker": { color: "var(--faint)" },
+  ".cm-link": { color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: "0.15em" },
+  ".cm-line:not(.cm-writing) .cm-link": { cursor: "pointer" },
+});
+
 const markerNodes = new Set(["EmphasisMark", "CodeMark", "QuoteMark", "LinkMark"]);
 const spaceSwallowingMarkers = new Set(["QuoteMark"]);
 const linkNodes = new Set(["Link", "Autolink", "URL"]);
@@ -113,6 +128,8 @@ export function MarkdownEditor({ value, onChange }: { value: string; onChange: (
         doc: value,
         extensions: [
           markdown({ extensions: Autolink }),
+          editorTheme,
+          markdownTheme,
           history(),
           drawSelection(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -128,5 +145,5 @@ export function MarkdownEditor({ value, onChange }: { value: string; onChange: (
     return () => view.destroy();
   }, []);
 
-  return <div className="editor" ref={host} />;
+  return <div className="flex flex-1 flex-col text-title leading-[1.5]" ref={host} />;
 }

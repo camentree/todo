@@ -9,7 +9,7 @@ export function TaskEditorPhone({ task, onCommit, onClose, onDelete }: TaskEditi
   return (
     <>
       <Modal>
-        <div className="composer">
+        <div className="composer flex h-full w-full flex-col bg-ground pt-top [overscroll-behavior:contain]">
           <TaskEditorFields editor={editor} />
         </div>
       </Modal>
