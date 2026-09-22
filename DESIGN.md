@@ -299,8 +299,8 @@ tables and the app talks only to Parallax. Agents use the same HTTP API.
 
 The composer's `#every` token is client syntax only: it compiles to the
 recurrence rule and serialises back for editing. For dev and testing,
-`server/standin.ts` serves the same contract over a data directory; `DEV.md`
-lists the endpoints, how to run, seed, isolate and reset.
+`dev-api/` serves the same contract over a data directory; `dev-api/CLAUDE.md`
+lists the endpoints and `README.md` covers how to run, seed, isolate and reset.
 
 The client loads schedules, every task and both journals once at start and
 holds them in memory; every screen renders from memory.

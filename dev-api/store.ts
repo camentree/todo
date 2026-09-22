@@ -1,11 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { shiftDate } from "@shared/format.ts";
-import { parseMarkdown, serializeMarkdown } from "@shared/journal.ts";
-import { isDue } from "@shared/schedule.ts";
-import { isNumericType } from "@shared/model.ts";
-import type { Comment, JournalEntry, Schedule, SubtaskSpec, Task } from "@shared/model.ts";
+import { parseMarkdown, serializeMarkdown } from "./journal.ts";
+import { isDue, isNumericType, shiftDate } from "./model.ts";
+import type { Comment, JournalEntry, Schedule, SubtaskSpec, Task } from "./model.ts";
 
 type Row = Omit<Task, "subtasks" | "comments">;
 

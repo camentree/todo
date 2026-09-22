@@ -22,6 +22,5 @@ git reset --hard --quiet "$target"
 git diff --quiet "$previous" "$target" -- package-lock.json || npm ci --include=dev --silent
 
 npm run build
-launchctl kickstart -k "gui/$UID/org.nixos.todo"
 echo "$target" > "$stamp"
 echo "$(date -u +%FT%TZ) deployed $(git rev-parse --short HEAD)"

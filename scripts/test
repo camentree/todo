@@ -4,4 +4,5 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 npx tsc --noEmit
+npx tsc --noEmit --project dev-api
 npx vitest run "$@"

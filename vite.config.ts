@@ -17,9 +17,6 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: {
-      "/api/": `http://localhost:${process.env.PORT ?? 8790}`,
-    },
   },
   test: {
     globals: true,

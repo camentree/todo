@@ -5,7 +5,26 @@ import { dateKey } from "@shared/format.ts";
 import type { Comment, JournalEntry, Schedule, Task } from "@shared/model.ts";
 import { deletedDays } from "@shared/tasks.ts";
 
-import { ApiError, get, post, put, remove } from "./api.ts";
+import {
+  ApiError,
+  createComment,
+  createEntry,
+  createSchedule,
+  createTask,
+  deleteComment,
+  deleteEntry,
+  deleteSchedule,
+  deleteTask,
+  listDeletedTasks,
+  listJournals,
+  listSchedules,
+  listTasks,
+  updateComment,
+  updateEntry,
+  updateSchedule,
+  updateTask,
+} from "./api.ts";
+import type { JournalName } from "./api.ts";
 
 export interface Memory {
   schedules: Schedule[];
@@ -15,7 +34,7 @@ export interface Memory {
   notebook: JournalEntry[];
 }
 
-export type JournalName = "journal" | "notebook";
+export type { JournalName };
 
 export interface Store extends Memory {
   today: string;
@@ -55,25 +74,15 @@ function restored<T extends { id: string }>({ list, id, previous }: { list: T[];
   return replaced({ list, item: previous });
 }
 
-function normalized(task: Task): Task {
-  return {
-    ...task,
-    subtasks: (task.subtasks ?? []).map((subtask) => ({ ...subtask, subtasks: [], comments: [] })),
-    comments: task.comments ?? [],
-  };
-}
-
-const deletedPath = `/api/tasks/recently-deleted?days=${deletedDays}`;
-
 async function load(): Promise<Memory> {
   const [schedules, tasks, deleted, journal, notebook] = await Promise.all([
-    get<Schedule[]>("/api/schedules"),
-    get<Task[]>("/api/tasks"),
-    get<Task[]>(deletedPath),
-    get<JournalEntry[]>("/api/journal"),
-    get<JournalEntry[]>("/api/notebook"),
+    listSchedules(),
+    listTasks(),
+    listDeletedTasks(deletedDays),
+    listJournals("journal"),
+    listJournals("notebook"),
   ]);
-  return { schedules, tasks: tasks.map(normalized), deleted: deleted.map(normalized), journal, notebook };
+  return { schedules, tasks, deleted, journal, notebook };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -127,13 +136,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshTasks = () =>
-    get<Task[]>("/api/tasks")
-      .then((tasks) => update((current) => ({ ...current, tasks: tasks.map(normalized) })))
+    listTasks()
+      .then((tasks) => update((current) => ({ ...current, tasks })))
       .catch(() => null);
 
   const refreshDeleted = () =>
-    get<Task[]>(deletedPath)
-      .then((deleted) => update((current) => ({ ...current, deleted: deleted.map(normalized) })))
+    listDeletedTasks(deletedDays)
+      .then((deleted) => update((current) => ({ ...current, deleted })))
       .catch(() => null);
 
   const findComment = (id: string): { task: Task; comment: Comment } | null => {
@@ -154,7 +163,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, tasks: replaced({ list: current.tasks, item: task }) }),
         undo: (current) => ({ ...current, tasks: restored({ list: current.tasks, id: task.id, previous }) }),
-        request: () => (previous ? put({ path: `/api/tasks/${task.id}`, body: task }) : post({ path: "/api/tasks", body: task })),
+        request: () => (previous ? updateTask(task) : createTask(task)),
       });
     },
     deleteTask: (id) => {
@@ -162,7 +171,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, tasks: without({ list: current.tasks, id }) }),
         undo: (current) => ({ ...current, tasks: restored({ list: current.tasks, id, previous }) }),
-        request: () => remove(`/api/tasks/${id}`).then(refreshDeleted),
+        request: () => deleteTask(id).then(refreshDeleted),
       });
     },
     putSchedule: (schedule) => {
@@ -170,8 +179,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, schedules: replaced({ list: current.schedules, item: schedule }) }),
         undo: (current) => ({ ...current, schedules: restored({ list: current.schedules, id: schedule.id, previous }) }),
-        request: () =>
-          (previous ? put({ path: `/api/schedules/${schedule.id}`, body: schedule }) : post({ path: "/api/schedules", body: schedule })).then(refreshTasks),
+        request: () => (previous ? updateSchedule(schedule) : createSchedule(schedule)).then(refreshTasks),
       });
     },
     deleteSchedule: (id) => {
@@ -183,7 +191,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           tasks: current.tasks.filter((task) => !(task.scheduleId === id && task.dueDate !== null && task.dueDate >= today)),
         }),
         undo: (current) => ({ ...current, schedules: restored({ list: current.schedules, id, previous }) }),
-        request: () => remove(`/api/schedules/${id}`).then(refreshTasks),
+        request: () => deleteSchedule(id).then(refreshTasks),
       });
     },
     putComment: (comment) => {
@@ -198,8 +206,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           tasks: current.tasks.map((task) => (carries(task) ? { ...task, comments: replaced({ list: task.comments, item: comment }) } : task)),
         }),
         undo: (current) => ({ ...current, tasks: previousTasks }),
-        request: () =>
-          existing ? put({ path: `/api/comments/${comment.id}`, body: comment }) : post({ path: `/api/tasks/${comment.taskId}/comments`, body: comment }),
+        request: () => (existing ? updateComment(comment) : createComment(comment)),
       });
     },
     deleteComment: (id) => {
@@ -207,7 +214,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, tasks: current.tasks.map((task) => ({ ...task, comments: without({ list: task.comments, id }) })) }),
         undo: (current) => ({ ...current, tasks: previousTasks }),
-        request: () => remove(`/api/comments/${id}`),
+        request: () => deleteComment(id),
       });
     },
     putEntry: ({ name, entry }) => {
@@ -216,8 +223,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, [name]: [...others(current), entry] }),
         undo: (current) => ({ ...current, [name]: previous ? [...others(current), previous] : others(current) }),
-        request: () =>
-          previous ? put({ path: `/api/${name}/${encodeURIComponent(entry.at)}`, body: entry }) : post({ path: `/api/${name}`, body: entry }),
+        request: () => (previous ? updateEntry({ name, entry }) : createEntry({ name, entry })),
       });
     },
     deleteEntry: ({ name, at }) => {
@@ -226,7 +232,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       write({
         apply: (current) => ({ ...current, [name]: others(current) }),
         undo: (current) => ({ ...current, [name]: previous ? [...others(current), previous] : others(current) }),
-        request: () => remove(`/api/${name}/${encodeURIComponent(at)}`),
+        request: () => deleteEntry({ name, at }),
       });
     },
   };

@@ -1,16 +1,26 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-
-import { shiftDate } from "@shared/format.ts";
+import { cors } from "hono/cors";
 
 import { Store } from "./store.ts";
+import { shiftDate } from "./model.ts";
 
 const store = new Store(process.env.DATA_DIR ?? "data/dev");
 const app = new Hono();
 let failWrites = false;
 
+app.use(
+  "/*",
+  cors({
+    origin: (origin) => (/^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin) ? origin : null),
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["content-type"],
+    maxAge: 600,
+  }),
+);
+
 app.use("/api/*", async (context, next) => {
-  if (failWrites && context.req.method !== "GET" && !context.req.path.startsWith("/api/_")) {
+  if (failWrites && context.req.method !== "GET") {
     return context.json({ error: "writes are failing on purpose" }, 500);
   }
   await next();
@@ -18,7 +28,7 @@ app.use("/api/*", async (context, next) => {
 
 app.onError((error, context) => context.json({ error: error.message }, error.message.startsWith("no ") ? 404 : 400));
 
-app.post("/api/_fail", async (context) => {
+app.post("/_dev/fail", async (context) => {
   failWrites = Boolean((await context.req.json()).writes);
   return context.json({ writes: failWrites });
 });

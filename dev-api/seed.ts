@@ -1,10 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { isDue } from "../shared/schedule.ts";
-import { serializeMarkdown, tagsFrom } from "../shared/journal.ts";
-import { isNumericType } from "../shared/model.ts";
-import type { Comment, JournalEntry, Schedule, SubtaskSpec, Task } from "../shared/model.ts";
+import { serializeMarkdown, tagsFrom } from "./journal.ts";
+import { isDue, isNumericType } from "./model.ts";
+import type { Comment, JournalEntry, Schedule, SubtaskSpec, Task } from "./model.ts";
 
 type Row = Omit<Task, "subtasks" | "comments">;
 

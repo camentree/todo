@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+slice="${1:-dev}"
+data="data/$slice"
+
+offset=0
+if [ "$slice" != "dev" ]; then
+  offset=$(( ( $(printf '%s' "$slice" | cksum | cut -d' ' -f1) % 40 ) + 1 ))
+fi
+api_port=$(( 8795 + offset ))
+vite_port=$(( 5173 + offset ))
+
+lan="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1)"
+if [ -z "$lan" ]; then
+  echo "no LAN address: the simulator and the phone cannot reach a localhost-only server"
+  exit 1
+fi
+
+for port in "$api_port" "$vite_port"; do
+  if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "port $port is held by $(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t | head -1); pick another slice or stop it"
+    exit 1
+  fi
+done
+
+install() {
+  local directory="$1"
+  if [ ! -d "$directory/node_modules" ] || [ "$directory/package.json" -nt "$directory/node_modules" ]; then
+    (cd "$directory" && npm install --silent)
+    rm -rf "$directory/node_modules/.vite"
+    touch "$directory/node_modules"
+  fi
+}
+
+install .
+install dev-api
+
+[ -d "$data" ] || (cd dev-api && npx tsx seed.ts "../$data")
+
+(cd dev-api && DATA_DIR="../$data" PORT="$api_port" npx tsx watch main.ts) &
+api=$!
+trap 'kill "$api" 2>/dev/null || true' EXIT
+
+VITE_API_URL="http://$lan:$api_port/api/" npx vite --host --port "$vite_port" --strictPort &
+client=$!
+
+echo
+echo "  $slice → http://$lan:$vite_port  (api on $api_port, data in $data)"
+echo
+
+wait "$client"
