@@ -47,8 +47,8 @@ export function useFolds(): Folds {
 
 export function Roll({ open, children }: { open: boolean; children: ReactNode }) {
   return (
-    <div className={open ? "roll open" : "roll"} inert={!open}>
-      <div>{children}</div>
+    <div className={"roll grid transition-[grid-template-rows] duration-[450ms] ease-[ease] " + (open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")} inert={!open}>
+      <div className="min-h-0 overflow-y-clip">{children}</div>
     </div>
   );
 }

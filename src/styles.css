@@ -126,21 +126,6 @@
   margin-top: var(--group-gap);
 }
 
-.roll {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.45s ease;
-}
-
-.roll.open {
-  grid-template-rows: 1fr;
-}
-
-.roll > div {
-  overflow-y: clip;
-  min-height: 0;
-}
-
 .group-head {
   display: flex;
   align-items: center;
@@ -200,34 +185,6 @@
   display: flex;
   gap: var(--tick-gap);
   align-items: center;
-}
-
-.tick {
-  width: var(--touch);
-  height: var(--touch);
-  margin: calc((var(--touch) - var(--tick)) / -2);
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tick span {
-  width: var(--tick);
-  height: var(--tick);
-  border-radius: 50%;
-  border: 1.5px solid var(--faint);
-  display: block;
-}
-
-.tick.done span {
-  border-color: var(--dim);
-  background: var(--dim);
-}
-
-.tick.skipped span {
-  border-color: var(--dim);
-  background: radial-gradient(circle, var(--dim) 0 28%, transparent 30%);
 }
 
 .main > .text {
@@ -313,14 +270,6 @@
   color: var(--faint);
 }
 
-.chevron {
-  transition: transform 0.45s ease;
-}
-
-.chevron.open {
-  transform: rotate(90deg);
-}
-
 .meta {
   padding-left: var(--indent);
   font-size: var(--meta);
@@ -352,51 +301,8 @@
   flex-direction: column;
 }
 
-.swipeable {
-  position: relative;
-  overflow: hidden;
-  touch-action: pan-y;
-}
-
 .swipeable button:not(.handle) {
   touch-action: pan-y;
-}
-
-.reveal {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 40%;
-  display: flex;
-  align-items: center;
-  padding: 0 1.15rem;
-  font-size: var(--label);
-  font-weight: 600;
-  color: var(--ground);
-  white-space: nowrap;
-  border-radius: 0.75rem;
-  will-change: transform;
-}
-
-.reveal.right {
-  left: 0;
-  justify-content: flex-start;
-  background: linear-gradient(to right, var(--swipe-accent) 0 45%, transparent 100%);
-}
-
-.reveal.left {
-  right: 0;
-  justify-content: flex-end;
-  background: linear-gradient(to left, var(--swipe-warn) 0 45%, transparent 100%);
-}
-
-.swiped {
-  position: relative;
-  background: var(--ground);
-}
-
-.swiped.settling {
-  transition: transform 0.25s ease;
 }
 
 .floating {
@@ -708,19 +614,6 @@
   text-align: center;
 }
 
-.card {
-  background: var(--raised);
-  border-radius: var(--card-radius);
-  padding: 0.8rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.card.user {
-  background: var(--chip-bg);
-}
-
 .thread {
   display: flex;
   flex-direction: column;
@@ -744,28 +637,9 @@
   margin-left: 0.6rem;
 }
 
-.bubble.user .card {
-  border-bottom-left-radius: 0.2rem;
-}
-
 .bubble.agent {
   align-self: flex-end;
   margin-right: 0.6rem;
-}
-
-.bubble.agent .card {
-  border-bottom-right-radius: 0.2rem;
-}
-
-.card-body {
-  font-size: var(--body);
-  line-height: 1.4;
-  white-space: pre-wrap;
-}
-
-.card-when {
-  font-size: var(--meta);
-  color: var(--faint);
 }
 
 /* The thread sits centred under the whole row, so it pulls back out of the
@@ -941,47 +815,8 @@
   background: var(--chip-bg);
 }
 
-.handle {
-  width: var(--touch);
-  height: var(--touch);
-  margin: calc((var(--touch) - var(--tick)) / -2);
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--faint);
-  touch-action: none;
-  cursor: grab;
-}
-
 .group-head:has(.square) {
   padding-left: calc(var(--indent) / 2 + 0.25rem);
-}
-
-.square {
-  width: var(--touch);
-  height: var(--touch);
-  margin: calc((var(--touch) - var(--tick)) / -2);
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.square span {
-  width: var(--tick);
-  height: var(--tick);
-  border-radius: 28%;
-  border: 1.5px solid var(--faint);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ground);
-}
-
-.square.on span {
-  background: var(--accent);
-  border-color: var(--accent);
 }
 
 .task .main:has(.handle) + .meta {

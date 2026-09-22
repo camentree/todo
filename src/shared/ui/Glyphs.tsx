@@ -16,7 +16,7 @@ export function TickGlyph({ size }: { size: number }) {
 
 export function ChevronGlyph({ open }: { open: boolean }) {
   return (
-    <svg className={open ? "chevron open" : "chevron"} width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={"chevron transition-transform duration-[450ms] ease-[ease] " + (open ? "rotate-90" : "")} width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 3l5 5-5 5" />
     </svg>
   );
