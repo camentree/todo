@@ -17,6 +17,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 body {
   background: var(--ground);
   color: var(--text);
@@ -416,10 +420,25 @@ textarea {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  z-index: 10;
+  max-width: none;
+  max-height: none;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
   display: flex;
   flex-direction: column;
-  background: var(--ground);
+}
+
+.overlay:not([open]) {
+  display: none;
+}
+
+.overlay::backdrop {
+  background: none;
 }
 
 .page:has(> .overlay > .page) > :not(.overlay) {
@@ -431,6 +450,7 @@ textarea {
   min-height: 0;
   flex: 1;
   padding-bottom: 0;
+  background: var(--ground);
 }
 
 .overlay .page > .actions {
@@ -456,7 +476,6 @@ textarea {
 
 @media (min-width: 700px) and (hover: hover) {
   .overlay:has(.composer) {
-    background: none;
     overflow: visible;
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { Modal } from "../ui/Modal.tsx";
 import { TextButton } from "../ui/TextButton.tsx";
 
 export interface Choice {
@@ -21,20 +22,22 @@ export function Confirm({ question, choices, onCancel }: { question: string; cho
   }, [choices, onCancel]);
 
   return (
-    <div className="scrim" onClick={onCancel}>
-      <div className="confirm" onClick={(event) => event.stopPropagation()}>
-        <div className="confirm-question">{question}</div>
-        <div className="confirm-choices">
-          <TextButton active={false} onSelect={onCancel}>
-            cancel
-          </TextButton>
-          {choices.map((choice) => (
-            <TextButton key={choice.label} active onSelect={choice.onChoose}>
-              {choice.label}
+    <Modal>
+      <div className="scrim" onClick={onCancel}>
+        <div className="confirm" onClick={(event) => event.stopPropagation()}>
+          <div className="confirm-question">{question}</div>
+          <div className="confirm-choices">
+            <TextButton active={false} onSelect={onCancel}>
+              cancel
             </TextButton>
-          ))}
+            {choices.map((choice) => (
+              <TextButton key={choice.label} active onSelect={choice.onChoose}>
+                {choice.label}
+              </TextButton>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
