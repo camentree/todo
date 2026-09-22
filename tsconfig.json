@@ -20,8 +20,9 @@
     "types": ["vitest/globals", "node", "vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["shared/*"]
+      "@shared/*": ["src/shared/*"],
+      "@app/*": ["src/app/*"]
     }
   },
-  "include": ["client", "shared", "test", "vite.config.ts"]
+  "include": ["src", "test", "vite.config.ts"]
 }

@@ -5,14 +5,15 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
-  root: "client",
+  root: "src",
   build: {
     outDir: "../dist/client",
     emptyOutDir: true,
   },
   resolve: {
     alias: {
-      "@shared": fileURLToPath(new URL("./shared", import.meta.url)),
+      "@shared": fileURLToPath(new URL("./src/shared", import.meta.url)),
+      "@app": fileURLToPath(new URL("./src/app", import.meta.url)),
     },
   },
   server: {

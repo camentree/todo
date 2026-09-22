@@ -1,6 +1,7 @@
 # Rebuild notes
 
-Built top to bottom from DESIGN.md, COMPONENTS.md and the Aesthetics page of
+Built top to bottom from DESIGN.md, the component rules now in
+`src/shared/ui/CLAUDE.md`, and the Aesthetics page of
 the canvas, with nobody to ask. Every judgment call is here, so are the
 acceptance passes and anything that does not hold.
 
@@ -29,7 +30,7 @@ checkout.
   `text`.
 - **Confirm**: a raised bottom sheet with plain text buttons (cancel, and
   the choices in accent) for the delete swipe, the comment delete and the
-  composer's delete. It is not in COMPONENTS.md; nothing else fit a two-way
+  composer's delete. Nothing in the design fit a two-way
   choice ("today only" / "every day").
 - **Delete in the composer** is dim text, not red; red stays on the swipe
   and the sprite.

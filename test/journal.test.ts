@@ -1,5 +1,5 @@
-import { entryFrom, entryTags, entryText, entryTitle, parseMarkdown, readableTitle, serializeMarkdown, tagCounts } from "@shared/journal.ts";
-import type { JournalEntry } from "@shared/model.ts";
+import { entryFrom, entryTags, entryText, entryTitle, parseMarkdown, readableTitle, serializeMarkdown, tagCounts } from "@app/models/journal.ts";
+import type { JournalEntry } from "@app/models/journal.ts";
 
 const entries: JournalEntry[] = [
   { sectionTitle: "2026-09-13T08:15:00", at: "2026-09-13T08:15:00", body: "Quiet morning.\n\nCoffee on the step.", metadata: { tags: ["personal"] } },

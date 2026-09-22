@@ -1,5 +1,5 @@
-import { isDue, nextDue } from "@shared/schedule.ts";
-import type { Rule } from "@shared/schedule.ts";
+import { isDue, nextDue } from "@app/models/schedule.ts";
+import type { Rule } from "@app/models/schedule.ts";
 
 function rule(overrides: Partial<Rule>): Rule {
   return { frequency: "daily", repeatEvery: 1, weekdays: null, dayOfMonth: null, startsOn: "2026-09-01", endedOn: null, ...overrides };

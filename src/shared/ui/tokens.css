@@ -1,0 +1,91 @@
+@font-face {
+  font-family: "Seravek";
+  font-weight: 400;
+  font-display: block;
+  src: url("./seravek-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Seravek";
+  font-weight: 500;
+  font-display: block;
+  src: url("./seravek-500.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Seravek";
+  font-weight: 700;
+  font-display: block;
+  src: url("./seravek-700.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light;
+  --ground: #f5f8f6;
+  --raised: #ebefec;
+  --text: #1b2120;
+  --dim: #68726f;
+  --faint: #9da6a3;
+  --accent: #356b52;
+  --hairline: #dfe5e2;
+  --chip-bg: #356b5224;
+  --tag: #68726f;
+  --scrim: rgba(27, 33, 32, 0.16);
+  --warn: #b46a5f;
+  --accent-hover: #26503c;
+  --warn-hover: #9c5449;
+  --swipe-warn: #ba6155;
+  --swipe-accent: #2d8059;
+  --shadow: rgba(27, 33, 32, 0.22);
+
+  --font: "Seravek", -apple-system, system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --heading: 1.74rem;
+  --title: 1.12rem;
+  --body: 1.05rem;
+  --meta: 0.96rem;
+  --label: 0.86rem;
+  --big: 4.56rem;
+
+  --group-gap: 1rem;
+  --row-gap: 0.15rem;
+  --tick-gap: 0.75rem;
+  --meta-gap: 0.6rem;
+  --entry-gap: 0.35rem;
+
+  --tick: 1.6rem;
+  --round-small: 2.6rem;
+  --round: 3.53rem;
+  --ring: 300px;
+  --gutter: 1.25rem;
+  --row-padding: 0.42rem 0.25rem;
+  --card-radius: 0.7rem;
+  --column: 42rem;
+  --top: max(2.6rem, calc(env(safe-area-inset-top) + 0.8rem));
+  --bottom: max(1.4rem, calc(env(safe-area-inset-bottom) + 0.6rem));
+  --indent: calc(var(--tick) + var(--tick-gap));
+  --glyph: 0.95rem;
+  --touch: 2.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ground: #1c1a1e;
+    --raised: #26242a;
+    --text: #ddd8d3;
+    --dim: #857f7a;
+    --faint: #605b58;
+    --accent: #7fb996;
+    --hairline: #2c2a2e;
+    --chip-bg: #7fb99629;
+    --tag: #857f7a;
+    --scrim: rgba(0, 0, 0, 0.5);
+    --warn: #c9736c;
+    --accent-hover: #9ccfb0;
+    --warn-hover: #dc8b84;
+    --swipe-warn: #d86d64;
+    --swipe-accent: #6ec490;
+    --shadow: rgba(0, 0, 0, 0.45);
+  }
+}
