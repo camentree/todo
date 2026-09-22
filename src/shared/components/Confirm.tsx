@@ -24,9 +24,9 @@ export function Confirm({ question, choices, onCancel }: { question: string; cho
   return (
     <Modal>
       <div className="scrim" onClick={onCancel}>
-        <div className="confirm" onClick={(event) => event.stopPropagation()}>
-          <div className="confirm-question">{question}</div>
-          <div className="confirm-choices">
+        <div className="fixed inset-x-0 bottom-0 z-[21] mx-auto flex max-w-column flex-col gap-[0.4rem] rounded-t-2xl bg-raised px-gutter pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]" onClick={(event) => event.stopPropagation()}>
+          <div className="px-1 py-[0.4rem] text-title">{question}</div>
+          <div className="flex justify-end gap-[1.6rem]">
             <TextButton className="min-h-touch px-1 py-[0.7rem] text-body font-medium text-dim hover:text-text" onSelect={onCancel}>
               cancel
             </TextButton>

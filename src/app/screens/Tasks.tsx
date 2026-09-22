@@ -641,11 +641,11 @@ export function Tasks() {
         </div>
       )}
       {selection ? (
-        <div className="floating select-bar">
-          <RoundButton label="delete selected" onSelect={askDeleteSelected}>
+        <div className="fixed right-[max(var(--gutter),calc(50%-var(--column)/2+var(--gutter)))] bottom-bottom z-[5] flex items-center gap-[0.6rem]">
+          <RoundButton className="size-round-small bg-raised text-warn" label="delete selected" onSelect={askDeleteSelected}>
             <TrashGlyph />
           </RoundButton>
-          <RoundButton label="leave select mode" onSelect={() => setSelection(null)}>
+          <RoundButton className="size-round-small bg-raised text-dim" label="leave select mode" onSelect={() => setSelection(null)}>
             <CrossGlyph />
           </RoundButton>
           <RoundButton label="play" onSelect={play}>

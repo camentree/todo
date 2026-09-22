@@ -22,7 +22,7 @@ export function App() {
   const editorScreen = route.tab === "tasks" && route.edit === true && isPhone;
   return (
     <>
-      <div className="page">
+      <div className="page mx-auto flex min-h-[100dvh] max-w-column flex-col px-gutter pb-32">
         {!editorScreen && <TopBar sections={sections} active={route.tab} dateline={longDate(store.today)} onSelect={(tab) => go({ tab, id: null })} />}
         {route.tab === "tasks" && <Tasks />}
         {route.tab === "journal" && <Journals key="journal" name="journal" />}

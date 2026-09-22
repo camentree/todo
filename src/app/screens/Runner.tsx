@@ -401,13 +401,13 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
 
   return (
     <Modal>
-      <div className="page runner">
-        <div className="screen-head">
+      <div className="page mx-auto flex min-h-[100dvh] max-w-column flex-col px-gutter pb-0">
+        <div className="flex items-center justify-between pt-top pb-[0.2rem]">
           <span className="text-heading font-bold tracking-[-0.02em]">
             {(task ?? tasksInOrder[0])?.group}
             {tasksInOrder.length > 1 && task && <span className="position">{tasksInOrder.indexOf(task) + 1} of {tasksInOrder.length}</span>}
           </span>
-          <RoundButton label="close" onSelect={exit}>
+          <RoundButton className="size-round-small bg-raised text-dim hover:text-text" label="close" onSelect={exit}>
             <CrossGlyph />
           </RoundButton>
         </div>
@@ -430,17 +430,17 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
             </div>
           )}
         </div>
-        <div className="nav">
+        <div className="flex flex-none items-center justify-between pt-[0.6rem] pb-bottom">
           {state.phase !== "end" && (
-            <RoundButton label="previous" onSelect={() => move(goBack(state))}>
+            <RoundButton className="bg-raised text-dim" label="previous" onSelect={() => move(goBack(state))}>
               <ArrowGlyph direction="previous" />
             </RoundButton>
           )}
-          <RoundButton label="done" onSelect={onDone}>
+          <RoundButton className={state.phase === "end" ? "mx-auto" : ""} label="done" onSelect={onDone}>
             <TickGlyph size={22} />
           </RoundButton>
           {state.phase !== "end" && (
-            <RoundButton label="next" onSelect={() => move(advance(state))}>
+            <RoundButton className="bg-raised text-dim" label="next" onSelect={() => move(advance(state))}>
               <ArrowGlyph direction="next" />
             </RoundButton>
           )}

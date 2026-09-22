@@ -5,6 +5,7 @@ export const mergeClasses = extendTailwindMerge({
     classGroups: {
       "font-size": ["text-heading", "text-title", "text-body", "text-meta", "text-label", "text-big"],
       rounded: ["rounded-card"],
+      size: ["size-round", "size-round-small", "size-tick", "size-touch", "size-glyph"],
     },
   },
 });

@@ -65,16 +65,6 @@
   }
 }
 
-.page {
-  max-width: var(--column);
-  margin: 0 auto;
-  padding: 0 var(--gutter) 8rem;
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
-
 .list > div + div > .group {
   margin-top: var(--group-gap);
 }
@@ -237,22 +227,6 @@
   margin-right: auto;
 }
 
-.confirm {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 21;
-  margin: 0 auto;
-  max-width: var(--column);
-  background: var(--raised);
-  border-radius: 1rem 1rem 0 0;
-  padding: 1rem var(--gutter) calc(1rem + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
 .row.focused {
   background: var(--raised);
 }
@@ -289,67 +263,6 @@
   display: none;
 }
 
-.shortcuts {
-  gap: 0;
-}
-
-.shortcut {
-  display: flex;
-  gap: 1rem;
-  padding: 0.3rem 0.25rem;
-  font-size: var(--body);
-}
-
-.shortcut-keys {
-  font-family: var(--mono);
-  font-size: var(--label);
-  color: var(--dim);
-  min-width: 7rem;
-  white-space: pre;
-}
-
-.confirm-question {
-  font-size: var(--title);
-  padding: 0.4rem 0.25rem;
-}
-
-.confirm-choices {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1.6rem;
-}
-
-.error-report {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(var(--bottom) + 9.4rem);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: 22rem;
-}
-
-.error-sprite {
-  background: var(--warn);
-  color: var(--ground);
-  padding: 0.7rem 1rem;
-  border-radius: var(--card-radius);
-  font-size: var(--body);
-  font-weight: 500;
-  text-align: center;
-  box-shadow: 0 8px 24px var(--shadow);
-}
-
-.error-detail {
-  font-size: var(--meta);
-  line-height: 1.4;
-  color: var(--dim);
-  text-align: center;
-}
-
 /* The thread sits centred under the whole row, so it pulls back out of the
    indent that lines notes and subtasks up with the tick. */
 .comment-list .thread,
@@ -359,14 +272,6 @@
 
 .comment-list .swipeable {
   border-radius: var(--card-radius);
-}
-
-.screen-head {
-  padding-top: var(--top);
-  padding-bottom: 0.2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .editor-host {
@@ -484,34 +389,12 @@
   padding-left: calc(var(--indent) * 2);
 }
 
-.select-bar .round:not(:last-child) {
-  width: var(--round-small);
-  height: var(--round-small);
-  background: var(--raised);
-  color: var(--dim);
-}
-
-.select-bar .round:first-child {
-  color: var(--warn);
-}
-
-.runner {
-  padding-bottom: 0;
-}
-
 .heading .position {
   font-size: var(--meta);
   font-weight: 400;
   letter-spacing: normal;
   color: var(--dim);
   margin-left: 0.6rem;
-}
-
-.screen-head .round {
-  width: var(--round-small);
-  height: var(--round-small);
-  background: var(--raised);
-  color: var(--dim);
 }
 
 .queue {
@@ -703,23 +586,6 @@
   overflow: visible;
 }
 
-.nav {
-  flex: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.6rem 0 var(--bottom);
-}
-
-.nav .round:nth-child(odd):not(:only-child) {
-  background: var(--raised);
-  color: var(--dim);
-}
-
-.nav .round:only-child {
-  margin: 0 auto;
-}
-
 .list > .swipeable + .swipeable {
   margin-top: var(--entry-gap);
 }
@@ -852,9 +718,5 @@
 }
 
 @media (hover: hover) {
-  .screen-head .round:hover {
-    color: var(--text);
-  }
-
 }
 
