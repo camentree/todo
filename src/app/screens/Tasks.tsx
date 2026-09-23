@@ -557,7 +557,7 @@ export function Tasks() {
           backlog ({backlog.length})
         </TextButton>
       </div>
-      <div className="list mt-[0.6rem] flex flex-col" ref={listRef} onPointerOver={followPointer}>
+      <div className="list mt-[0.6rem] flex flex-col [&>div+div>.group]:mt-[var(--group-gap)]" ref={listRef} onPointerOver={followPointer}>
         {list === "today" ? (
           todayGroups.map(({ group, tasks }) => (
             <div key={group} data-container="today" data-group={group}>

@@ -18,5 +18,13 @@ app would want is an app component, not a new shared one.
 ## Sizes and colours
 
 Sizes and colours come from the tokens in `tokens.css`: `:root` holds the light
-palette and dark is the same names redefined. A parent's stylesheet sets a
-primitive's size; the primitive never takes a variant prop.
+palette and dark is the same names redefined, and `@theme inline` points every
+Tailwind utility at those same properties, so the utilities flip with the
+scheme.
+
+A primitive writes its own look as utilities and takes a `className`, merged
+with `mergeClasses` so the caller wins. That is how a parent sets a child's
+size or colour; a primitive never takes a variant prop. A named token used in a
+utility (`text-title`, `size-round`, `rounded-card`) has to be listed in
+`mergeClasses.ts` too, or tailwind-merge reads it as a different property and
+drops the wrong one.

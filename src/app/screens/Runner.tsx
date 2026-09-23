@@ -409,7 +409,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
 
   return (
     <Modal>
-      <div className="page mx-auto flex min-h-[100dvh] max-w-column flex-col px-gutter pb-0">
+      <div className="page mx-auto flex min-h-0 w-full max-w-column flex-1 flex-col bg-ground px-gutter pb-0">
         <div className="flex items-center justify-between pt-top pb-[0.2rem]">
           <span className="text-heading font-bold tracking-[-0.02em]">
             {(task ?? tasksInOrder[0])?.group}

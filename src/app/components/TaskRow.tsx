@@ -163,7 +163,7 @@ export function TaskRow({
         <div
           className={
             "row flex cursor-pointer flex-col gap-[var(--row-gap)] rounded-lg [padding:var(--row-padding)] transition-[background] duration-[450ms] ease-[ease] wide:flex-row wide:items-center wide:gap-[var(--tick-gap)] wide:px-[0.9rem]" +
-            (focused === task.id ? " focused" : "") +
+            (focused === task.id ? " bg-raised" : "") +
             (saved === task.id ? " saved" : "")
           }
           data-focus={task.id}

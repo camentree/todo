@@ -67,20 +67,8 @@
   }
 }
 
-.list > div + div > .group {
-  margin-top: var(--group-gap);
-}
-
 .page:has(> .overlay > .page) > :not(.overlay) {
   visibility: hidden;
-}
-
-.overlay .page {
-  width: 100%;
-  min-height: 0;
-  flex: 1;
-  padding-bottom: 0;
-  background: var(--ground);
 }
 
 .scrim {
@@ -104,14 +92,6 @@
   .overlay:has(.composer) {
     overflow: visible;
   }
-}
-
-.composer + .scrim {
-  z-index: 22;
-}
-
-.row.focused {
-  background: var(--raised);
 }
 
 .row.saved {
