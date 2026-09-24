@@ -40,8 +40,8 @@ export function JournalEditor({
   }, [text, leaving]);
 
   return (
-    <Modal>
-      <div className="page mx-auto flex min-h-0 w-full max-w-column flex-1 flex-col bg-ground px-gutter pb-0">
+    <Modal className="bg-ground">
+      <div className="page mx-auto flex min-h-0 w-full max-w-column flex-1 flex-col px-gutter pb-0">
         <div className="flex items-center justify-between pt-top pb-[0.2rem]">
           <span className="text-heading font-bold tracking-[-0.02em]">{heading}</span>
           <RoundButton className="size-round-small bg-raised text-dim hover:text-text" label="close" onSelect={onCancel}>
