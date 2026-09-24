@@ -99,8 +99,7 @@ export function Tasks() {
     if (event.clientX === pointerWas.current.x && event.clientY === pointerWas.current.y) return;
     pointerWas.current = { x: event.clientX, y: event.clientY };
     const hovered = (event.target as HTMLElement).closest<HTMLElement>("[data-focus]");
-    if (!hovered || hovered.closest(".roll:not(.open)")) return;
-    const id = hovered.dataset.focus ?? null;
+    const id = hovered && !hovered.closest(".roll:not(.open)") ? (hovered.dataset.focus ?? null) : null;
     if (id !== focused) setFocused(id);
   };
 
@@ -557,7 +556,7 @@ export function Tasks() {
           backlog ({backlog.length})
         </TextButton>
       </div>
-      <div className="list mt-[0.6rem] flex flex-col [&>div+div>.group]:mt-[var(--group-gap)]" ref={listRef} onPointerOver={followPointer}>
+      <div className="list mt-[0.6rem] flex flex-col [&>div+div>.group]:mt-[var(--group-gap)]" ref={listRef} onPointerOver={followPointer} onPointerLeave={() => setFocused(null)}>
         {list === "today" ? (
           todayGroups.map(({ group, tasks }) => (
             <div key={group} data-container="today" data-group={group}>
