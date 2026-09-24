@@ -27,8 +27,6 @@ export interface TaskEditorState {
   host: (element: HTMLDivElement | null) => void;
   parsed: ParsedTask | null;
   preview: Task | null;
-  leaving: boolean;
-  stayHere: () => void;
   commit: () => void;
   close: () => void;
   onDelete: () => void;
@@ -70,8 +68,6 @@ export function useTaskEditor({ task, onCommit, onClose, onDelete }: TaskEditing
   const element = useRef<HTMLDivElement | null>(null);
   const schedule = task?.scheduleId ? (store.schedules.find((each) => each.id === task.scheduleId) ?? null) : null;
   const [text, setText] = useState(() => (task === null ? "" : serializeTask({ task, every: schedule ? everyToken(schedule) : null, today: store.today })));
-  const opened = useRef(text);
-  const [leaving, setLeaving] = useState(false);
   const subtasks = task === null || task.parentId === null;
   const parsed = parseTask({ text, today: store.today, subtasks });
 
@@ -133,21 +129,17 @@ export function useTaskEditor({ task, onCommit, onClose, onDelete }: TaskEditing
       event.preventDefault();
       event.stopPropagation();
       if (event.key === "Enter") commit();
-      else if (leaving) setLeaving(false);
-      else if (parsed && text !== opened.current) setLeaving(true);
       else onClose();
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [text, leaving]);
+  }, [text]);
 
   return {
     task,
     host,
     parsed,
     preview: parsed ? taskFromParsed({ parsed, existing: task, id: "preview", today: store.today, now: nowStamp(), schedule: null, newId: identifier }) : null,
-    leaving,
-    stayHere: () => setLeaving(false),
     commit,
     close: onClose,
     onDelete,

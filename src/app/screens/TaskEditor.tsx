@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { Confirm } from "@shared/components/Confirm.tsx";
 import { formatDuration } from "@shared/format.ts";
 import { Modal } from "@shared/ui/Modal.tsx";
 import { TextButton } from "@shared/ui/TextButton.tsx";
@@ -65,32 +64,15 @@ export function TaskEditorFields({ editor }: { editor: TaskEditorState }) {
   );
 }
 
-export function LeavingConfirm({ editor }: { editor: TaskEditorState }) {
-  if (!editor.leaving) return null;
-  return (
-    <Confirm
-      question="save this task?"
-      choices={[
-        { label: "discard", onChoose: editor.close },
-        { label: "save", onChoose: editor.commit },
-      ]}
-      onCancel={editor.stayHere}
-    />
-  );
-}
-
 export function TaskEditor({ task, onCommit, onClose, onDelete }: TaskEditing) {
   const [closing, setClosing] = useState(false);
   const editor = useTaskEditor({ task, onCommit, onClose: () => setClosing(true), onDelete });
   return (
-    <>
-      <Modal>
-        <div className="scrim" onClick={editor.close} />
-        <div className={closing ? "composer flex h-full w-full flex-col bg-ground pt-top [overscroll-behavior:contain] closing" : "composer flex h-full w-full flex-col bg-ground pt-top [overscroll-behavior:contain]"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
-          <TaskEditorFields editor={editor} />
-        </div>
-      </Modal>
-      <LeavingConfirm editor={editor} />
-    </>
+    <Modal>
+      <div className="scrim" onClick={editor.close} />
+      <div className={closing ? "composer flex h-full w-full flex-col bg-ground pt-top [overscroll-behavior:contain] closing" : "composer flex h-full w-full flex-col bg-ground pt-top [overscroll-behavior:contain]"} onTransitionEnd={(event) => closing && event.target === event.currentTarget && onClose()}>
+        <TaskEditorFields editor={editor} />
+      </div>
+    </Modal>
   );
 }
