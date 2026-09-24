@@ -32,10 +32,14 @@ export function TaskGroup({
         trigger={(fold) => (
           <div
             className={
-              "group-head flex items-center gap-[0.4rem] rounded-lg pt-[0.35rem] pr-1 pb-[0.1rem] pl-1 text-dim transition-[background] duration-[450ms] ease-[ease] wide:-mx-[0.65rem] wide:px-[0.9rem]" +
+              "group-head flex cursor-pointer items-center gap-[0.4rem] rounded-lg pt-[0.35rem] pr-1 pb-[0.1rem] pl-1 text-dim transition-[background] duration-[450ms] ease-[ease] wide:-mx-[0.65rem] wide:px-[0.9rem]" +
               (focused ? " bg-raised" : "")
             }
             data-focus={"group:" + storageKey}
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("button")) return;
+              fold.toggle();
+            }}
           >
             {select && <SquareTick on={select.on} onToggle={select.onToggle} />}
             <button
