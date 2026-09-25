@@ -7,7 +7,7 @@ export type JournalName = "journal" | "notebook";
 
 export class ApiError extends Error {}
 
-const base = import.meta.env.VITE_API_URL;
+const base = new URL(import.meta.env.VITE_API_URL, window.location.href);
 
 async function send({ method, path, body }: { method: string; path: string; body?: unknown }): Promise<unknown> {
   let response: Response;
