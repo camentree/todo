@@ -122,11 +122,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   if (!memory) {
     return error ? (
-      <div className="error-report">
-        <button className="error-sprite" onClick={start}>
+      <div className="fixed bottom-[calc(var(--bottom)+9.4rem)] left-1/2 z-30 flex max-w-[22rem] -translate-x-1/2 flex-col items-center gap-2">
+        <button className="rounded-card bg-warn px-4 py-[0.7rem] text-center text-body font-medium text-ground shadow-[0_8px_24px_var(--shadow)]" onClick={start}>
           error
         </button>
-        <div className="error-detail">{error}</div>
+        <div className="text-center text-meta leading-[1.4] text-dim">{error}</div>
       </div>
     ) : null;
   }
