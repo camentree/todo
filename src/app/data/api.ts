@@ -22,11 +22,13 @@ async function send({ method, path, body }: { method: string; path: string; body
   }
   if (!response.ok) {
     const text = await response.text();
+    let reported: string | undefined;
     try {
-      throw new ApiError((JSON.parse(text) as { error?: string }).error ?? response.statusText);
-    } catch (failure) {
-      throw failure instanceof ApiError ? failure : new ApiError("could not reach Parallax");
+      reported = (JSON.parse(text) as { error?: string }).error;
+    } catch {
+      reported = undefined;
     }
+    throw new ApiError(reported ?? response.statusText);
   }
   if (response.status === 204) return null;
   return response.json();
