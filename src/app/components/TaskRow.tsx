@@ -37,7 +37,7 @@ function Mark({ label, count, active, onSelect, children }: { label: string; cou
 }
 
 function Meta({ children }: { children: ReactNode }) {
-  return <div className="meta flex min-h-[1.2rem] flex-wrap items-center gap-[var(--meta-gap)] pl-indent text-meta text-dim wide:contents">{children}</div>;
+  return <div className="meta flex min-h-[1.2rem] flex-wrap items-center gap-[var(--meta-gap)] pl-indent text-meta text-dim desktop:contents">{children}</div>;
 }
 
 export interface Select {
@@ -159,10 +159,10 @@ export function TaskRow({
 
   return (
     <div className="task flex flex-col">
-      <Swipeable className="wide:-mx-[0.65rem]" right={select ? null : todaySwipe} left={select || !onDelete ? null : { word: "delete", onSwipe: onDelete }}>
+      <Swipeable className="desktop:-mx-[0.65rem]" right={select ? null : todaySwipe} left={select || !onDelete ? null : { word: "delete", onSwipe: onDelete }}>
         <div
           className={
-            "row flex cursor-pointer flex-col gap-[var(--row-gap)] rounded-lg [padding:var(--row-padding)] transition-[background] duration-[450ms] ease-[ease] wide:flex-row wide:items-center wide:gap-[var(--tick-gap)] wide:px-[0.9rem]" +
+            "row flex cursor-pointer flex-col gap-[var(--row-gap)] rounded-lg [padding:var(--row-padding)] transition-[background] duration-[450ms] ease-[ease] desktop:flex-row desktop:items-center desktop:gap-[var(--tick-gap)] desktop:px-[0.9rem]" +
             (focused === task.id ? " bg-raised" : "") +
             (saved === task.id ? " saved" : "")
           }
@@ -170,7 +170,7 @@ export function TaskRow({
           onClick={onRow}
           {...press}
         >
-          <div className="main flex items-center gap-[var(--tick-gap)] wide:contents">
+          <div className="main flex items-center gap-[var(--tick-gap)] desktop:contents">
             {select ? (
               <>
                 <Handle onPointerDown={(event) => select.onHandle({ event, id: task.id })} />
@@ -183,7 +183,7 @@ export function TaskRow({
               {task.title}
               {hint && <span className="ml-[0.6rem] inline-flex flex-none items-center gap-[0.3rem] text-meta whitespace-nowrap text-dim">{hint}</span>}
             </span>
-            <div className="ml-auto flex flex-none items-center justify-end wide:order-1">
+            <div className="ml-auto flex flex-none items-center justify-end desktop:order-1">
               {comments.length > 0 && (
                 <Mark label="comments" active={commentsShowing} onSelect={onCommentGlyph}>
                   <SpeechGlyph />
@@ -197,7 +197,7 @@ export function TaskRow({
               )}
               {(hasSubtasks || comments.length > 0) && !fixedOpen && (
                 <button
-                  className="flex h-11 w-8 flex-none items-center justify-center text-faint [margin:-0.725rem_-0.7rem_-0.725rem_0] hover:text-dim [&_svg]:size-glyph wide:[&_svg]:size-[0.875rem]"
+                  className="flex h-11 w-8 flex-none items-center justify-center text-faint [margin:-0.725rem_-0.7rem_-0.725rem_0] hover:text-dim [&_svg]:size-glyph desktop:[&_svg]:size-[0.875rem]"
                   aria-label={open ? "fold" : "unfold"}
                   onClick={onChevron}
                 >
@@ -227,7 +227,7 @@ export function TaskRow({
       {task.note && (
         <Roll open={subtasksOpen}>
           <div className="unfolded flex flex-col pl-indent">
-            <div className="px-1 pt-[0.35rem] pb-[0.1rem] text-body leading-[1.4] whitespace-pre-wrap text-dim wide:text-meta">{task.note}</div>
+            <div className="px-1 pt-[0.35rem] pb-[0.1rem] text-body leading-[1.4] whitespace-pre-wrap text-dim desktop:text-meta">{task.note}</div>
           </div>
         </Roll>
       )}

@@ -32,7 +32,7 @@ export function TaskGroup({
         trigger={(fold) => (
           <div
             className={
-              "group-head flex cursor-pointer items-center gap-[0.4rem] rounded-lg pt-[0.35rem] pr-1 pb-[0.1rem] pl-1 text-dim transition-[background] duration-[450ms] ease-[ease] wide:-mx-[0.65rem] wide:px-[0.9rem]" +
+              "group-head flex cursor-pointer items-center gap-[0.4rem] rounded-lg pt-[0.35rem] pr-1 pb-[0.1rem] pl-1 text-dim transition-[background] duration-[450ms] ease-[ease] desktop:-mx-[0.65rem] desktop:px-[0.9rem]" +
               (focused ? " bg-raised" : "")
             }
             data-focus={"group:" + storageKey}
@@ -43,7 +43,7 @@ export function TaskGroup({
           >
             {select && <SquareTick on={select.on} onToggle={select.onToggle} />}
             <button
-              className="mx-[-0.5rem] flex h-11 w-8 flex-none items-center justify-center text-faint hover:text-dim [&_svg]:size-glyph wide:[&_svg]:size-[0.875rem]"
+              className="mx-[-0.5rem] flex h-11 w-8 flex-none items-center justify-center text-faint hover:text-dim [&_svg]:size-glyph desktop:[&_svg]:size-[0.875rem]"
               aria-label={fold.open ? "fold" : "unfold"}
               onClick={fold.toggle}
             >
