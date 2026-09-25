@@ -2,7 +2,8 @@ import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
 
 export const editorTheme: Extension = EditorView.baseTheme({
-  "&": { flex: "1", outline: "none" },
+  "&": { flex: "1" },
+  "&.cm-focused": { outline: "none" },
   ".cm-scroller": { fontFamily: "var(--font)", lineHeight: "1.5" },
   ".cm-content": { padding: "0", caretColor: "transparent", WebkitUserSelect: "text", userSelect: "text" },
   ".cm-line": { padding: "0" },
