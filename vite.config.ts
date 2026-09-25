@@ -7,6 +7,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   root: "src",
+  envDir: "..",
   build: {
     outDir: "../dist/client",
     emptyOutDir: true,
