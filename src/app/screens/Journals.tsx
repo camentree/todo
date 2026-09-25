@@ -11,38 +11,18 @@ import { TextButton } from "@shared/ui/TextButton.tsx";
 import type { JournalName } from "../data/store.tsx";
 import { nowStamp, useStore } from "../data/store.tsx";
 import type { JournalEntry } from "../models/journal.ts";
-import { entryFrom, entryTags, entryText, readableTitle, tagCounts, wordCount } from "../models/journal.ts";
+import { blankEntry, entryFrom, entryTags, entryText, readableTitle, tagCounts, wordCount } from "../models/journal.ts";
 import { useRoute } from "../route.ts";
-import { JournalEditor } from "../screens/JournalEditor.tsx";
+import { JournalEditor } from "./JournalEditor.tsx";
 
 const headings: Record<JournalName, string> = { journal: "Journal", notebook: "Notebook" };
-
-export function blankEntry({ tag }: { tag: string | null }): JournalEntry {
-  const at = nowStamp();
-  return { sectionTitle: at, at, body: "", metadata: tag ? { tags: [tag] } : {} };
-}
-
-function Filters({ counts, active, total, onSelect }: { counts: { tag: string; count: number }[]; active: string | null; total: number; onSelect: (tag: string | null) => void }) {
-  return (
-    <div className="flex flex-wrap gap-x-4 gap-y-0 pt-[0.3rem] pb-[0.2rem]">
-      <TextButton className={"min-h-touch py-2 text-meta " + (active === null ? "text-text" : "text-faint hover:text-dim")} onSelect={() => onSelect(null)}>
-        all ({total})
-      </TextButton>
-      {counts.map(({ tag, count }) => (
-        <TextButton key={tag} className={"min-h-touch py-2 text-meta " + (active === tag ? "text-text" : "text-faint hover:text-dim")} onSelect={() => onSelect(active === tag ? null : tag)}>
-          {tag} ({count})
-        </TextButton>
-      ))}
-    </div>
-  );
-}
 
 function EntryRow({ entry, filter, onOpen, onDelete }: { entry: JournalEntry; filter: string | null; onOpen: () => void; onDelete: () => void }) {
   const tags = entryTags(entry).filter((tag) => tag !== filter);
   const words = wordCount(entry.body);
   return (
-    <Swipeable className="mt-[var(--entry-gap)] first:mt-0 wide:-mx-[0.65rem]" right={null} left={{ word: "delete", onSwipe: onDelete }}>
-      <button className="entry flex w-full flex-col rounded-lg px-1 py-[0.7rem] transition-[background] duration-[450ms] ease-[ease] hover:bg-raised wide:px-[0.9rem]" onClick={onOpen}>
+    <Swipeable className="mt-[var(--entry-gap)] first:mt-0 desktop:-mx-[0.65rem]" right={null} left={{ word: "delete", onSwipe: onDelete }}>
+      <button className="entry flex w-full flex-col rounded-lg px-1 py-[0.7rem] transition-[background] duration-[450ms] ease-[ease] hover:bg-raised desktop:px-[0.9rem]" onClick={onOpen}>
         <div className="text-title leading-[1.35] text-text">{readableTitle(entry)}</div>
         <div className="mt-[0.15rem] flex gap-[0.4rem] text-meta text-text [&>span+span]:before:pr-[0.4rem] [&>span+span]:before:text-faint [&>span+span]:before:content-['·']">
           <span>{formatWhen(entry.at)}</span>
@@ -59,12 +39,13 @@ function EntryRow({ entry, filter, onOpen, onDelete }: { entry: JournalEntry; fi
   );
 }
 
-export function Journals({ name }: { name: JournalName }) {
+export function Journals() {
   const store = useStore();
   const { route, go, close } = useRoute();
   const [filter, setFilter] = useState<string | null>(null);
   const [drafted, setDrafted] = useState<JournalEntry | null>(null);
   const [deleting, setDeleting] = useState<JournalEntry | null>(null);
+  const name: JournalName = route.tab === "notebook" ? "notebook" : "journal";
   const entries = store[name];
   const shown = entries.filter((entry) => filter === null || entryTags(entry).includes(filter)).sort((a, b) => b.at.localeCompare(a.at));
   const editing = route.id === null ? null : (entries.find((entry) => entry.at === route.id) ?? (drafted?.at === route.id ? drafted : null));
@@ -76,7 +57,28 @@ export function Journals({ name }: { name: JournalName }) {
 
   return (
     <>
-      <Filters counts={tagCounts(entries)} active={filter} total={entries.length} onSelect={setFilter} />
+      <div className="flex flex-wrap gap-x-4 gap-y-0 pt-[0.3rem] pb-[0.2rem]">
+        <TextButton className={"min-h-touch py-2 text-meta " + (name === "journal" ? "text-text" : "text-faint hover:text-dim")} onSelect={() => go({ tab: "journal", id: null })}>
+          journal ({store.journal.length})
+        </TextButton>
+        <TextButton className={"min-h-touch py-2 text-meta " + (name === "notebook" ? "text-text" : "text-faint hover:text-dim")} onSelect={() => go({ tab: "notebook", id: null })}>
+          notebook ({store.notebook.length})
+        </TextButton>
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-0 pb-[0.2rem]">
+        <TextButton className={"min-h-touch py-2 text-meta " + (filter === null ? "text-text" : "text-faint hover:text-dim")} onSelect={() => setFilter(null)}>
+          all ({entries.length})
+        </TextButton>
+        {tagCounts(entries).map(({ tag, count }) => (
+          <TextButton
+            key={tag}
+            className={"min-h-touch py-2 text-meta " + (filter === tag ? "text-text" : "text-faint hover:text-dim")}
+            onSelect={() => setFilter(filter === tag ? null : tag)}
+          >
+            {tag} ({count})
+          </TextButton>
+        ))}
+      </div>
       <div className="list mt-[0.6rem] flex flex-col">
         {shown.map((entry) => (
           <EntryRow key={entry.at} entry={entry} filter={filter} onOpen={() => go({ tab: route.tab, id: entry.at })} onDelete={() => setDeleting(entry)} />
@@ -98,7 +100,7 @@ export function Journals({ name }: { name: JournalName }) {
         />
       )}
       <div className="fixed right-[max(var(--gutter),calc(50%-var(--column)/2+var(--gutter)))] bottom-bottom z-[5] flex items-center gap-[0.6rem]">
-        <RoundButton label="add" onSelect={() => write(blankEntry({ tag: filter }))}>
+        <RoundButton label="add" onSelect={() => write(blankEntry({ at: nowStamp(), tag: filter }))}>
           <PlusGlyph />
         </RoundButton>
       </div>

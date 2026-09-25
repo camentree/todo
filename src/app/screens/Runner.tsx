@@ -10,12 +10,12 @@ import { RoundButton } from "@shared/ui/RoundButton.tsx";
 import { TextButton } from "@shared/ui/TextButton.tsx";
 
 import { Comments } from "../components/Comments.tsx";
-import { blankEntry } from "../components/Journals.tsx";
+
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import type { Comment } from "../models/comment.ts";
 import { commentsFor } from "../models/comment.ts";
 import type { JournalEntry } from "../models/journal.ts";
-import { entryFrom, entryText } from "../models/journal.ts";
+import { blankEntry, entryFrom, entryText } from "../models/journal.ts";
 import type { Task } from "../models/task.ts";
 import { isDone, isNumericType, subtaskDone } from "../models/task.ts";
 import { useRoute } from "../route.ts";
@@ -356,7 +356,7 @@ export function Runner({ taskIds, onClose }: { taskIds: string[]; onClose: () =>
         <>
           <div className="max-w-[190px] pt-[0.4rem] text-title leading-[1.2] font-bold tracking-[-0.02em] [overflow-wrap:anywhere]">{subtask.title}</div>
           {journalTask && !subtaskIsDone ? (
-            <TextButton className="min-h-touch px-4 py-2 text-body font-medium text-accent" onSelect={() => setWriting(blankEntry({ tag: null }))}>
+            <TextButton className="min-h-touch px-4 py-2 text-body font-medium text-accent" onSelect={() => setWriting(blankEntry({ at: nowStamp(), tag: null }))}>
               write
             </TextButton>
           ) : (

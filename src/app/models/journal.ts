@@ -98,6 +98,10 @@ export function readableTitle(entry: JournalEntry): string {
   return entry.metadata.displayTitle ?? entry.sectionTitle.replace("T", " ").slice(0, 16);
 }
 
+export function blankEntry({ at, tag }: { at: string; tag: string | null }): JournalEntry {
+  return { sectionTitle: at, at, body: "", metadata: tag ? { tags: [tag] } : {} };
+}
+
 export function entryText(entry: JournalEntry): string {
   const tags = entry.metadata.tags ?? [];
   const metadata = [`tags: ${tags.join(", ")}`.trimEnd(), entry.metadata.author ? `author: ${entry.metadata.author}` : ""].filter(Boolean);
