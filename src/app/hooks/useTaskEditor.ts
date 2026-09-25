@@ -12,8 +12,8 @@ import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { dueToday, everyToken, scheduleFromParsed } from "../models/schedule.ts";
 import type { Task } from "../models/task.ts";
 import { taskFromParsed } from "../models/task.ts";
-import type { ParsedTask } from "../models/taskText.ts";
-import { parseTask, serializeTask, tokenSpans } from "../models/taskText.ts";
+import type { ParsedTask } from "../models/taskSyntax.ts";
+import { parseTask, serializeTask, tokenSpans } from "../models/taskSyntax.ts";
 
 export interface TaskEditing {
   task: Task | null;

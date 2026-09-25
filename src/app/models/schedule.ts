@@ -1,7 +1,7 @@
 import { dateFromKey, dateKey } from "@shared/format.ts";
 
 import type { TaskType } from "./task.ts";
-import type { ParsedTask } from "./taskText.ts";
+import type { ParsedTask } from "./taskSyntax.ts";
 
 export type Frequency = "daily" | "weekly" | "monthly";
 

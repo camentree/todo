@@ -4,7 +4,7 @@ import type { Comment } from "./comment.ts";
 import { unseenFor } from "./comment.ts";
 import type { JournalEntry } from "./journal.ts";
 import type { Schedule } from "./schedule.ts";
-import type { ParsedSubtask, ParsedTask } from "./taskText.ts";
+import type { ParsedSubtask, ParsedTask } from "./taskSyntax.ts";
 
 export type TaskType = "boolean" | "timer_seconds" | "count" | "amount" | "text";
 

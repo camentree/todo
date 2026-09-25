@@ -1,6 +1,6 @@
 import { everyLabel } from "@app/models/schedule.ts";
 import type { Task } from "@app/models/task.ts";
-import { parseTask, serializeTask, tokenSpans } from "@app/models/taskText.ts";
+import { parseTask, serializeTask, tokenSpans } from "@app/models/taskSyntax.ts";
 
 const today = "2026-09-15";
 
