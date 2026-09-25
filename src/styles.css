@@ -155,7 +155,7 @@
       margin-top: auto;
       max-width: var(--column);
       align-self: center;
-      height: calc(100% - var(--top));
+      height: min(32rem, calc(100% - var(--top)));
       padding-top: 0;
       border-radius: 1rem 1rem 0 0;
       transition: transform 0.45s ease;
