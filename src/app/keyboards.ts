@@ -1,8 +1,8 @@
-import type { Shortcut } from "@shared/hooks/useShortcuts.ts";
+import type { KeyboardBinding } from "@shared/hooks/useKeyboard.ts";
 
-export type ShortcutAction = "close" | "down" | "up" | "switch" | "fold" | "select" | "complete" | "edit" | "delete" | "today" | "thread" | "add" | "help";
+export type KeyboardAction = "close" | "down" | "up" | "switch" | "fold" | "select" | "complete" | "edit" | "delete" | "today" | "thread" | "add" | "help";
 
-export const shortcuts: Shortcut<ShortcutAction>[] = [
+export const keyboardBindings: KeyboardBinding<KeyboardAction>[] = [
   { keys: ["Escape"], action: "close", label: "close what is open" },
   { keys: ["j", "ctrl+n"], action: "down", label: "move down" },
   { keys: ["k", "ctrl+p"], action: "up", label: "move up" },

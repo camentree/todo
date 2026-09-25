@@ -3,9 +3,9 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { Confirm } from "@shared/components/Confirm.tsx";
 import type { Choice } from "@shared/components/Confirm.tsx";
-import { ShortcutsSheet } from "@shared/components/ShortcutsSheet.tsx";
+import { KeyboardSheet } from "@shared/components/KeyboardSheet.tsx";
 import { useIsPhone } from "@shared/hooks/useIsPhone.ts";
-import { useShortcuts } from "@shared/hooks/useShortcuts.ts";
+import { useKeyboard } from "@shared/hooks/useKeyboard.ts";
 import { longPress } from "@shared/longPress.ts";
 import { useFolds } from "@shared/ui/Foldable.tsx";
 import { CrossGlyph, GripGlyph, PlayGlyph, PlusGlyph, TickGlyph, TrashGlyph } from "@shared/ui/Glyphs.tsx";
@@ -42,8 +42,8 @@ import {
   withoutSubtask,
 } from "../models/task.ts";
 import { useRoute } from "../route.ts";
-import type { ShortcutAction } from "../shortcuts.ts";
-import { shortcuts } from "../shortcuts.ts";
+import type { KeyboardAction } from "../keyboards.ts";
+import { keyboardBindings } from "../keyboards.ts";
 import { Runner } from "./Runner.tsx";
 import { TaskEditor } from "./TaskEditor.tsx";
 import { TaskEditorPhone } from "./TaskEditorPhone.tsx";
@@ -490,7 +490,7 @@ export function Tasks() {
     listRef.current?.querySelector<HTMLElement>(`[data-focus="${next}"]`)?.scrollIntoView({ block: "nearest" });
   };
 
-  const shortcut = (action: ShortcutAction) => {
+  const onKeyboard = (action: KeyboardAction) => {
     const target = focused && !focused.startsWith("group:") ? rowAt(focused) : null;
     if (action === "help") return setHelping(true);
     if (action === "switch") return setList(list === "today" ? "backlog" : "today");
@@ -530,7 +530,7 @@ export function Tasks() {
     if (action === "thread") toggleComments({ folds, task: host });
   };
 
-  useShortcuts({ shortcuts, handle: shortcut });
+  useKeyboard({ bindings: keyboardBindings, handle: onKeyboard });
 
   const Editor = isPhone ? TaskEditorPhone : TaskEditor;
   const editor = editing ? (
@@ -673,7 +673,7 @@ export function Tasks() {
       )}
       {editor}
       {confirm}
-      {helping && <ShortcutsSheet shortcuts={shortcuts} onClose={() => setHelping(false)} />}
+      {helping && <KeyboardSheet bindings={keyboardBindings} onClose={() => setHelping(false)} />}
     </>
   );
 }
