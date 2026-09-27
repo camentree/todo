@@ -164,9 +164,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dismissError: () => setError(null),
     putTask: (task) => {
       const previous = latest.current?.tasks.find((each) => each.id === task.id);
+      const nested = new Set(task.subtasks.map((subtask) => subtask.id));
+      const absorbed = (latest.current?.tasks ?? []).filter((each) => nested.has(each.id));
       write({
-        apply: (current) => ({ ...current, tasks: replaced({ list: current.tasks, item: task }) }),
-        undo: (current) => ({ ...current, tasks: restored({ list: current.tasks, id: task.id, previous }) }),
+        apply: (current) => ({ ...current, tasks: replaced({ list: current.tasks.filter((each) => !nested.has(each.id)), item: task }) }),
+        undo: (current) => ({ ...current, tasks: [...restored({ list: current.tasks, id: task.id, previous }), ...absorbed] }),
         request: () => (previous ? updateTask(task) : createTask(task)),
       });
     },

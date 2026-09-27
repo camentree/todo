@@ -48,7 +48,9 @@ interface DocumentLine {
   bullet: number | null;
 }
 
-const dayList = /^(mo|tu|we|th|fr|sa|su)(,(mo|tu|we|th|fr|sa|su))*$/;
+export const keywords = ["every", "timer", "count", "text", "rest"];
+
+const dayList =/^(mo|tu|we|th|fr|sa|su)(,(mo|tu|we|th|fr|sa|su))*$/;
 const interval = /^\d+[dwm]$/;
 const weekdayNames: Record<string, number> = {
   sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2, wed: 3, wednesday: 3,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { autocompletion } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { EditorState } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
@@ -11,9 +12,9 @@ import { editorTheme } from "@shared/ui/editorTheme.ts";
 import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import { dueToday, everyToken, scheduleFromParsed } from "../models/schedule.ts";
 import type { Task } from "../models/task.ts";
-import { taskFromParsed } from "../models/task.ts";
+import { orderedGroups, taskFromParsed } from "../models/task.ts";
 import type { ParsedTask } from "../models/taskSyntax.ts";
-import { parseTask, serializeTask, tokenSpans } from "../models/taskSyntax.ts";
+import { keywords, parseTask, serializeTask, tokenSpans } from "../models/taskSyntax.ts";
 
 export interface TaskEditing {
   task: Task | null;
@@ -39,7 +40,26 @@ const composerTheme = EditorView.theme({
   "@media (min-width: 700px)": { ".cm-scroller": { height: "12rem" } },
   ".cm-bullet": { color: "var(--faint)" },
   ".cm-attribute": { color: "var(--accent)" },
+  ".cm-tooltip.cm-tooltip-autocomplete": { background: "var(--raised)", border: "none", borderRadius: "0.6rem", boxShadow: "0 8px 24px var(--shadow)", overflow: "hidden" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": { fontFamily: "var(--font)", maxHeight: "12rem" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li": { padding: "0.55rem 0.9rem", color: "var(--text)" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": { background: "var(--chip-bg)", color: "var(--accent)" },
 });
+
+function grammarCompletion({ groups }: { groups: string[] }): Extension {
+  return autocompletion({
+    icons: false,
+    override: [
+      (context) => {
+        const word = context.matchBefore(/(?:^|\s)[/#]\S*/);
+        if (!word) return null;
+        const from = word.text.search(/[/#]/) + word.from;
+        const options = context.state.sliceDoc(from, from + 1) === "/" ? groups.map((group) => "/" + group) : keywords.map((keyword) => "#" + keyword);
+        return { from, options: options.map((label) => ({ label, apply: label + " " })), validFor: /^[/#]\S*$/ };
+      },
+    ],
+  });
+}
 
 function grammarHighlighting({ today, subtasks }: { today: string; subtasks: boolean }): Extension {
   const marks = (view: EditorView): DecorationSet =>
@@ -110,8 +130,9 @@ export function useTaskEditor({ task, onCommit, onClose, onDelete }: TaskEditing
           drawSelection(),
           EditorView.lineWrapping,
           grammarHighlighting({ today: store.today, subtasks }),
+          grammarCompletion({ groups: orderedGroups([...store.tasks, ...store.schedules].map((each) => each.group)).filter((group) => group !== "") }),
           placeholder("Morning stretch /exercise #every mo,we,fr\n- neck rolls #timer 30s"),
-          EditorView.contentAttributes.of({ spellcheck: "false", autocapitalize: "sentences", enterkeyhint: "enter" }),
+          EditorView.contentAttributes.of({ spellcheck: "true", autocorrect: "on", autocapitalize: "sentences", enterkeyhint: "enter" }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) latest.current.setText(update.state.doc.toString());
           }),

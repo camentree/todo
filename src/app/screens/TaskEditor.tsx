@@ -28,6 +28,8 @@ export function TaskEditorFields({ editor }: { editor: TaskEditorState }) {
             todaySwipe={null}
             onDelete={null}
             onDeleteSubtask={null}
+            onSubtaskToToday={null}
+            onAddSubtask={null}
             onAddComment={() => null}
             onDeleteComment={() => null}
             fixedOpen

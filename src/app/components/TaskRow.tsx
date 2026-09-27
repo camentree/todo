@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import type { MouseEvent, PointerEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 
 import { longPress } from "@shared/longPress.ts";
 import { CircleTick } from "@shared/ui/CircleTick.tsx";
 import { Roll, useFolds } from "@shared/ui/Foldable.tsx";
 import type { Folds } from "@shared/ui/Foldable.tsx";
-import { ChevronGlyph, RepeatGlyph, SpeechGlyph, ListGlyph } from "@shared/ui/Glyphs.tsx";
+import { ChevronGlyph, PlusGlyph, RepeatGlyph, SpeechGlyph, ListGlyph } from "@shared/ui/Glyphs.tsx";
 import { Handle } from "@shared/ui/Handle.tsx";
 import { SquareTick } from "@shared/ui/SquareTick.tsx";
 import { Swipeable } from "@shared/ui/Swipeable.tsx";
@@ -38,6 +38,39 @@ function Mark({ label, count, active, onSelect, children }: { label: string; cou
 
 function Meta({ children }: { children: ReactNode }) {
   return <div className="meta flex min-h-[1.2rem] flex-wrap items-center gap-[var(--meta-gap)] pl-indent text-meta text-dim desktop:contents">{children}</div>;
+}
+
+function SubtaskCapture({ onAdd }: { onAdd: (text: string) => void }) {
+  const [text, setText] = useState("");
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      setText("");
+      event.currentTarget.blur();
+      return;
+    }
+    if (event.key !== "Enter" || text.trim() === "") return;
+    event.preventDefault();
+    onAdd(text.trim());
+    setText("");
+  };
+
+  return (
+    <label className="flex cursor-text items-center gap-[var(--tick-gap)] [padding:var(--row-padding)] desktop:px-[0.9rem]">
+      <span className="flex size-tick flex-none items-center justify-center text-faint [&_svg]:size-glyph">
+        <PlusGlyph />
+      </span>
+      <input
+        className="min-w-0 flex-1 py-[0.3rem] text-title leading-[1.35] text-text [caret-color:var(--accent)] placeholder:text-faint"
+        placeholder="add subtask"
+        enterKeyHint="next"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onKeyDown={onKeyDown}
+      />
+    </label>
+  );
 }
 
 export interface Select {
@@ -95,6 +128,8 @@ export function TaskRow({
   todaySwipe,
   onDelete,
   onDeleteSubtask,
+  onSubtaskToToday,
+  onAddSubtask,
   onAddComment,
   onDeleteComment,
   fixedOpen,
@@ -113,6 +148,8 @@ export function TaskRow({
   todaySwipe: Swipe | null;
   onDelete: (() => void) | null;
   onDeleteSubtask: ((index: number) => void) | null;
+  onSubtaskToToday: ((index: number) => void) | null;
+  onAddSubtask: ((text: string) => void) | null;
   onAddComment: (body: string) => void;
   onDeleteComment: (comment: Comment) => void;
   fixedOpen: boolean;
@@ -255,9 +292,11 @@ export function TaskRow({
                     onTick={() => (fixedOpen ? null : store.putTask(subtaskToggled({ task, index, now })))}
                     onTitle={onTitleSubtask ? () => onTitleSubtask(index) : onTitle}
                     onTitleSubtask={null}
-                    todaySwipe={null}
+                    todaySwipe={onSubtaskToToday ? { word: "today", onSwipe: () => onSubtaskToToday(index) } : null}
                     onDelete={onDeleteSubtask ? () => onDeleteSubtask(index) : null}
                     onDeleteSubtask={null}
+                    onSubtaskToToday={null}
+                    onAddSubtask={null}
                     onAddComment={() => null}
                     onDeleteComment={() => null}
                     fixedOpen={fixedOpen}
@@ -265,6 +304,7 @@ export function TaskRow({
                   />
                 </div>
               ))}
+              {onAddSubtask && !select && <SubtaskCapture onAdd={onAddSubtask} />}
             </div>
           </div>
         </Roll>

@@ -143,7 +143,7 @@ describe("placing rows", () => {
       task("u", { group: "habits" }),
       task("s", { group: "personal", sortOrder: 1, createdAt: "2026-08-01T00:00:00+00:00" }),
     ];
-    expect(grouped(rows).map((each) => [each.group, each.tasks.map((row) => row.id)])).toEqual([
+    expect(grouped({ tasks: rows, arrangement: { grouping: "list", sorting: "manual" } }).map((each) => [each.group, each.tasks.map((row) => row.id)])).toEqual([
       ["habits", ["u"]],
       ["exercise", ["v"]],
       ["personal", ["s", "w", "x"]],
@@ -151,6 +151,27 @@ describe("placing rows", () => {
       ["programming", ["z"]],
       ["", ["t"]],
     ]);
+  });
+
+  it("puts every row in one ungrouped list when grouping is none", () => {
+    const rows = [task("b", { group: "garden", sortOrder: 1 }), task("a", { group: "personal", sortOrder: 0 })];
+    expect(grouped({ tasks: rows, arrangement: { grouping: "none", sorting: "manual" } }).map((each) => [each.group, each.tasks.map((row) => row.id)])).toEqual([[null, ["a", "b"]]]);
+  });
+
+  it("sorts dated rows first by date then time, undated last in manual order", () => {
+    const rows = [
+      task("undated", { sortOrder: 0 }),
+      task("later", { dueDate: "2026-09-20" }),
+      task("untimed", { dueDate: "2026-09-16" }),
+      task("morning", { dueDate: "2026-09-16", dueTime: "09:00" }),
+    ];
+    expect(grouped({ tasks: rows, arrangement: { grouping: "none", sorting: "due" } })[0]?.tasks.map((row) => row.id)).toEqual(["morning", "untimed", "later", "undated"]);
+  });
+
+  it("sorts by title ignoring case, and by newest creation first", () => {
+    const rows = [task("b", { title: "banana", createdAt: "2026-09-02T00:00:00+00:00" }), task("a", { title: "Apple", createdAt: "2026-09-01T00:00:00+00:00" }), task("c", { title: "cherry", createdAt: "2026-09-03T00:00:00+00:00" })];
+    expect(grouped({ tasks: rows, arrangement: { grouping: "none", sorting: "title" } })[0]?.tasks.map((row) => row.id)).toEqual(["a", "b", "c"]);
+    expect(grouped({ tasks: rows, arrangement: { grouping: "none", sorting: "newest" } })[0]?.tasks.map((row) => row.id)).toEqual(["c", "b", "a"]);
   });
 
   it("closes the line with the date and the time, and drops the date when it is today", () => {

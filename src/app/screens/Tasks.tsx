@@ -13,6 +13,7 @@ import { RoundButton } from "@shared/ui/RoundButton.tsx";
 import type { Swipe } from "@shared/ui/Swipeable.tsx";
 import { TextButton } from "@shared/ui/TextButton.tsx";
 
+import { ArrangementSheet } from "../components/ArrangementSheet.tsx";
 import { TaskGroup } from "../components/TaskGroup.tsx";
 import { TaskRow } from "../components/TaskRow.tsx";
 import type { Select } from "../components/TaskRow.tsx";
@@ -21,7 +22,8 @@ import { identifier, nowStamp, useStore } from "../data/store.tsx";
 import type { Comment } from "../models/comment.ts";
 import type { Schedule } from "../models/schedule.ts";
 import { everyToken } from "../models/schedule.ts";
-import type { Container, Target, Task } from "../models/task.ts";
+import type { Arrangement, Container, Target, Task } from "../models/task.ts";
+import { parseTask } from "../models/taskSyntax.ts";
 import {
   byPosition,
   changedOnly,
@@ -38,6 +40,7 @@ import {
   subtaskToggled,
   taskAsSubtasks,
   toggled,
+  withSubtaskAdded,
   withSubtasksInserted,
   withoutSubtask,
 } from "../models/task.ts";
@@ -55,7 +58,7 @@ interface Asking {
 
 interface Drag {
   ids: string[];
-  fromSubtask: { taskId: string; index: number } | null;
+  fromSubtask: boolean;
   title: string;
   startX: number;
   x: number;
@@ -70,6 +73,19 @@ const unfoldDelay = 480;
 const savedDuration = 3000;
 const scrollEdge = 120;
 const scrollStep = 10;
+
+const defaultArrangements: Record<Container, Arrangement> = {
+  today: { grouping: "list", sorting: "manual" },
+  backlog: { grouping: "none", sorting: "due" },
+};
+
+function rememberedArrangements(): Record<Container, Arrangement> {
+  try {
+    return { ...defaultArrangements, ...(JSON.parse(localStorage.getItem("arrangements") ?? "{}") as Partial<Record<Container, Arrangement>>) };
+  } catch {
+    return defaultArrangements;
+  }
+}
 
 export function Tasks() {
   const store = useStore();
@@ -88,6 +104,8 @@ export function Tasks() {
   const folds = useFolds();
   const [selection, setSelection] = useState<Set<string> | null>(null);
   const [list, setList] = useState<Container>("today");
+  const [arrangements, setArrangements] = useState(rememberedArrangements);
+  const [arranging, setArranging] = useState(false);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [openedByDrag, setOpenedByDrag] = useState<Set<string>>(new Set());
   const [landed, setLanded] = useState<string | null>(null);
@@ -216,6 +234,28 @@ export function Tasks() {
 
   const bringToToday = (task: Task): Swipe => ({ word: "today", onSwipe: () => store.putTask({ ...task, dueDate: store.today }) });
 
+  const subtaskToToday = ({ host, index }: { host: Task; index: number }) => {
+    const subtask = host.subtasks[index];
+    if (!subtask) return;
+    store.putTask(withoutSubtask({ host, index }));
+    store.putTask({ ...subtaskAsTask({ subtask, host }), dueDate: store.today });
+  };
+
+  const addSubtask = ({ host, text }: { host: Task; text: string }) => {
+    const parsed = parseTask({ text, today: store.today, subtasks: false });
+    if (parsed) store.putTask(withSubtaskAdded({ host, parsed, now: nowStamp(), newId: identifier }));
+  };
+
+  const arrange = (arrangement: Arrangement) => {
+    const next = { ...arrangements, [list]: arrangement };
+    setArrangements(next);
+    try {
+      localStorage.setItem("arrangements", JSON.stringify(next));
+    } catch {
+      return;
+    }
+  };
+
   const addComment = ({ task, body }: { task: Task; body: string }) =>
     store.putComment({ id: identifier(), taskId: task.id, body, author: "user", writtenAt: nowStamp(), seenAt: nowStamp(), createdAt: nowStamp() });
 
@@ -230,15 +270,18 @@ export function Tasks() {
     const saved = parent ? { ...task, group: parent.host.group } : task;
     const shown = parent ? { ...parent.host, subtasks: parent.host.subtasks.map((each) => (each.id === saved.id ? saved : each)) } : saved;
     store.putTask(shown);
-    setList(shown.dueDate !== null && shown.dueDate <= store.today ? "today" : "backlog");
-    folds.set({ key: "today:" + shown.group, open: true });
+    const destination = shown.dueDate !== null && shown.dueDate <= store.today ? "today" : "backlog";
+    setList(destination);
+    folds.set({ key: destination + ":" + shown.group, open: true });
     folds.set({ key: subtasksKey(shown.id), open: true });
     setLanded(shown.id);
     markSaved(parent ? shown.id + ":" + parent.index : shown.id);
   };
 
-  const todayGroups = grouped(onToday);
-  const listOrder = [...todayGroups.flatMap((each) => each.tasks), ...backlog];
+  const todayGroups = grouped({ tasks: onToday, arrangement: arrangements.today });
+  const backlogGroups = grouped({ tasks: backlog, arrangement: arrangements.backlog });
+  const shownGroups = list === "today" ? todayGroups : backlogGroups;
+  const listOrder = [...todayGroups, ...backlogGroups].flatMap((each) => each.tasks);
 
   const rowAt = (id: string): { host: Task; index: number | null } | null => {
     const whole = store.tasks.find((each) => each.id === id);
@@ -297,8 +340,8 @@ export function Tasks() {
     window.scrollTo(0, listScrolledTo.current);
   }, [editorScreen]);
 
-  const rowsOf = ({ container, group }: { container: Container; group: string }): Task[] =>
-    container === "backlog" ? backlog : (todayGroups.find((each) => each.group === group)?.tasks ?? []);
+  const rowsOf = ({ container, group }: { container: Container; group: string | null }): Task[] =>
+    ((container === "today" ? todayGroups : backlogGroups).find((each) => each.group === group)?.tasks ?? []);
 
   const resolveTarget = ({ current, x, y }: { current: Drag; x: number; y: number }): { target: Target | null; line: Drag["line"]; hovered: string | null } => {
     const column = listRef.current?.getBoundingClientRect();
@@ -314,9 +357,10 @@ export function Tasks() {
       null;
     if (taskElement?.closest(".completed-section")) return { target: null, line: null, hovered: null };
     const nesting = x - current.startX > nestDistance;
-    const leaving = current.fromSubtask !== null && x - current.startX < -nestDistance;
+    const leaving = current.fromSubtask && x - current.startX < -nestDistance;
     if (subtaskElement && taskElement && !leaving) {
       const [taskId = "", indexText = "0"] = (subtaskElement.dataset.subtask ?? "").split(":");
+      if (current.ids.includes(taskId)) return { target: null, line: null, hovered: null };
       const rect = subtaskElement.getBoundingClientRect();
       const after = y > rect.top + rect.height / 2;
       return {
@@ -330,7 +374,7 @@ export function Tasks() {
     if (current.ids.includes(taskId)) return { target: null, line: null, hovered: null };
     const holder = taskElement.closest<HTMLElement>("[data-container]");
     const container = (holder?.dataset.container ?? "today") as Container;
-    const group = holder?.dataset.group ?? "";
+    const group = holder?.dataset.group ?? null;
     const main = taskElement.querySelector(".main")?.getBoundingClientRect() ?? taskElement.getBoundingClientRect();
     const rect = taskElement.getBoundingClientRect();
     if (nesting && !leaving) {
@@ -350,31 +394,34 @@ export function Tasks() {
   const applyDrop = (current: Drag) => {
     const target = current.target;
     if (!target) return;
-    const source = current.fromSubtask ? (store.tasks.find((each) => each.id === current.fromSubtask?.taskId) ?? null) : null;
-    const sourceSubtask = source && current.fromSubtask ? source.subtasks[current.fromSubtask.index] : undefined;
-    const moving: Task[] = source && sourceSubtask && current.fromSubtask
-      ? [subtaskAsTask({ subtask: sourceSubtask, host: source })]
-      : listOrder.filter((task) => current.ids.includes(task.id));
-    if (moving.length === 0) return;
+    const pieces = listOrder.flatMap((task): { task: Task; source: { host: Task; index: number } | null }[] =>
+      current.ids.includes(task.id)
+        ? [{ task, source: null }]
+        : task.subtasks.flatMap((subtask, index) => (current.ids.includes(task.id + ":" + index) ? [{ task: subtask, source: { host: task, index } }] : [])),
+    );
+    if (pieces.length === 0) return;
+    const sourceHosts = listOrder.filter((task) => pieces.some((piece) => piece.source?.host.id === task.id));
+    const stripped = (host: Task): Task =>
+      pieces
+        .flatMap((piece) => (piece.source?.host.id === host.id ? [piece.source.index] : []))
+        .sort((a, b) => b - a)
+        .reduce((remaining, index) => withoutSubtask({ host: remaining, index }), host);
     if (target.kind === "top") {
-      const rows = rowsOf({ container: target.container, group: target.group });
+      const moving = pieces.map((piece) => (piece.source ? subtaskAsTask({ subtask: piece.task, host: piece.source.host }) : piece.task));
+      const rows = rowsOf({ container: target.container, group: target.group }).map((task) => (sourceHosts.some((host) => host.id === task.id) ? stripped(task) : task));
       const after = placed({ rows, moving, target, today: store.today });
-      for (const task of changedOnly({ before: rows, after })) store.putTask(task);
-      if (target.container === "today") for (const schedule of regrouped({ moving, schedules: store.schedules, group: target.group })) store.putSchedule(schedule);
-      if (source && current.fromSubtask) store.putTask(withoutSubtask({ host: source, index: current.fromSubtask.index }));
+      for (const host of sourceHosts) store.putTask(after.find((each) => each.id === host.id) ?? stripped(host));
+      for (const task of changedOnly({ before: rows, after })) if (!sourceHosts.some((host) => host.id === task.id)) store.putTask(task);
+      if (target.group !== null) for (const schedule of regrouped({ moving, schedules: store.schedules, group: target.group })) store.putSchedule(schedule);
       return;
     }
     const host = store.tasks.find((each) => each.id === target.taskId);
     if (!host) return;
-    const subtasks = moving.flatMap(taskAsSubtasks);
-    if (source && current.fromSubtask && source.id === host.id) {
-      const index = target.index > current.fromSubtask.index ? target.index - 1 : target.index;
-      store.putTask(withSubtasksInserted({ host: withoutSubtask({ host, index: current.fromSubtask.index }), subtasks, index }));
-      return;
-    }
-    store.putTask(withSubtasksInserted({ host, subtasks, index: target.index }));
-    if (source && current.fromSubtask) store.putTask(withoutSubtask({ host: source, index: current.fromSubtask.index }));
-    else for (const task of moving) if (task.subtasks.length) store.deleteTask(task.id);
+    const subtasks = pieces.flatMap((piece) => (piece.source ? [piece.task] : taskAsSubtasks(piece.task)));
+    const lifted = pieces.filter((piece) => piece.source?.host.id === host.id && piece.source.index < target.index).length;
+    store.putTask(withSubtasksInserted({ host: stripped(host), subtasks, index: target.index - lifted }));
+    for (const other of sourceHosts) if (other.id !== host.id) store.putTask(stripped(other));
+    for (const piece of pieces) if (!piece.source && piece.task.subtasks.length) store.deleteTask(piece.task.id);
   };
 
   const beginDrag = ({ event, ids, fromSubtask, title }: { event: ReactPointerEvent<HTMLButtonElement>; ids: string[]; fromSubtask: Drag["fromSubtask"]; title: string }) => {
@@ -417,7 +464,7 @@ export function Tasks() {
       setOpenedByDrag(new Set());
       if (!current) return;
       applyDrop(current);
-      if (current.fromSubtask && current.target) toggleSelected([current.fromSubtask.taskId + ":" + current.fromSubtask.index]);
+      if (current.target) setSelection(null);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", finish);
@@ -433,12 +480,9 @@ export function Tasks() {
           if (!dragged) return;
           const chosen = selection.has(id) ? selection : new Set(selection).add(id);
           setSelection(chosen);
-          if (dragged.index !== null) {
-            beginDrag({ event, ids: [], fromSubtask: { taskId: dragged.host.id, index: dragged.index }, title: dragged.host.subtasks[dragged.index]?.title ?? "" });
-            return;
-          }
-          const bundle = listOrder.filter((each) => chosen.has(each.id)).map((each) => each.id);
-          beginDrag({ event, ids: bundle, fromSubtask: null, title: bundle.length > 1 ? `${bundle.length} tasks` : dragged.host.title });
+          const bundle = listOrder.flatMap((task) => [task.id, ...task.subtasks.map((_, index) => task.id + ":" + index)]).filter((each) => chosen.has(each));
+          const title = dragged.index === null ? dragged.host.title : (dragged.host.subtasks[dragged.index]?.title ?? "");
+          beginDrag({ event, ids: bundle, fromSubtask: dragged.index !== null, title: bundle.length > 1 ? `${bundle.length} tasks` : title });
         },
       }
     : null;
@@ -466,6 +510,8 @@ export function Tasks() {
           todaySwipe={todaySwipe}
           onDelete={() => (task.scheduleId ? askDelete(task) : store.deleteTask(task.id))}
           onDeleteSubtask={(index) => store.putTask(withoutSubtask({ host: task, index }))}
+          onSubtaskToToday={(index) => subtaskToToday({ host: task, index })}
+          onAddSubtask={(text) => addSubtask({ host: task, text })}
           onAddComment={(body) => addComment({ task, body })}
           onDeleteComment={askDeleteComment}
           fixedOpen={false}
@@ -500,6 +546,7 @@ export function Tasks() {
     if (action === "close") {
       if (asking) return setAsking(null);
       if (helping) return setHelping(false);
+      if (arranging) return setArranging(false);
       if (editing || running) return close();
       if (selection) return setSelection(null);
       if (target && showing({ folds, task: target.host }).open) return closeTask({ folds, task: target.host });
@@ -511,7 +558,7 @@ export function Tasks() {
       const key = focused.slice(6);
       if (action === "fold") folds.set({ key, open: !folds.isOpen({ key, fallback: true }) });
       if (action === "select") {
-        const ids = (todayGroups.find((each) => "today:" + each.group === key)?.tasks ?? []).map((task) => task.id);
+        const ids = (shownGroups.find((each) => list + ":" + each.group === key)?.tasks ?? []).map((task) => task.id);
         selection ? toggleSelected(ids) : setSelection(new Set(ids));
       }
       return;
@@ -555,21 +602,29 @@ export function Tasks() {
         <TextButton className={"min-h-touch py-2 text-meta " + (list === "backlog" ? "text-text" : "text-faint hover:text-dim")} onSelect={() => setList("backlog")}>
           backlog ({backlog.length})
         </TextButton>
+        <TextButton className="ml-auto min-h-touch py-2 text-meta text-faint hover:text-dim" onSelect={() => setArranging(true)}>
+          {arrangements[list].grouping === "list" ? "by list" : "ungrouped"} · {arrangements[list].sorting}
+        </TextButton>
       </div>
       <div className="list mt-[0.6rem] flex flex-col [&>div+div>.group]:mt-[var(--group-gap)]" ref={listRef} onPointerOver={followPointer} onPointerLeave={() => setFocused(null)}>
-        {list === "today" ? (
-          todayGroups.map(({ group, tasks }) => (
-            <div key={group} data-container="today" data-group={group}>
-              <TaskGroup storageKey={"today:" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:today:" + group}>
-                {tasks.map((task) => row({ task, chips: [], todaySwipe: sendToBacklog(task), onTick: () => tick(task) }))}
+        {shownGroups.map(({ group, tasks }) => {
+          const todaySwipe = list === "today" ? sendToBacklog : bringToToday;
+          if (group === null)
+            return (
+              <div key="" data-container={list}>
+                {tasks.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: todaySwipe(task), onTick: () => tick(task) }))}
+              </div>
+            );
+          return (
+            <div key={group} data-container={list} data-group={group}>
+              <TaskGroup storageKey={list + ":" + group} label={groupLabel(group)} count={tasks.length} defaultOpen select={groupSelect(tasks)} press={groupPress(tasks)} focused={focused === "group:" + list + ":" + group}>
+                {tasks.map((task) => row({ task, chips: [], todaySwipe: todaySwipe(task), onTick: () => tick(task) }))}
               </TaskGroup>
             </div>
-          ))
-        ) : (
+          );
+        })}
+        {list === "backlog" && (
           <>
-            <div data-container="backlog" data-group="">
-              {backlog.map((task) => row({ task, chips: task.group === "" ? [] : [task.group], todaySwipe: bringToToday(task), onTick: () => tick(task) }))}
-            </div>
             {completed.length > 0 && (
               <div className="completed-section">
                 <TaskGroup
@@ -614,6 +669,8 @@ export function Tasks() {
                         todaySwipe={null}
                         onDelete={null}
                         onDeleteSubtask={null}
+                        onSubtaskToToday={null}
+                        onAddSubtask={null}
                         onAddComment={() => null}
                         onDeleteComment={() => null}
                         fixedOpen={false}
@@ -674,6 +731,7 @@ export function Tasks() {
       {editor}
       {confirm}
       {helping && <KeyboardSheet bindings={keyboardBindings} onClose={() => setHelping(false)} />}
+      {arranging && <ArrangementSheet arrangement={arrangements[list]} onArrange={arrange} onClose={() => setArranging(false)} />}
     </>
   );
 }

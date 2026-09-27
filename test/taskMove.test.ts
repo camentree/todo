@@ -1,6 +1,7 @@
 import type { Schedule } from "@app/models/schedule.ts";
 import type { Task } from "@app/models/task.ts";
-import { changedOnly, placed, regrouped, subtaskAsTask, taskAsSubtasks, withSubtasksInserted, withoutSubtask } from "@app/models/task.ts";
+import { changedOnly, placed, regrouped, subtaskAsTask, taskAsSubtasks, withSubtaskAdded, withSubtasksInserted, withoutSubtask } from "@app/models/task.ts";
+import { parseTask } from "@app/models/taskSyntax.ts";
 
 const today = "2026-09-15";
 
@@ -45,11 +46,21 @@ describe("placed", () => {
     expect(onToday[1]).toMatchObject({ id: "x", group: "personal", dueDate: today, sortOrder: 1 });
   });
 
-  it("keeps the group and clears the date when dropped into Backlog", () => {
-    const intoBacklog = placed({ rows: [], moving: [task("a", { group: "garden" })], target: { kind: "top", container: "backlog", group: "", index: 0 }, today });
+  it("keeps the group and clears the date when dropped into an ungrouped Backlog", () => {
+    const intoBacklog = placed({ rows: [], moving: [task("a", { group: "garden" })], target: { kind: "top", container: "backlog", group: null, index: 0 }, today });
     expect(intoBacklog[0]).toMatchObject({ id: "a", group: "garden", dueDate: null });
-    const dated = placed({ rows: [], moving: [task("d", { group: "", dueDate: "2026-09-20" })], target: { kind: "top", container: "backlog", group: "", index: 0 }, today });
+    const dated = placed({ rows: [], moving: [task("d", { group: "", dueDate: "2026-09-20" })], target: { kind: "top", container: "backlog", group: null, index: 0 }, today });
     expect(dated[0]).toMatchObject({ id: "d", group: "", dueDate: null });
+  });
+
+  it("takes the group it lands in when Backlog is grouped by list", () => {
+    const intoGroup = placed({ rows: [], moving: [task("a", { group: "garden", dueDate: today })], target: { kind: "top", container: "backlog", group: "personal", index: 0 }, today });
+    expect(intoGroup[0]).toMatchObject({ id: "a", group: "personal", dueDate: null });
+  });
+
+  it("keeps each row's group when dropped on an ungrouped Today", () => {
+    const onToday = placed({ rows: [], moving: [task("a", { group: "garden" })], target: { kind: "top", container: "today", group: null, index: 0 }, today });
+    expect(onToday[0]).toMatchObject({ id: "a", group: "garden", dueDate: today });
   });
 
   it("lands a bundle together in order", () => {
@@ -96,5 +107,13 @@ describe("subtasks", () => {
     const out = subtaskAsTask({ subtask: nested.subtasks[0]!, host: nested });
     expect(out).toMatchObject({ id: "m", title: "m", group: "exercise", dueDate: today, parentId: null, type: "count", target: 5, numericalValue: 2, sortOrder: 3, subtasks: [] });
     expect(withoutSubtask({ host: nested, index: 0 }).subtasks.map((subtask) => [subtask.title, subtask.sortOrder])).toEqual([["one", 0]]);
+  });
+
+  it("adds a captured subtask at the end with the host's group and the parsed type", () => {
+    const host = task("h", { group: "exercise", subtasks: [task("one", { parentId: "h", group: "exercise" })] });
+    const parsed = parseTask({ text: "push ups #count 10", today, subtasks: false });
+    const added = withSubtaskAdded({ host, parsed: parsed!, now: "2026-09-15T08:00:00", newId: () => "new" });
+    expect(added.subtasks.map((subtask) => subtask.id)).toEqual(["one", "new"]);
+    expect(added.subtasks[1]).toMatchObject({ title: "push ups", parentId: "h", group: "exercise", type: "count", target: 10, numericalValue: 0, sortOrder: 1 });
   });
 });

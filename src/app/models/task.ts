@@ -122,8 +122,34 @@ export function byPosition(a: Task, b: Task): number {
   return a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 }
 
-export function grouped(tasks: Task[]): { group: string; tasks: Task[] }[] {
-  return orderedGroups(tasks.map((task) => task.group)).map((group) => ({ group, tasks: tasks.filter((task) => task.group === group).sort(byPosition) }));
+export type Grouping = "list" | "none";
+
+export type Sorting = "manual" | "due" | "title" | "newest";
+
+export interface Arrangement {
+  grouping: Grouping;
+  sorting: Sorting;
+}
+
+export const groupings: Grouping[] = ["list", "none"];
+
+export const sortings: Sorting[] = ["manual", "due", "title", "newest"];
+
+function byDue(a: Task, b: Task): number {
+  return (a.dueDate === null ? 1 : 0) - (b.dueDate === null ? 1 : 0) || (a.dueDate ?? "").localeCompare(b.dueDate ?? "") || (a.dueTime === null ? 1 : 0) - (b.dueTime === null ? 1 : 0) || (a.dueTime ?? "").localeCompare(b.dueTime ?? "") || byPosition(a, b);
+}
+
+const orderings: Record<Sorting, (a: Task, b: Task) => number> = {
+  manual: byPosition,
+  due: byDue,
+  title: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }) || byPosition(a, b),
+  newest: (a, b) => b.createdAt.localeCompare(a.createdAt) || byPosition(a, b),
+};
+
+export function grouped({ tasks, arrangement }: { tasks: Task[]; arrangement: Arrangement }): { group: string | null; tasks: Task[] }[] {
+  const ordering = orderings[arrangement.sorting];
+  if (arrangement.grouping === "none") return [{ group: null, tasks: [...tasks].sort(ordering) }];
+  return orderedGroups(tasks.map((task) => task.group)).map((group) => ({ group, tasks: tasks.filter((task) => task.group === group).sort(ordering) }));
 }
 
 export function isOnToday({ task, today, entries }: { task: Task; today: string; entries: JournalEntry[] }): boolean {
@@ -178,7 +204,7 @@ export type Container = "today" | "backlog";
 export interface TopTarget {
   kind: "top";
   container: Container;
-  group: string;
+  group: string | null;
   index: number;
 }
 
@@ -196,7 +222,7 @@ export function placed({ rows, moving, target, today }: { rows: Task[]; moving: 
   const index = Math.max(0, Math.min(target.index, remaining.length));
   const arrivals = moving.map((task) => ({
     ...task,
-    group: target.container === "today" ? target.group : task.group,
+    group: target.group ?? task.group,
     dueDate: target.container === "today" ? today : null,
   }));
   const ordered = [...remaining.slice(0, index), ...arrivals, ...remaining.slice(index)];
@@ -291,6 +317,11 @@ function subtasksFrom({ parsed, previous, hostId, group, now, newId }: { parsed:
       deletedAt: null,
     };
   });
+}
+
+export function withSubtaskAdded({ host, parsed, now, newId }: { host: Task; parsed: ParsedSubtask; now: string; newId: () => string }): Task {
+  const added = subtasksFrom({ parsed: [parsed], previous: [], hostId: host.id, group: host.group, now, newId }).map((subtask) => ({ ...subtask, sortOrder: host.subtasks.length }));
+  return { ...host, subtasks: [...host.subtasks, ...added] };
 }
 
 export function taskFromParsed({ parsed, existing, id, today, now, schedule, newId }: { parsed: ParsedTask; existing: Task | null; id: string; today: string; now: string; schedule: Schedule | null; newId: () => string }): Task {

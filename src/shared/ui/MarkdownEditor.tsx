@@ -134,6 +134,7 @@ export function MarkdownEditor({ value, onChange }: { value: string; onChange: (
           drawSelection(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
+          EditorView.contentAttributes.of({ spellcheck: "true", autocorrect: "on", autocapitalize: "sentences" }),
           livePreview,
           EditorView.domEventHandlers({ mousedown: (event, view) => openLink({ view, event }) }),
           EditorView.updateListener.of((update) => {
